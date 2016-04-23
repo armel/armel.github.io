@@ -2,7 +2,10 @@
 layout: post
 title: "Lancement du livre « Éco-conception web : les 115 bonnes pratiques »"
 categories: dev
-tag: green it, ouvrage
+tags:
+- greenit
+- performance
+- bouquin
 ---
 
 Fin septembre a eu lieu le lancement du livre « Éco­-conception web : les 115 bonnes pratiques » édité chez [Eyrolles](http://www.eyrolles.com/Informatique/Livre/eco-conception-web-les-115-bonnes-pratiques-9782212140712). J’ai eu la chance de participer à l’enrichissement de cette seconde édition avec un collectif de professionnels comme Atalan ou encore Temesis. À cette occasion, Frédéric Bordage, que j’ai le privilège de connaitre depuis plus de 15 ans et qui a piloté ce projet éditorial, en a profité pour rappeler quelques points essentiels que je vais tenter de vous retranscrire ici.
@@ -19,6 +22,6 @@ L’éco­conception logicielle vise donc à trouver le meilleur équilibre poss
 
 Le livre « Éco­conception web : les 115 bonnes pratiques » tente donc de constituer une référentiel de bonnes pratiques et d’apporter des solutions à ce constat d’urgence. Il tombe également l’année de la COP 21 et prend donc tout son sens. Ajoutons que ce référentiel n’est pas figé, bien au contraire. Un site dédié, [ecoconceptionweb.com](http://ecoconceptionweb.com/), permet à tout le monde de l’enrichir. Une version anglaise du livre est en discussion. Et l’idéal serait, à terme, de pouvoir tendre vers une sorte de certification « éco­conception », même si certains obstacles restent à solutionner ici (outils de mesure, audit et certification délivrés par une instance indépendante, etc.).
 
-Depuis toujours, [GLOBALIS](https://www.globalis-ms.com) s’est montrée vigilante aux regards des problématiques de performances et d’économie logicielle, tant « back » que « front ». Et je suis le premier à pointer du doigt les dérives de certains socles et à défendre les principes de développement auxquels je crois, comme le KISS (« Keep It Simple, Stupid »). Notre micro framework n’a plus à faire ses preuves ici, depuis déjà bien longtemps. Nous sommes restés dans l’esprit initial de PHP qui se démarquait de Java par ses faibles pré­ requis. Cela concerne aussi la gestion de notre infra.
+Depuis toujours, [GLOBALIS](https://www.globalis-ms.com) s’est montrée vigilante aux regards des problématiques de performances et d’économie logicielle, tant « back » que « front ». Et je suis le premier à pointer du doigt les dérives de certains socles et à défendre les principes de développement auxquels je crois, comme le KISS (« Keep It Simple, Stupid »). Notre micro framework n’a plus à faire ses preuves ici, depuis déjà bien longtemps. Nous sommes restés dans l’esprit initial de PHP qui se démarquait de Java par ses faibles pré­ requis. 
 
-L’utilisation de disques SSD ou encore d’un hyperviseur « bare metal » également. Notre capacité à répondre aux besoins fonctionnels de nos clients, avec justesse, concision et bon sens, aussi. Tout ceci nous conforte dans nos choix et fait de GLOBALIS une structure déjà respectueuse des grands principes de l’éco­conception web. Nous en sommes particulièrement fiers.
+Cela concerne aussi la gestion de notre infra. L’utilisation de disques SSD ou encore d’un hyperviseur « bare metal » également. Notre capacité à répondre aux besoins fonctionnels de nos clients, avec justesse, concision et bon sens, aussi. Tout ceci nous conforte dans nos choix et fait de GLOBALIS une structure déjà respectueuse des grands principes de l’éco­conception web. Nous en sommes particulièrement fiers.

@@ -2,7 +2,10 @@
 layout: post
 title: "Wordpress manque encore de maturité !"
 categories: dev
-tag: php, wordpress
+tags:
+- réflexion
+- wordpress
+- php
 ---
 
 L’année 2015 sera particulière pour le langage PHP pour au moins 2 raisons. L’automne devrait être marqué par la sortie de PHP 7. Mais d’ici là, PHP fête aussi ses 20 ans ! C’est en effet le 8 juin 1995 que le code source du langage a été rendu public. Si la légitimité et la pertinence de ce langage ne sont plus à démontrer, PHP servant à dynamiser plus de 80% du Web mondial, cette réussite était pourtant loin d’être acquise. Pendant de nombreuses années, il aura fallu évangéliser, expliquer, convaincre, énormément travailler et apprendre également, tout ceci dans un unique but: professionnaliser l’écosystème autour de PHP dans l’espoir d’en faire une alternative crédible et mature. Et quel chemin parcouru !

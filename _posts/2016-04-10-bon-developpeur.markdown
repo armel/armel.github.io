@@ -2,6 +2,10 @@
 layout: post
 title: Qu’est-ce qu’un bon développeur PHP...
 categories: dev
+tags:
+- réflexion
+- developpement
+- php
 ---
 
 ## Le langage joue un rôle secondaire

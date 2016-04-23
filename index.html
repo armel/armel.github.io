@@ -10,6 +10,13 @@ layout: default
             <header class="major">
                 <h2>{{ post.title }}</h2>
                 <p class="post-meta">{{ post.date | date: "%d-%m-%Y" }}{% if post.author %} • {{ post.author }}{% endif %}{% if page.meta %} • {{ page.meta }}{% endif %}</p>
+                {% if tag == page.tag %}
+                    <ul class="tags">
+                    {% for tag in post.tags %}
+                        <li><a href="#" class="tag">{{tag}}</a></li>
+                    {% endfor %}
+                    </ul>
+                {% endif %}
             </header>
 
             <section>

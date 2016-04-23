@@ -2,7 +2,9 @@
 layout: post
 title: "Comment dévérouiller un écran Dell"
 categories: matos
-tag: dell, ecran
+tags:
+- tips
+- matos
 ---
 
 Parfois, il arrive que les écrans Dell se vérouillent, sans raison particulière, interdisant toutes modifications des paramétrages. Pire, cet état persiste et il semble impossible d'en sortir. Dans les faits, c'est un méchant bug du firmware interne. Voici la procédure à suivre pour les dévérouiller: 
