@@ -4,7 +4,7 @@ title: "Industrialisation: il reste du chemin à faire..."
 categories: dev
 tags:
 - réflexion
-- developpement
+- développement
 ---
 
 Ces dernières années, l’industrialisation s’est imposée comme une problématique majeure et une attente forte de la part des équipes de développement. Et si le profane ne sait pas toujours en définir les contours et qu’il s’imagine avec effroi un alignement de murs de briques rouges ou de grandes cheminées crachant une fumée noire et épaisse, les développeurs aguerris savent parfaitement de quoi il en retourne. Et ils ont même, le plus souvent, développé une certaine forme d’appétence à l’égard de l’industrialisation. L’attrait de la nouveauté mais aussi l’occasion de pouvoir enrichir leur CV et cocher de nouvelles cases, nourrissent cette attente forte. Pour ma part, j’ai un regard un peu critique sur tout cela et je vais tenter d’expliquer pourquoi.

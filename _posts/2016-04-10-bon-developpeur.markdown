@@ -4,7 +4,7 @@ title: Qu’est-ce qu’un bon développeur PHP...
 categories: dev
 tags:
 - réflexion
-- developpement
+- développement
 - php
 ---
 
