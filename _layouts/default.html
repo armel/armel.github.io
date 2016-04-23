@@ -1,20 +1,78 @@
 <!DOCTYPE html>
 <html>
+  	<head>
+  		<title>Strata by HTML5 UP</title>
+  		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+  		<meta name="description" content="" />
+  		<meta name="keywords" content="" />
+  		<!--[if lte IE 8]><script src="css/ie/html5shiv.js"></script><![endif]-->
+  		<script src="/js/jquery.min.js"></script>
+  		<script src="/js/jquery.poptrox.min.js"></script>
+  		<script src="/js/skel.min.js"></script>
+  		<script src="/js/init.js"></script>
+  		<noscript>
+  			<link rel="stylesheet" href="/css/skel.css" />
+  			<link rel="stylesheet" href="/css/style.css" />
+  			<link rel="stylesheet" href="/css/style-xlarge.css" />
+  		</noscript>
+  		<!--[if lte IE 8]><link rel="stylesheet" href="/css/ie/v8.css" /><![endif]-->
+  	</head>
 
-  {% include head.html %}
+	<body id="top">
 
-  <body>
+      <header id="header">
+          <a href="/" class="image avatar"><img src="/images/avatar.jpg" alt="" /></a>
+          <h1><a href="http://www.globalis-ms.com">GLOBALIS</a> Ⓖ co-founder/CTO.</h1>
+          <h1><a href="http://open-goodies.com/">OpenGoodies</a> partner.</h1>
+          <br/>
+          <h1>Web, Security, <a href="https://www.amazon.fr/dp/2212136587/ref=cm_sw_r_tw_dp_upTgxbM2TT1KM">Performance</a>, Apple  Addict, Geek Life, <a ref="http://www.astrobin.com/users/armel/">Astronomy</a>, Arduino, RX, Nature, Fly Fishing and more.</h1>
+      </header>
 
-    {% include header.html %}
 
-    <div class="page-content">
-      <div class="wrapper">
         {{ content }}
-      </div>
-    </div>
 
-    {% include footer.html %}
+        <!-- Footer -->
+        <footer id="footer">
+            <ul class="icons">
 
-  </body>
+              {% if site.github_username %}
+              <li>
+                <a href="https://github.com/{{ site.github_username }}" class="icon fa-github">
+                  <span class="label">GitHub</span>
+                </a>
+              </li>
+              {% endif %}
 
+              {% if site.twitter_username %}
+              <li>
+                <a href="https://twitter.com/{{ site.twitter_username }}" class="icon fa-twitter">
+                  <span class="label">Twitter</span>
+                </a>
+              </li>
+              {% endif %}
+
+              {% if site.linkedin_username %}
+              <li>
+                <a href="https://linkedin.com/in/{{ site.linkedin_username }}" class="icon fa-linkedin">
+                  <span class="label">LinkedIn</span>
+                </a>
+              </li>
+              {% endif %}
+
+              {% if site.email %}
+              <li>
+                <a href="mailto:{{ site.email }}" class="icon fa-envelope-o">
+                  <span class="label">Email</span>
+                </a>
+              </li>
+              {% endif %}
+            </ul>
+            <ul class="copyright">
+                <li>&copy; Untitled</li>
+                <li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
+                <li>Jekyll Template: <a href="http://cloudcannon.com">Cloud Cannon</a></li>
+            </ul>
+        </footer>
+
+	</body>
 </html>
