@@ -1,0 +1,55 @@
+---
+layout: default
+---
+
+<!-- Main -->
+<div id="main">
+
+  <!-- Get the tag name for every tag on the site and set them
+  to the `site_tags` variable. -->
+  {% capture site_tags %}{% for tag in site.tags %}{{ tag | first }}{% unless forloop.last %},{% endunless %}{% endfor %}{% endcapture %}
+
+  <!-- `tag_words` is a sorted array of the tag names. -->
+  {% assign tag_words = site_tags | split:',' | sort %}
+
+  <h1>Tags</h1>
+
+  <!-- List of all tags -->
+  <ul class="tags">
+    {% for item in (0..site.tags.size) %}{% unless forloop.last %}
+      {% capture this_word %}{{ tag_words[item] }}{% endcapture %}
+      <li>
+        <a href="#{{ this_word | cgi_escape }}" class="tag">{{ this_word }}
+          ({{ site.tags[this_word].size }})
+        </a>
+      </li>
+    {% endunless %}{% endfor %}
+  </ul>
+
+  <hr/>
+  <h1>Index</h1>
+
+  <!-- Posts by Tag -->
+  <div>
+    {% for item in (0..site.tags.size) %}{% unless forloop.last %}
+      {% capture this_word %}{{ tag_words[item] }}{% endcapture %}
+      <ul class="tags">
+        <li id="{{ this_word | cgi_escape }}"><a href="#" class="tag">{{ this_word }}</a></li>
+      </ul>
+      <div style="clear: both;"></div>
+      {% for post in site.tags[this_word] %}{% if post.title != null %}
+        <div>
+          <span style="float: left;">
+            <a href="{{ post.url }}">{{ post.title }}</a>
+          </span>
+          <span style="float: right;">
+            {{ post.date | date: "%d/%m/%Y" }}
+          </span>
+        </div>
+        <div style="clear: both;"></div>
+      {% endif %}{% endfor %}
+      <hr/>
+    {% endunless %}{% endfor %}
+  </div>
+
+</div>
