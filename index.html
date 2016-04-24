@@ -2,47 +2,53 @@
 layout: default
 ---
 
-
 <!-- Main -->
 <div id="main">
-    <section>
-        {% for post in site.posts limit:1 %}
-            <header class="major">
-                <h2>{{ post.title }}</h2>
-                <p class="post-meta">{{ post.date | date: "%d-%m-%Y" }}{% if post.author %} • {{ post.author }}{% endif %}{% if page.meta %} • {{ page.meta }}{% endif %}</p>
-                {% if tag == page.tag %}
-                    <ul class="tags">
+
+    <!-- This loops through the paginated posts -->
+    {% for post in paginator.posts %}
+    <article>
+        <header class="major">
+            <h2 class="post-title"><a href="{{ post.url }}">{{ post.title }}</a></h2>
+            <p><span>Publié le {{ post.date | date: "%d/%m/%Y" }}</span>
+            {% if tag == post.tag %}
+            <ul class="tags">
+                {% if tag == post.tag %}
                     {% for tag in post.tags %}
                         <li><a href="#" class="tag">{{tag}}</a></li>
                     {% endfor %}
-                    </ul>
                 {% endif %}
-            </header>
+            </ul>
+            </p>
+            {% endif %}
+        </header>
 
-            <section>
-                {{ post.content }}
-            </section>
-        {% endfor %}
-    </section>
-    <section>
-        <div class="row">
-            {% for post in site.posts offset:1 %}
+        <section>
+            {{ post.excerpt }}
+        </section>
 
-                <article class="{% cycle '6u', '6u$' %} 12u(small)">
-                    <header>
-                        <h2><a href="{{ post.url }}">{{ post.title }}</a></h2>
-                    </header>
-                    <section>
-                        {{ post.excerpt }}
-                    </section>
-                    <footer>
-                        <ul class="actions">
-                            <li><a href="{{ post.url }}" class="button">Lire la suite</a></li>
-                        </ul>
-                    </footer>
-                </article>
+        <footer>
+            <ul class="actions">
+                <li><a href="{{ post.url }}" class="button">Lire la suite</a></li>
+            </ul>
+        </footer>
 
-            {% endfor %}
-        </div>
-    </section>
+    </article>
+    {% endfor %}
+
+    <!-- Pagination links -->
+    <div class="pagination">
+      {% if paginator.previous_page %}
+        <a href="{{ paginator.previous_page_path }}" class="previous">Previous</a>
+      {% else %}
+        <span class="previous">Previous</span>
+      {% endif %}
+      <span class="page_number ">Page: {{ paginator.page }} of {{ paginator.total_pages }}</span>
+      {% if paginator.next_page %}
+        <a href="{{ paginator.next_page_path }}" class="next">Next</a>
+      {% else %}
+        <span class="next ">Next</span>
+      {% endif %}
+    </div>
+
 </div>
