@@ -306,7 +306,7 @@ $ pstree | grep php
 
 ## Compilation d'une extension PHP
 
-Lorsque l'on compile une extension PHP, le binaire produit dépend de la version de PHP (du Zend Engine). C'est pour cela que le binaire d'une extension compilée pour PHP 5.4 ne fonctionnera pas avec PHP 5.5 ou 5.6, le moteur interne de PHP ayant changé. C'est aussi pour cela que nous avons compilé PHP avec les paramétrage `--prefix` et `--with-config-file-path`. Cela va simplifier la compilation de nouvelles extensions. Voici la marche à suivre avec, par exemple, la compilation de xDebug pour PHP 7.0.
+Lorsque l'on compile une extension PHP, le binaire produit dépend de la version de PHP (du Zend Engine). C'est pour cela que le binaire d'une extension compilée pour PHP 5.4 ne fonctionnera pas avec PHP 5.5 ou 5.6, le moteur interne de PHP ayant changé. C'est aussi pour cela que nous avons compilé PHP avec les paramétrages `--prefix` et `--with-config-file-path`. Cela va simplifier la compilation de nouvelles extensions. Voici la marche à suivre avec, par exemple, la compilation de xDebug pour PHP 7.0.
 
 ```
 $ wget https://xdebug.org/files/xdebug-2.4.0.tgz
