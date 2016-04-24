@@ -326,7 +326,7 @@ $ cp modules/xdebug.so /usr/local/php-70/extensions/
 
 Et voilà, une fois encore, dérouler la même procédure avec les différentes version de PHP en prenant soin de pointer vers les bonnes versions de `phpize` et `php-config`.
 
-## Mise en oeuvre et performance
+## Un dernier mot sur la mise en oeuvre et la performance
 
 Afin d'activer le parseur de telle ou telle version de PHP, il suffit d'utiliser un simple fichier *.htaccess*. Par exemple, pour activer le parseur de PHP 7.0.
 
