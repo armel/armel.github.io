@@ -143,7 +143,7 @@ chdir = /
 
 Bien noter encore ici le soin particulier apporté à l'isolation dans les chemins `pid` et `error_log`, mais aussi au niveau `listen` dans le choix du port réseau à écouter. Il conviendra d'adapter et affiner les autres paramétres en fonction de vos besoins.
 
-Un second fichier rc, que nous appelerons */etc/rc.d/rc.php-fpm-70*, servira à lancer le pool.
+Un second fichier, que nous appelerons */etc/rc.d/rc.php-fpm-70*, servira à lancer le pool.
 
 ```
 #! /bin/sh
