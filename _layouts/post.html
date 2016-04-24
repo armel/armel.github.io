@@ -9,10 +9,10 @@ layout: default
             <h2 class="post-title">{{ page.title }}</h2>
             <p><span>Publié le {{ page.date | date: "%d/%m/%Y" }}</span>
             {% if tag == page.tag %}
-            <ul class="tags">
+            <ul class="tags tags_left">
                 {% if tag == page.tag %}
                     {% for tag in page.tags %}
-                        <li><a href="#" class="tag">{{tag}}</a></li>
+                        <li><a href="/tags.html#{{tag}}" class="tag">{{tag}}</a></li>
                     {% endfor %}
                 {% endif %}
             </ul>

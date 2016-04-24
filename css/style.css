@@ -1278,7 +1278,12 @@
 
 	.tags li {
 		padding: 0;
-		float: right; 
+		float: left; 
+	}
+
+	.tags_left li {
+		padding: 0;
+		float: right;
 	}
 
 	.tag {
