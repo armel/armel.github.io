@@ -1,6 +1,7 @@
 ---
 layout: post
 title: "Lancement du livre « Éco-conception web : les 115 bonnes pratiques »"
+author: Armel
 categories: dev
 tags:
 - greenit

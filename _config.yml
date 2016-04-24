@@ -18,3 +18,7 @@ linkedin_username:    fauveauarmel  # Replace this with your LinkedIn username
 
 # Build settings
 markdown: kramdown
+
+# Pagination
+gems: [jekyll-paginate]
+paginate: 2

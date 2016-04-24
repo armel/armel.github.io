@@ -8,7 +8,6 @@ tags:
 - php
 ---
 
-## Le langage joue un rôle secondaire
 Dans un premier temps, j’aurais tendance à élargir cette question à « qu’est-ce qu’un bon développeur...tout court » en faisant volontairement abstraction de PHP. En effet, je pense qu’une partie de la réponse est clairement indépendante du langage employé.
 
 Un bon développeur, c’est déjà quelqu’un de suffisamment mature et pragmatique pour avoir pris conscience que la technique n’est que rarement un objectif, mais presque toujours un moyen… Ne jamais perdre de vue la finalité d’un développement : répondre aux besoins du client et au cahier des charges. Cela passe par en respecter le périmètre, en accepter les contraintes et les délais, etc. Ca peut sembler idiot, mais de trop nombreux développeurs, souvent encore jeunes, tendent à mettre en avant plan la technique, motivés par une soif intarissable d’apprendre, mais au détriment du projet final. C’est une erreur…imputable à un manque d’expérience.

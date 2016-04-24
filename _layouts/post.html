@@ -1,24 +1,31 @@
 ---
 layout: default
 ---
+
+<!-- Main -->
 <div id="main">
     <article>
         <header class="major">
             <h2 class="post-title">{{ page.title }}</h2>
-                <p class="post-meta">{{ page.date | date: "%d-%m-%Y" }}{% if page.author %} • {{ page.author }}{% endif %}{% if page.meta %} • {{ page.meta }}{% endif %}</p>
+            <p><span>Publié le {{ page.date | date: "%d/%m/%Y" }}</span>
+            {% if tag == page.tag %}
+            <ul class="tags">
                 {% if tag == page.tag %}
-                    <ul class="tags">
                     {% for tag in page.tags %}
                         <li><a href="#" class="tag">{{tag}}</a></li>
                     {% endfor %}
-                    </ul>
                 {% endif %}
+            </ul>
+            </p>
+            {% endif %}
         </header>
 
         <section>
-            {{ content }}
+            {{ page.content }}
         </section>
         
+        <hr/>
+
         <footer>
             <div class="row">
             {% if page.previous %}
