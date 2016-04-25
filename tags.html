@@ -43,7 +43,34 @@ layout: default
             <a href="{{ post.url }}">{{ post.title }}</a>
           </span>
           <span style="float: right;">
-            {{ post.date | date: "%d/%m/%Y" }}
+                {% assign dy = post.date | date: "%a" %}
+                {% case dy %}
+                  {% when "Mon" %}Lundi
+                  {% when "Tue" %}Mardi
+                  {% when "Wed" %}Mercredi
+                  {% when "Thu" %}Jeudi
+                  {% when "Fri" %}Vendredi
+                  {% when "Sat" %}Samedi
+                  {% when "Sun" %}Dimanche
+                  {% else %}{{ dy }}
+                  {% endcase %}
+                {% assign m = post.date | date: "%-m" %}
+                {{ post.date | date: "%-d" }}
+                {% case m %}
+                  {% when '1' %}janvier
+                  {% when '2' %}février
+                  {% when '3' %}mars
+                  {% when '4' %}avril
+                  {% when '5' %}mai
+                  {% when '6' %}juin
+                  {% when '7' %}juillet
+                  {% when '8' %}août
+                  {% when '9' %}septembre
+                  {% when '10' %}octobre
+                  {% when '11' %}novembre
+                  {% when '12' %}décembre
+                {% endcase %}
+                {{ post.date | date: "%Y" }}
           </span>
         </div>
         <div style="clear: both;"></div>

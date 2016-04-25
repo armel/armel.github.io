@@ -10,7 +10,36 @@ layout: default
     <article>
         <header class="major">
             <h2 class="post-title"><a href="{{ post.url }}">{{ post.title }}</a></h2>
-            <p><span>Publié le {{ post.date | date: "%d/%m/%Y" }}</span>
+            <p><span>
+                {% assign dy = post.date | date: "%a" %}
+                {% case dy %}
+                  {% when "Mon" %}Lundi
+                  {% when "Tue" %}Mardi
+                  {% when "Wed" %}Mercredi
+                  {% when "Thu" %}Jeudi
+                  {% when "Fri" %}Vendredi
+                  {% when "Sat" %}Samedi
+                  {% when "Sun" %}Dimanche
+                  {% else %}{{ dy }}
+                  {% endcase %}
+                {% assign m = post.date | date: "%-m" %}
+                {{ post.date | date: "%-d" }}
+                {% case m %}
+                  {% when '1' %}janvier
+                  {% when '2' %}février
+                  {% when '3' %}mars
+                  {% when '4' %}avril
+                  {% when '5' %}mai
+                  {% when '6' %}juin
+                  {% when '7' %}juillet
+                  {% when '8' %}août
+                  {% when '9' %}septembre
+                  {% when '10' %}octobre
+                  {% when '11' %}novembre
+                  {% when '12' %}décembre
+                {% endcase %}
+                {{ post.date | date: "%Y" }}
+            </span>
             {% if tag == post.tag %}
             <ul class="tags tags_left">
                 {% if tag == post.tag %}
