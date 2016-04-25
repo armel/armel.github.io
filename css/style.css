@@ -970,6 +970,13 @@
 			margin: 0;
 		}
 
+		#header h5 {
+			color: rgba(255, 255, 255, 0.8);
+			font-size: 0.8em;
+			line-height: 1.75em;
+			margin: 0;
+		}
+
 		#header .image.avatar {
 			margin: 0 0 1em 0;
 			width: 6.25em;

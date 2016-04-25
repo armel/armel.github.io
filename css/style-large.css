@@ -7,7 +7,7 @@
 /* Header */
 
 	#header {
-		padding: 6em 3em 3em 3em;
+		padding: 4.5em 2em 2em 2em;
 		width: 30%;
 	}
 
@@ -22,17 +22,17 @@
 /* Footer */
 
 	#footer {
-		padding: 0 3em 5em 3em;
+		padding: 0 2em 2em 2em;
 		width: 30%;
 	}
 
-		#footer .copyright li {
-			border-left-width: 0;
-			display: block;
-			line-height: 2.25em;
-			margin-left: 0;
-			padding-left: 0;
-		}
+	#footer .copyright li {
+		border-left-width: 0;
+		display: block;
+		line-height: 2em;
+		margin-left: 0;
+		padding-left: 0;
+	}
 
 /* Main */
 
