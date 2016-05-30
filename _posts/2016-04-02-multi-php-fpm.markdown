@@ -5,6 +5,7 @@ categories: matos
 tags:
 - php
 - apache
+- slackware
 ---
 Ce billet explique comment déployer Apache 2.4 et de multiples versions de PHP en mode FPM (Fast Process Manager). L'idée est de tirer profit des dernières évolutions d'Apache, mais surtout, de pouvoir faire cohabiter les différentes versions de PHP simultanément, tout en profitant des performances remarquables de la SAPI FPM.
 
