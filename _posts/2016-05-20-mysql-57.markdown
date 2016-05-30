@@ -1,0 +1,74 @@
+---
+layout: post
+title: "Installation de MySQL 5.7 sous Slackware 14.1: dirty note"
+categories: matos
+tags:
+- mysql
+- slackware
+---
+Ce billet regroupe quelques notes à propos de l'installation de MySQL 5.7.
+
+Cette procédure a été testée et approuvée sur la distribution Slackware (14.1). J'utilise cette distribution depuis 1993. Donc, ne pas s'attendre à l'utilisation de commandes `apt-get` et autres `yum`. On va partir des sources de MySQL, compiler et configurer l'ensemble, etc. 
+
+
+## En préambule
+
+Je concidère qu'aucune version de MySQL ne fonctionne sur le serveur. Bien veiller également à ce qu'aucun fichier /etc/my.cnf résiduel ne persiste. Sinon, backupez vos bases et votre /etc/my.cnf, stoppez proprement MySQL et renommer l'arborescence (par exemple /usr/local/mysql en /usr/local/mysql_old).
+
+## Pré-configuration de MySQL 5.7
+
+Si ce n'est pas déjà fait, créez un utilisateur et un groupe mysql.
+
+```
+$ groupadd mysql
+$ useradd -r -g mysql -s /bin/false mysql
+```
+
+## Compilation de MySQL 5.7
+
+Nous allons maintenant compiler MySQL. Je prévois de déployer MySQL sous /usr/local/mysql. 
+
+```
+$ tar xvfz mysql-version.tar.gz
+$ cd mysql-version
+# => Unarchivage et déplacement dans le répertoire source
+
+$ cmake . -DENABLE_DOWNLOADS=1 -DDOWNLOAD_BOOST=1 \
+ -DWITH_BOOST=~/my_boost -DCURSES_LIBRARY=/usr/lib64/libncurses.so \
+ -DCURSES_INCLUDE_PATH=/usr/include
+$ make
+# => Compilation de MySQL
+```
+
+On peut maintenant installer MySQL via la commande `make install`.
+
+Avant d'aller plus loin, je le redis à nouveau, bien veiller à ce qu'aucun fichier /etc/my.cnf ne persiste...
+
+## Post-installation de MySQL
+
+Nous allons maintenant dérouler la procédure de post-installation de MySQL. Avec la version 5.7, quelques détails changent.
+
+```
+$ cd /usr/local/mysql
+$ chown -R mysql .
+$ chgrp -R mysql .
+$ bin/mysqld --initialize --user=mysql
+$ bin/mysql_ssl_rsa_setup
+$ chown -R root .
+$ chown -R mysql data
+$ bin/mysqld_safe --user=mysql &
+```
+
+En particulier, lors du `bin/mysqld --initialize --user=mysql` un mot de passe sera initialisé... Par exemple, voici un exemple de sortie produite par cette commande :
+
+```
+2016-05-18T15:53:07.885780Z 0 [Warning] Gtid table is not ready to be used. Table 'mysql.gtid_executed' cannot be opened.
+2016-05-18T15:53:07.887373Z 1 [Note] A temporary password is generated for root@localhost: 1Gf;dDsuH#Lx
+root@globalis-mysql2:/usr/local/mysql# bin/mysql_ssl_rsa_setup
+Generating a 2048 bit RSA private key
+```
+
+Pour finir, utliser la commande `bin/mysql_secure_installation` afin de ré-initialiser proprement le mot de passe root. On peut alors mettre en place un /etc/rc.d/rc.mysqld ou prévoir le lancement de MySQL depuis le /etc/rc.d/rc.local. Sans oublier la mise en place d'un /etc/my.cnf.
+
+
+
