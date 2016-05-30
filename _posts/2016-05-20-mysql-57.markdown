@@ -13,7 +13,7 @@ Cette procédure a été testée et approuvée sur la distribution Slackware (14
 
 ## En préambule
 
-Je concidère qu'aucune version de MySQL ne fonctionne sur le serveur. Bien veiller également à ce qu'aucun fichier */etc/my.cnf* résiduel ne persiste. Sinon, backupez vos bases et *votre /etc/my.cnf*, stoppez proprement MySQL et renommer l'arborescence (par exemple */usr/local/mysql* en */usr/local/mysql_old*).
+Je concidère qu'aucune version de MySQL ne fonctionne sur le serveur. Bien veiller également à ce qu'aucun fichier */etc/my.cnf* résiduel ne persiste. Sinon, backupez vos bases et votre */etc/my.cnf*, stoppez proprement MySQL et renommer l'arborescence (par exemple */usr/local/mysql* en */usr/local/mysql_old*).
 
 ## Pré-configuration de MySQL 5.7
 
