@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Installation de MySQL 5.7 sous Slackware 14.1: dirty note"
+title: "Installation de MySQL 5.7 sous Slackware 14.1: dirty installation note"
 categories: matos
 tags:
 - mysql
@@ -69,6 +69,8 @@ Generating a 2048 bit RSA private key
 ```
 
 Pour finir, utliser la commande `bin/mysql_secure_installation` afin de ré-initialiser proprement le mot de passe root. On peut alors mettre en place un */etc/rc.d/rc.mysqld* ou prévoir le lancement de MySQL depuis le */etc/rc.d/rc.local*. Sans oublier la mise en place d'un */etc/my.cnf*.
+
+That's all !
 
 
 
