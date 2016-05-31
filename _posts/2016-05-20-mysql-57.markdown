@@ -8,7 +8,7 @@ tags:
 ---
 Ce billet regroupe quelques notes à propos de l'installation de MySQL 5.7.
 
-Cette procédure a été testée et approuvée sur la distribution Slackware (14.1). J'utilise cette distribution depuis 1993. Donc, ne pas s'attendre à l'utilisation de commandes `apt-get` et autres `yum`. On va partir des sources de MySQL, compiler et configurer l'ensemble, etc. 
+Cette procédure a été testée et approuvée sur la distribution Slackware (14.1 64 bits). J'utilise cette distribution depuis 1993. Donc, ne pas s'attendre à l'utilisation de commandes `apt-get` et autres `yum`. On va partir des sources de MySQL, compiler et configurer l'ensemble, etc. 
 
 
 ## En préambule
@@ -40,7 +40,7 @@ $ make
 # => Compilation de MySQL
 ```
 
-On peut maintenant installer MySQL via la commande `make install`.
+À noter les paramètres passés à `cmake` ! Sans eux, la compilation va probablement échouer. On peut maintenant installer MySQL via la commande `make install`.
 
 Avant d'aller plus loin, je le redis à nouveau, bien veiller à ce qu'aucun fichier */etc/my.cnf* ne persiste...
 
