@@ -21,4 +21,4 @@ markdown: kramdown
 
 # Pagination
 gems: [jekyll-paginate]
-paginate: 2
+paginate: 3
