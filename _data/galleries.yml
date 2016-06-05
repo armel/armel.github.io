@@ -1,0 +1,82 @@
+- id: gallery1
+  description: This is the first gallery
+  imagefolder: /images/astrobin/
+  images:
+  - name: NGC6543
+    astrobin: http://www.astrobin.com/250909/
+  - name: M84&M86
+    astrobin: http://www.astrobin.com/250902/
+  - name: M82
+    astrobin: http://www.astrobin.com/250506/
+  - name: NGC3953
+    astrobin: http://www.astrobin.com/250415/
+  - name: M106
+    astrobin: http://www.astrobin.com/250405/
+  - name: M17
+    astrobin: http://www.astrobin.com/250401/
+  - name: NGC7635
+    astrobin: http://www.astrobin.com/250328/
+  - name: NGC4244
+    astrobin: http://www.astrobin.com/250319/
+  - name: M61
+    astrobin: http://www.astrobin.com/250312/
+  - name: M104
+    astrobin: http://www.astrobin.com/248710/
+  - name: M97
+    astrobin: http://www.astrobin.com/248709/B/
+  - name: M101
+    astrobin: http://www.astrobin.com/248708/C/
+  - name: M13
+    astrobin: http://www.astrobin.com/248706/
+  - name: NGC4565
+    astrobin: http://www.astrobin.com/248705/C/
+  - name: M27
+    astrobin: http://www.astrobin.com/248556/B/
+  - name: M51
+    astrobin: http://www.astrobin.com/248555/B/
+  - name: M65&M66
+    astrobin: http://www.astrobin.com/248553/
+  - name: M64
+    astrobin: http://www.astrobin.com/248552/
+  - name: NGC6888
+    astrobin: http://www.astrobin.com/248549/
+  - name: NGC247
+    astrobin: http://www.astrobin.com/222800/B/
+  - name: M15
+    astrobin: http://www.astrobin.com/222621/B/
+  - name: M74
+    astrobin: http://www.astrobin.com/222390/
+  - name: NGC7023
+    astrobin: http://www.astrobin.com/222182/C/
+  - name: NGC7814
+    astrobin: http://www.astrobin.com/222175/C/
+  - name: NGC7331
+    astrobin: http://www.astrobin.com/222161/B/
+  - name: NGC6781
+    astrobin: http://www.astrobin.com/222159/
+  - name: M31
+    astrobin: http://www.astrobin.com/222092/
+  - name: NGC253
+    astrobin: http://www.astrobin.com/221968/B/
+  - name: NGC891
+    astrobin: http://www.astrobin.com/221966/
+  - name: M42
+    astrobin: http://www.astrobin.com/221961/B/
+  - name: M11
+    astrobin: http://www.astrobin.com/221664/
+  - name: NGC7479
+    astrobin: http://www.astrobin.com/221658/B/
+  - name: NGC7293
+    astrobin: http://www.astrobin.com/221644/B/
+  - name: M1
+    astrobin: http://www.astrobin.com/221632/B/
+  - name: M57
+    astrobin: http://www.astrobin.com/217405/B/
+  - name: M33
+    astrobin: http://www.astrobin.com/216240/B/
+  - name: NGC6960
+    astrobin: http://www.astrobin.com/215999/B/
+  - name: M81&M82
+    astrobin: http://www.astrobin.com/215994/B/
+
+

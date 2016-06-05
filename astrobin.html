@@ -1,0 +1,16 @@
+---
+layout: default
+---
+
+<!-- Main -->
+<div id="main">
+
+{% for gallery in site.data.galleries %}
+    {% for image in gallery.images %}
+        <a href="{{ image.astrobin }}">
+          <img src="{{ gallery.imagefolder }}/{{ image.name }}.png" title="{{ image.name }}" />
+        </a>
+    {% endfor %}
+{% endfor %}
+
+</div>
