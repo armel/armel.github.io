@@ -1,5 +1,5 @@
-- id: gallery1
-  description: This is the first gallery
+- id: astrobin
+  title: "Astronomie"
   imagefolder: /images/astrobin/
   images:
   - name: NGC6543

@@ -4,13 +4,28 @@ layout: default
 
 <!-- Main -->
 <div id="main">
+    <article>
+        <header class="major">
+            <h2 class="post-title">Astronomie</h2>
+        </header>
+        <section>
+Je pratique l'Astronomie depuis plus de 25 ans. 
+Mais je n'ai débuté sérieusement la photographie du ciel qu'en 2015. 
+Voici quelques photos, sans prétention, que j'ai réalisé avec un Celestron 8 EdgeHD et un simple Canon EOS 1200D. 
+Un click sur chaque image permet d'accéder à plus de détails visibles sur ma gallerie <a href="http://www.astrobin.com/users/armel/" title="Astrobin">Astrobin</a>.
+        <section>
 
-{% for gallery in site.data.galleries %}
-    {% for image in gallery.images %}
-        <a href="{{ image.astrobin }}">
-          <img src="{{ gallery.imagefolder }}/{{ image.name }}.png" title="{{ image.name }}" />
-        </a>
-    {% endfor %}
-{% endfor %}
+        <hr class="special" />
+
+        <section>
+        {% for gallery in site.data.galleries %}
+            {% for image in gallery.images %}
+                <a href="{{ image.astrobin }}">
+                  <img src="{{ gallery.imagefolder }}/{{ image.name }}.png" title="{{ image.name }}" />
+                </a>
+            {% endfor %}
+        {% endfor %}
+        </section>
+</article>
 
 </div>
