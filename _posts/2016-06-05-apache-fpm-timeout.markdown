@@ -9,7 +9,7 @@ tags:
 - php
 ---
 Le fait d'utiliser PHP en mode FPM implique certaines subtilités que je n'avais pas dans mon scope.
-Un lead dev de mon équipe m'a fait très justement remarquer qu'un timeout au niveau d'Apache venait interrompre l'exécution d'un de ses scripts [^1]. 
+Un lead dev de mon équipe m'a fait très justement remarquer qu'un timeout venait interrompre l'exécution d'un de ses scripts [^1]. 
 Et effectivement, il génère une erreur Apache au bout de 30 secondes.
 
 ```
