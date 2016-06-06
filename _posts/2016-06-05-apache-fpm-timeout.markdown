@@ -1,7 +1,8 @@
 ---
 layout: post
 title: "Apache, PHP en mode FPM et timeout"
-categories: matos
+author: Armel
+categories: sysadmin
 tags:
 - apache
 - slackware

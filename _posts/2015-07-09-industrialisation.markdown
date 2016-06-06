@@ -1,7 +1,8 @@
 ---
 layout: post
 title: "Industrialisation: il reste du chemin à faire..."
-categories: dev
+author: Armel
+categories: reflexion
 tags:
 - réflexion
 - développement

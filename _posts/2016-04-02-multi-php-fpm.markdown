@@ -1,7 +1,8 @@
 ---
 layout: post
 title: "Apache 2.4 et multiples versions de PHP en mode FPM"
-categories: matos
+author: Armel
+categories: sysadmin
 tags:
 - php
 - apache

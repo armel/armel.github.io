@@ -1,6 +1,7 @@
 ---
 layout: post
 title: "Comment dévérouiller un écran Dell"
+author: Armel
 categories: matos
 tags:
 - tips

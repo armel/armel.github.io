@@ -1,7 +1,8 @@
 ---
 layout: post
-title: Qu'est-ce qu’un bon développeur PHP...?
-categories: dev
+title: "Qu'est-ce qu’un bon développeur PHP...?"
+author: Armel
+categories: reflexion
 tags:
 - réflexion
 - développement

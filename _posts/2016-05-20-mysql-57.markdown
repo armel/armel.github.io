@@ -1,7 +1,8 @@
 ---
 layout: post
 title: "Installation de MySQL 5.7 sous Slackware 14.1: dirty installation note"
-categories: matos
+author: Armel
+categories: sysadmin
 tags:
 - mysql
 - slackware

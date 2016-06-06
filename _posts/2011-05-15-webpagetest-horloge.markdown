@@ -2,7 +2,7 @@
 layout: post
 title: "Serveur WebPagetest Parisien et temps de latence"
 author: Armel
-categories: dev
+categories: perf
 tags:
 - performance
 - webpagetest

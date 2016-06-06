@@ -1,7 +1,8 @@
 ---
 layout: post
 title: "Wordpress manque encore de maturité !"
-categories: dev
+author: Armel
+categories: reflexion
 tags:
 - réflexion
 - wordpress
