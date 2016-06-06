@@ -1,0 +1,26 @@
+---
+layout: post
+title: "Premier cliché du LBT"
+author: Armel
+categories: astro
+tags:
+- astro
+- photo
+---
+Le Large Binocular Telescope (LBT) est un télescope binoculaire équipé de 2 miroirs de 8,4 m. Cette conception le rend équivalent à un télescope disposant d’une surface optique de 11,8 m. Cela fait du LBT le télescope optique terrestre le plus avancé en terme de résolution.
+
+Installé au sommet du mont Graham, en Arizona, le LBT est une merveille d’ingénierie. Il repose sur un bâti d’élévation azimutale d’environ 380 tonnes. Un soin particulier a été apporté à la conception des miroirs. Utilisant une structure en « nid d’abeille », ils ne pèsent que 16 tonnes chacun, ce qui est une véritable prouesse pour des miroirs d’une telle dimension. Coût total ? Environ 120 millions de dollars.
+
+Le LBT a été inauguré en octobre 2004. Et c’est un an plus tard, le 12 octobre 2005, qu’il produit son premier cliché du ciel. La cible était la galaxie NGC891 de la constellation d’Andromède. Cette galaxie spirale a la particularité d’être vue par la tranche. Même si ce n’est pas la seule dans ce cas, c’est un objet intéressant à observer en visuel (à partir de 200mm) et à photographier. À noter au passage que cette galaxie s'étend sur environ 80 000 années lumières... Ouais, nous sommes tout petit.
+
+<img src="/images/fulls/NGC891_LBT.jpg" class="fit image">
+<div class="align-center" style="margin-bottom:1em;">- NGC891 - LBT - 12 octobre 2005 -</div>
+
+Ce qui est amusant, c’est que j’ai « imagé » cette galaxie à l’automne 2015 avec mon matériel. En l’occurence, j’ai utiliser une télescope Celestron C8 EdgeHD et un simple APN Canon EOS 1200D. J’ai fait une dizaine de pose de 30’’ et voici ce que j’ai obtenu. 
+
+<img src="/images/fulls/NGC891_C8.jpg" class="fit image">
+<div class="align-center" style="margin-bottom:1em;">- NGC891 - C8 EdgeHD - 10 octobre 2015 -</div>
+
+Alors oui, l'image manque de piqué et de netteté. Mais l'essentiel de la structure est néanmoins visible et en particulier la bande d'absorption, qui tend à masquer le noyau galactique. Pas si mal pour environ 3 500 dollars de matériel depuis un coin de jardin à la campagne :)
+
+[^1]: Je précise que le script en question est hérité d'un projet en TMA... 
