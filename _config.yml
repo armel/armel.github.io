@@ -6,7 +6,7 @@ email: armel.fauveau@globalis-ms.com # Your contant email
 description: "GLOBALIS Ⓖ co-founder/CTO & OpenGoodies partner, Web, Security, Performance, Apple  Addict, Geek Life, Astronomy, Arduino, RX, Nature, Fly Fishing and more."
 keywords: "Apache, Nginx, PHP, MySQL, MariaDB, Python, Web, HTML, CSS, Swift, Security, Performance, Apple, Geek Life, Astronomy, Arduino, RX, Nature, Fly Fishing."
 baseurl: "" # the subpath of your site, e.g. /blog/
-url: "http://yourdomain.com" # the base hostname & protocol for your site
+url: "http://armel.github.io" # the base hostname & protocol for your site
 
 # Social links.
 # Replace the word 'example' with your username if you want to include the icon in the left sidebar
@@ -20,5 +20,7 @@ linkedin_username:    fauveauarmel  # Replace this with your LinkedIn username
 markdown: kramdown
 
 # Pagination
-gems: [jekyll-paginate]
+gems:
+  - jekyll-paginate
+  - jekyll-sitemap
 paginate: 3
