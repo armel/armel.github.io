@@ -3,8 +3,8 @@
 title: "Armel FAUVEAU" # Title of your site
 email: armel.fauveau@globalis-ms.com # Your contant email
 
-description: "GLOBALIS Ⓖ co-founder/CTO & OpenGoodies partner, Web, Security, Performance, Apple  Addict, Geek Life, Astronomy, Arduino, RX, Nature, Fly Fishing and more."
-keywords: "Apache, Nginx, PHP, MySQL, MariaDB, Python, Web, HTML, CSS, Swift, Security, Performance, Apple, Geek Life, Astronomy, Arduino, RX, Nature, Fly Fishing."
+description: "GLOBALIS Ⓖ co-founder/CTO, Web, Security, Performance, Apple  Addict, Geek Life, Astronomy, Ham Radio Operator F4HWN & RRF Admin, Nature, Fly Fishing and more."
+keywords: "Apache, Nginx, PHP, MySQL, MariaDB, Python, Web, HTML, CSS, Swift, Security, Performance, Apple, Geek Life, Astronomy, Arduino, M5Stack, ESP-32, Ham Radio, RRF, Nature, Fly Fishing."
 baseurl: "" # the subpath of your site, e.g. /blog/
 url: "http://armel.github.io" # the base hostname & protocol for your site
 
@@ -23,4 +23,4 @@ markdown: kramdown
 gems:
   - jekyll-paginate
   - jekyll-sitemap
-paginate: 3
+paginate: 5
