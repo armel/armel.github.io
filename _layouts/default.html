@@ -40,7 +40,7 @@
       <header id="header">
           <a href="/" class="image avatar"><img src="/images/avatar.jpg" alt="" /></a>
           <h1><a href="http://www.globalis-ms.com">GLOBALIS</a> Ⓖ co-founder/CTO</h1>
-          <h5>Web, Security, <a href="https://www.amazon.fr/dp/2212136587/ref=cm_sw_r_tw_dp_upTgxbM2TT1KM">Performance</a>, Apple  Addict, Geek Life, <a href="{{baseurl}}/astrobin.html">Astronomy</a>, Arduino, Ham Radio Operator F4HWN & <<a href="http://rrf.f5nlg.ovh:8080/RRFTracker/RRF-today/">RRF</a> Admin, Nature, Fly Fishing and more.</h5>
+          <h5>Web, Security, <a href="https://www.amazon.fr/dp/2212136587/ref=cm_sw_r_tw_dp_upTgxbM2TT1KM">Performance</a>, Apple  Addict, Geek Life, <a href="{{baseurl}}/astrobin.html">Astronomy</a>, Arduino, M5Stack, ESP32, Ham Radio Operator <a href="https://www.qrz.com/db/F4HWN">F4HWN</a> & <a href="http://rrf.f5nlg.ovh:8080/RRFTracker/RRF-today/">RRF</a> Admin, Nature, Fly Fishing and more.</h5>
       </header>
 
 
@@ -62,6 +62,14 @@
               <li>
                 <a href="https://twitter.com/{{ site.twitter_username }}" class="icon fa-twitter">
                   <span class="label">Twitter</span>
+                </a>
+              </li>
+              {% endif %}
+
+              {% if site.youtube_username %}
+              <li>
+                <a href="https://www.youtube.com/channel/UCGMFTTyjEqTGnXbS5c1k64w" class="icon fa-youtube">
+                  <span class="label">Youtube</span>
                 </a>
               </li>
               {% endif %}

@@ -4,7 +4,7 @@ title: "Armel FAUVEAU" # Title of your site
 email: armel.fauveau@globalis-ms.com # Your contant email
 
 description: "GLOBALIS Ⓖ co-founder/CTO, Web, Security, Performance, Apple  Addict, Geek Life, Astronomy, Ham Radio Operator F4HWN & RRF Admin, Nature, Fly Fishing and more."
-keywords: "Apache, Nginx, PHP, MySQL, MariaDB, Python, Web, HTML, CSS, Swift, Security, Performance, Apple, Geek Life, Astronomy, Arduino, M5Stack, ESP-32, Ham Radio, RRF, Nature, Fly Fishing."
+keywords: "Apache, Nginx, PHP, MySQL, MariaDB, Python, Web, HTML, CSS, Swift, Security, Performance, Apple, Geek Life, Astronomy, Arduino, M5Stack, ESP32, Ham Radio, RRF, Nature, Fly Fishing."
 baseurl: "" # the subpath of your site, e.g. /blog/
 url: "http://armel.github.io" # the base hostname & protocol for your site
 
@@ -12,9 +12,10 @@ url: "http://armel.github.io" # the base hostname & protocol for your site
 # Replace the word 'example' with your username if you want to include the icon in the left sidebar
 # Delete the word 'example' if you don't want to include the icon in the left sidebar
 
-twitter_username:     fauveauarmel  # Replace this with your Twitter username
-github_username:      armel  # Replace this with your GitHub username
-linkedin_username:    fauveauarmel  # Replace this with your LinkedIn username
+twitter_username:   fauveauarmel  # Replace this with your Twitter username
+github_username:    armel  # Replace this with your GitHub username
+linkedin_username:  fauveauarmel  # Replace this with your LinkedIn username
+youtube_username:   fauveauarmel  # Replace this with your Youtube username
 
 # Build settings
 markdown: kramdown
