@@ -41,8 +41,9 @@ function loadFirmwareFromUrl(theUrl)
     log("Loading file from url: "+ theUrl+'\n')
     let res = null;
 
-    fetch('https://corsproxy.egzi.ovh/' + theUrl).catch(err => {
-        return fetch('https://api.codetabs.com/v1/proxy?quest=' + theUrl);
+    fetch('https://api.codetabs.com/v1/proxy?quest=' + theUrl).catch(err => {
+    return new Promise(resolve => setTimeout(resolve, 1000))
+        .then(() => fetch('https://api.codetabs.com/v1/proxy?quest=' + theUrl));
     })
     .then(res => {
         if (res.ok) {
