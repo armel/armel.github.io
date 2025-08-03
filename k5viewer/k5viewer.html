@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>K5Viewer Web</title>
+<title>K5Viewer Web v1.0 by F4HWN</title>
 <style>
         :root {
             --bg: #fafbfc;
@@ -19,6 +19,7 @@
             --radius: 8px;
             --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-header: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         }
         
         [data-theme="dark"] {
@@ -63,6 +64,7 @@
             padding: 16px 24px;
             background: var(--surface);
             border-bottom: 1px solid var(--border);
+            box-shadow: var(--shadow-header); /* Ajout de l'ombre */
         }
         
         .brand {
@@ -118,8 +120,10 @@
         .btn {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 6px;
             padding: 8px 16px;
+            height: 36px;
             border: 1px solid var(--border);
             border-radius: var(--radius);
             background: var(--surface);
@@ -128,6 +132,7 @@
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
+            white-space: nowrap;
         }
         
         .btn:hover:not(:disabled) {
@@ -161,24 +166,17 @@
             cursor: not-allowed;
         }
         
-        .btn-icon {
-            width: 36px;
-            height: 36px;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-        }
-        
         select {
-            padding: 6px 8px;
+            height: 36px;
+            padding: 8px 12px;
             border: 1px solid var(--border);
             border-radius: var(--radius);
             background: var(--surface);
             color: var(--text);
             font-size: 13px;
+            font-weight: 500;
             cursor: pointer;
+            transition: all 0.2s;
         }
         
         select:focus {
@@ -200,9 +198,9 @@
         }
         
         #display {
-            border: 1px solid var(--border);
+            border: 6px solid var(--border);
             border-radius: var(--radius);
-            background: #000;
+            background: #fff;
             image-rendering: pixelated;
             box-shadow: var(--shadow-lg);
         }
@@ -383,7 +381,7 @@
         <!-- Header -->
         <header class="header">
             <div class="brand">
-                <h1>K5Viewer</h1>
+                <h1>K5Viewer Web v1.0 by F4HWN</h1>
                 <div class="status-pill" id="status">
                     <div class="status-dot"></div>
                     <span data-i18n="ready_to_connect">Ready to connect</span>
@@ -396,8 +394,8 @@
                 
                 <div style="width: 1px; height: 20px; background: var(--border); margin: 0 8px;"></div>
                 
-                <button class="btn btn-icon" id="helpBtn" title="Help">?</button>
-                <button class="btn btn-icon" id="themeToggle" title="Toggle theme">◐</button>
+                <button class="btn" id="helpBtn" data-i18n="help" title="Help">Help</button>
+                <button class="btn" id="themeToggle" title="Toggle theme">◐</button>
                 
                 <select id="languageSelect">
                     <option value="en">🇬🇧 English</option>
@@ -486,7 +484,7 @@
     </div>
 
 <script>
-        // Translations dictionary - extended with new keys
+        // Translations dictionary - updated with corrected translations
         const TRANSLATIONS = {
             en: {
                 ready_to_connect: "Ready to connect",
@@ -498,17 +496,17 @@
                 disconnect: "Disconnect",
                 help_title: "Keyboard Controls",
                 display_controls: "Display Controls",
-                color_controls: "Color Schemes", 
+                color_controls: "Screen color", 
                 other_controls: "Other",
                 screenshot_desc: "Take a screenshot and download it",
                 lcd_desc: "Toggle LCD pixel effect for realistic display",
                 invert_desc: "Invert foreground and background colors",
                 pixel_size_desc: "Increase/decrease pixel size (3-12)",
-                grey_scheme: "Switch to grey color scheme",
-                orange_scheme: "Switch to orange color scheme",
-                blue_scheme: "Switch to blue color scheme",
-                white_scheme: "Switch to white color scheme",
-                quit_desc: "Disconnect from the device",
+                grey_scheme: "Switch to grey screen",
+                orange_scheme: "Switch to orange screen",
+                blue_scheme: "Switch to blue screen",
+                white_scheme: "Switch to white screen",
+                quit_desc: "Disconnect from the K5",
                 serial_established: "Serial connection established",
                 disconnected_success: "Successfully disconnected",
                 screenshot_saved: "Screenshot saved: {filename}",
@@ -522,33 +520,35 @@
                 disconnection_error: "Disconnection error: {error}",
                 serial_read_error: "Serial read error",
                 web_serial_not_supported: "Web Serial API not supported. Use Chrome 89+ or Edge 89+",
-                app_loaded: "Application loaded. Click \"Connect\" to start."
+                app_loaded: "Application loaded. Click \"Connect\" to start.",
+                help: "Help"
             },
+
             fr: {
                 ready_to_connect: "Prêt à se connecter",
                 connected_waiting: "Connecté - En attente de données",
-                connected_fps: "Connecté - FPS: {fps}",
-                connected_no_data: "Connecté - Pas de données",
+                connected_fps: "Connecté - IPS : {fps}",
+                connected_no_data: "Connecté - Aucune donnée",
                 disconnected: "Déconnecté",
-                connect: "Connecter",
-                disconnect: "Déconnecter",
-                help_title: "Contrôles Clavier",
-                display_controls: "Contrôles d'Affichage",
-                color_controls: "Schémas de Couleurs",
-                other_controls: "Autres",
-                screenshot_desc: "Prendre une capture d'écran et la télécharger",
-                lcd_desc: "Activer/désactiver l'effet LCD pour un affichage réaliste",
-                invert_desc: "Inverser les couleurs de premier plan et d'arrière-plan",
-                pixel_size_desc: "Augmenter/diminuer la taille des pixels (3-12)",
-                grey_scheme: "Passer au schéma de couleurs gris",
-                orange_scheme: "Passer au schéma de couleurs orange",
-                blue_scheme: "Passer au schéma de couleurs bleu",
-                white_scheme: "Passer au schéma de couleurs blanc",
-                quit_desc: "Se déconnecter de l'appareil",
+                connect: "Connexion",
+                disconnect: "Déconnexion",
+                help_title: "Contrôles clavier",
+                display_controls: "Affichage",
+                color_controls: "Couleur de l'écran",
+                other_controls: "Autre",
+                screenshot_desc: "Faire une capture d’écran et la télécharger",
+                lcd_desc: "Activer l'effet LCD pour un affichage réaliste",
+                invert_desc: "Inverser les couleurs de premier plan et d’arrière-plan",
+                pixel_size_desc: "Ajuster la taille des pixels (3 à 12)",
+                grey_scheme: "Passer à l'écran gris",
+                orange_scheme: "Passer à l'écran orange",
+                blue_scheme: "Passer à l'écran bleu",
+                white_scheme: "Passer à l'écran blanc",
+                quit_desc: "Déconnecter le K5",
                 serial_established: "Connexion série établie",
                 disconnected_success: "Déconnexion réussie",
-                screenshot_saved: "Capture sauvée : {filename}",
-                pixel_size: "Taille pixels : {size}",
+                screenshot_saved: "Capture enregistrée : {filename}",
+                pixel_size: "Taille des pixels : {size}",
                 lcd_effect: "Effet LCD : {status}",
                 lcd_on: "Activé",
                 lcd_off: "Désactivé",
@@ -557,9 +557,11 @@
                 connection_error: "Erreur de connexion : {error}",
                 disconnection_error: "Erreur de déconnexion : {error}",
                 serial_read_error: "Erreur de lecture série",
-                web_serial_not_supported: "Web Serial API non supportée. Utilisez Chrome 89+ ou Edge 89+",
-                app_loaded: "Application chargée. Cliquez \"Connecter\" pour commencer."
+                web_serial_not_supported: "API Web Serial non supportée. Utilisez Chrome 89+ ou Edge 89+",
+                app_loaded: "Application chargée. Cliquez sur « Connexion » pour commencer.",
+                help: "Aide"
             },
+
             it: {
                 ready_to_connect: "Pronto per connettersi",
                 connected_waiting: "Connesso - In attesa di dati",
@@ -568,21 +570,21 @@
                 disconnected: "Disconnesso",
                 connect: "Connetti",
                 disconnect: "Disconnetti",
-                help_title: "Controlli Tastiera",
-                display_controls: "Controlli Display",
-                color_controls: "Schemi Colore",
-                other_controls: "Altri",
-                screenshot_desc: "Cattura schermata e scaricala",
-                lcd_desc: "Attiva/disattiva effetto LCD per display realistico",
-                invert_desc: "Inverti colori primo piano e sfondo",
-                pixel_size_desc: "Aumenta/diminuisci dimensione pixel (3-12)",
-                grey_scheme: "Passa allo schema colori grigio",
-                orange_scheme: "Passa allo schema colori arancione",
-                blue_scheme: "Passa allo schema colori blu",
-                white_scheme: "Passa allo schema colori bianco",
-                quit_desc: "Disconnetti dal dispositivo",
+                help_title: "Controlli da tastiera",
+                display_controls: "Controlli di visualizzazione",
+                color_controls: "Colore dello schermo",
+                other_controls: "Altro",
+                screenshot_desc: "Cattura uno screenshot e scaricalo",
+                lcd_desc: "Attiva effetto LCD per un display realistico",
+                invert_desc: "Inverti i colori di primo piano e sfondo",
+                pixel_size_desc: "Modifica la dimensione dei pixel (3-12)",
+                grey_scheme: "Passa allo schermo grigio",
+                orange_scheme: "Passa allo schermo arancione",
+                blue_scheme: "Passa allo schermo blu",
+                white_scheme: "Passa allo schermo bianco",
+                quit_desc: "Disconnetti dal K5",
                 serial_established: "Connessione seriale stabilita",
-                disconnected_success: "Disconnesso con successo",
+                disconnected_success: "Disconnessione riuscita",
                 screenshot_saved: "Screenshot salvato: {filename}",
                 pixel_size: "Dimensione pixel: {size}",
                 lcd_effect: "Effetto LCD: {status}",
@@ -592,10 +594,12 @@
                 color_changed: "Colore: {color}",
                 connection_error: "Errore di connessione: {error}",
                 disconnection_error: "Errore di disconnessione: {error}",
-                serial_read_error: "Errore di lettura seriale",
+                serial_read_error: "Errore lettura seriale",
                 web_serial_not_supported: "Web Serial API non supportata. Usa Chrome 89+ o Edge 89+",
-                app_loaded: "Applicazione caricata. Clicca \"Connetti\" per iniziare."
+                app_loaded: "Applicazione caricata. Clicca su \"Connetti\" per iniziare.",
+                help: "Aiuto"
             },
+
             es: {
                 ready_to_connect: "Listo para conectar",
                 connected_waiting: "Conectado - Esperando datos",
@@ -604,69 +608,72 @@
                 disconnected: "Desconectado",
                 connect: "Conectar",
                 disconnect: "Desconectar",
-                help_title: "Controles del Teclado",
-                display_controls: "Controles de Pantalla",
-                color_controls: "Esquemas de Color",
+                help_title: "Controles del teclado",
+                display_controls: "Controles de pantalla",
+                color_controls: "Color de pantalla",
                 other_controls: "Otros",
-                screenshot_desc: "Tomar captura de pantalla y descargarla",
-                lcd_desc: "Activar/desactivar efecto LCD para pantalla realista",
-                invert_desc: "Invertir colores de primer plano y fondo",
-                pixel_size_desc: "Aumentar/disminuir tamaño de píxel (3-12)",
-                grey_scheme: "Cambiar a esquema de color gris",
-                orange_scheme: "Cambiar a esquema de color naranja",
-                blue_scheme: "Cambiar a esquema de color azul",
-                white_scheme: "Cambiar a esquema de color blanco",
-                quit_desc: "Desconectar del dispositivo",
+                screenshot_desc: "Tomar una captura y descargarla",
+                lcd_desc: "Activar efecto LCD para una visualización realista",
+                invert_desc: "Invertir colores de fondo y primer plano",
+                pixel_size_desc: "Ajustar tamaño de píxel (3-12)",
+                grey_scheme: "Cambiar a pantalla gris",
+                orange_scheme: "Cambiar a pantalla naranja",
+                blue_scheme: "Cambiar a pantalla azul",
+                white_scheme: "Cambiar a pantalla blanca",
+                quit_desc: "Desconectar del K5",
                 serial_established: "Conexión serie establecida",
-                disconnected_success: "Desconectado exitosamente",
+                disconnected_success: "Desconectado correctamente",
                 screenshot_saved: "Captura guardada: {filename}",
-                pixel_size: "Tamaño píxel: {size}",
+                pixel_size: "Tamaño de píxel: {size}",
                 lcd_effect: "Efecto LCD: {status}",
                 lcd_on: "Activado",
                 lcd_off: "Desactivado",
                 colors_inverted: "Colores invertidos",
                 color_changed: "Color: {color}",
                 connection_error: "Error de conexión: {error}",
-                disconnection_error: "Error de desconexión: {error}",
-                serial_read_error: "Error de lectura serie",
-                web_serial_not_supported: "Web Serial API no soportada. Usa Chrome 89+ o Edge 89+",
-                app_loaded: "Aplicación cargada. Haz clic en \"Conectar\" para empezar."
+                disconnection_error: "Error al desconectar: {error}",
+                serial_read_error: "Error de lectura serial",
+                web_serial_not_supported: "Web Serial API no compatible. Usa Chrome 89+ o Edge 89+",
+                app_loaded: "Aplicación cargada. Haz clic en «Conectar» para comenzar.",
+                help: "Ayuda"
             },
+
             de: {
-                ready_to_connect: "Bereit zum Verbinden",
-                connected_waiting: "Verbunden - Warte auf Daten",
-                connected_fps: "Verbunden - FPS: {fps}",
-                connected_no_data: "Verbunden - Keine Daten",
+                ready_to_connect: "Bereit zur Verbindung",
+                connected_waiting: "Verbunden – Warte auf Daten",
+                connected_fps: "Verbunden – FPS: {fps}",
+                connected_no_data: "Verbunden – Keine Daten",
                 disconnected: "Getrennt",
                 connect: "Verbinden",
                 disconnect: "Trennen",
                 help_title: "Tastatursteuerung",
-                display_controls: "Anzeigesteuerung",
-                color_controls: "Farbschemata",
+                display_controls: "Anzeigeoptionen",
+                color_controls: "Bildschirmfarbe",
                 other_controls: "Sonstiges",
-                screenshot_desc: "Screenshot erstellen und herunterladen",
-                lcd_desc: "LCD-Pixeleffekt für realistische Anzeige umschalten",
-                invert_desc: "Vordergrund- und Hintergrundfarben invertieren",
-                pixel_size_desc: "Pixelgröße erhöhen/verringern (3-12)",
-                grey_scheme: "Zu grauem Farbschema wechseln",
-                orange_scheme: "Zu orangem Farbschema wechseln",
-                blue_scheme: "Zu blauem Farbschema wechseln",
-                white_scheme: "Zu weißem Farbschema wechseln",
-                quit_desc: "Vom Gerät trennen",
+                screenshot_desc: "Screenshot aufnehmen und herunterladen",
+                lcd_desc: "LCD-Effekt für realistische Anzeige umschalten",
+                invert_desc: "Vorder- und Hintergrundfarben umkehren",
+                pixel_size_desc: "Pixelgröße ändern (3–12)",
+                grey_scheme: "Zum grauen Bildschirm wechseln",
+                orange_scheme: "Zum orangen Bildschirm wechseln",
+                blue_scheme: "Zum blauen Bildschirm wechseln",
+                white_scheme: "Zum weißen Bildschirm wechseln",
+                quit_desc: "Vom K5 trennen",
                 serial_established: "Serielle Verbindung hergestellt",
                 disconnected_success: "Erfolgreich getrennt",
                 screenshot_saved: "Screenshot gespeichert: {filename}",
                 pixel_size: "Pixelgröße: {size}",
                 lcd_effect: "LCD-Effekt: {status}",
-                lcd_on: "Ein",
+                lcd_on: "An",
                 lcd_off: "Aus",
-                colors_inverted: "Farben umgekehrt",
+                colors_inverted: "Farben invertiert",
                 color_changed: "Farbe: {color}",
                 connection_error: "Verbindungsfehler: {error}",
                 disconnection_error: "Trennungsfehler: {error}",
                 serial_read_error: "Serieller Lesefehler",
-                web_serial_not_supported: "Web Serial API nicht unterstützt. Verwende Chrome 89+ oder Edge 89+",
-                app_loaded: "Anwendung geladen. Klicke \"Verbinden\" zum Starten."
+                web_serial_not_supported: "Web Serial API wird nicht unterstützt. Verwenden Sie Chrome 89+ oder Edge 89+",
+                app_loaded: "Anwendung geladen. Klicke auf „Verbinden“, um zu starten.",
+                help: "Hilfe"
             }
         };
         
@@ -707,7 +714,7 @@
         let keepaliveInterval = null;
         let currentLanguage = 'en';
         let isDarkTheme = false;
-        
+
         // DOM elements
         const canvas = document.getElementById('display');
         const ctx = canvas.getContext('2d');
@@ -721,6 +728,35 @@
         const helpModal = document.getElementById('helpModal');
         const closeModal = document.getElementById('closeModal');
         
+        // Load local storage
+        const pixelSizeLocal = parseInt(localStorage.getItem('pixelSize'), 10);
+        if (!isNaN(pixelSizeLocal) && pixelSizeLocal >= 3 && pixelSizeLocal <= 12) {
+            pixelSize = pixelSizeLocal;
+        }
+
+        const pixelLcdLocal = parseInt(localStorage.getItem('pixelLcd'), 10);
+        if (!isNaN(pixelLcdLocal)) {
+            pixelLcd = pixelLcdLocal;
+        }
+        
+        const currentColorKeyLocal = localStorage.getItem('currentColorKey');
+        if (currentColorKeyLocal && currentColorKeyLocal in COLOR_SETS) {
+            currentColorKey = currentColorKeyLocal;
+        }
+
+        const currentLanguageLocal = localStorage.getItem('currentLanguage');
+        if (currentLanguageLocal && currentLanguageLocal in TRANSLATIONS) {
+            currentLanguage = currentLanguageLocal;
+            languageSelect.value = currentLanguage;
+        }
+
+        const isDarkThemeLocal = localStorage.getItem('isDarkTheme');
+        if (isDarkThemeLocal !== null) {
+            isDarkTheme = isDarkThemeLocal === 'true';
+            document.body.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+            themeToggle.textContent = isDarkTheme ? '◑' : '◐';
+        }
+
         // Initialize canvas
         updateCanvasSize();
         
@@ -754,6 +790,7 @@
                 currentLanguage = lang;
                 document.documentElement.lang = lang;
                 updateUI();
+                localStorage.setItem('currentLanguage', currentLanguage);
                 console.log(`Language changed to: ${lang}`);
             }
         }
@@ -762,6 +799,7 @@
             isDarkTheme = !isDarkTheme;
             document.body.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
             themeToggle.textContent = isDarkTheme ? '◑' : '◐';
+            localStorage.setItem('isDarkTheme', isDarkTheme);
         }
         
         function updateCanvasSize() {
@@ -1059,7 +1097,8 @@
             if (newSize >= 3 && newSize <= 12) {
                 pixelSize = newSize;
                 updateCanvasSize();
-                showNotification('pixel_size', { size: pixelSize }, 'info');
+                showNotification('pixel_size', { size: pixelSize - 2}, 'info');
+                localStorage.setItem('pixelSize', pixelSize);
             }
         }
         
@@ -1069,6 +1108,7 @@
                 const [name] = COLOR_SETS[key];
                 showNotification('color_changed', { color: name }, 'info');
                 drawFrame();
+                localStorage.setItem('currentColorKey', currentColorKey);
             }
         }
         
@@ -1116,6 +1156,7 @@
                     drawFrame();
                     const lcdStatus = pixelLcd ? t('lcd_on') : t('lcd_off');
                     showNotification('lcd_effect', { status: lcdStatus }, 'info');
+                    localStorage.setItem('pixelLcd', pixelLcd);
                     break;
                     
                 case 'i':
@@ -1171,7 +1212,7 @@
         }
         
         // Initialize app
-        detectLanguage();
+        //detectLanguage();
         updateUI();
         drawFrame();
         
@@ -1180,4 +1221,3 @@
     </script>
 </body>
 </html>
-            
