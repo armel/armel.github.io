@@ -39,7 +39,8 @@ const TRANSLATIONS = {
         serial_read_error: "Serial read error",
         web_serial_not_supported: "Web Serial API not supported. Use Chrome 89+ or Edge 89+",
         app_loaded: "Application loaded. Click \"Connect\" to start.",
-        help: "Help"
+        help: "Help",
+        toggle_theme: "Toggle theme"
     },
 
     fr: {
@@ -81,7 +82,8 @@ const TRANSLATIONS = {
         serial_read_error: "Erreur de lecture série",
         web_serial_not_supported: "API Web Serial non supportée. Utilisez Chrome 89+ ou Edge 89+",
         app_loaded: "Application chargée. Cliquez sur « Connexion » pour commencer.",
-        help: "Aide"
+        help: "Aide",
+        toggle_theme: "Changer le thème"
     },
 
     it: {
@@ -123,7 +125,8 @@ const TRANSLATIONS = {
         serial_read_error: "Errore lettura seriale",
         web_serial_not_supported: "Web Serial API non supportata. Usa Chrome 89+ o Edge 89+",
         app_loaded: "Applicazione caricata. Clicca su \"Connetti\" per iniziare.",
-        help: "Aiuto"
+        help: "Aiuto",
+        toggle_theme: "Cambia tema"
     },
 
     es: {
@@ -165,7 +168,8 @@ const TRANSLATIONS = {
         serial_read_error: "Error de lectura serial",
         web_serial_not_supported: "Web Serial API no compatible. Usa Chrome 89+ o Edge 89+",
         app_loaded: "Aplicación cargada. Haz clic en «Conectar» para comenzar.",
-        help: "Ayuda"
+        help: "Ayuda",
+        toggle_theme: "Cambiar tema"
     },
 
     de: {
@@ -207,6 +211,7 @@ const TRANSLATIONS = {
         serial_read_error: "Serieller Lesefehler",
         web_serial_not_supported: "Web Serial API wird nicht unterstützt. Verwenden Sie Chrome 89+ oder Edge 89+",
         app_loaded: "Anwendung geladen. Klicke auf „Verbinden“, um zu starten.",
-        help: "Hilfe"
+        help: "Hilfe",
+        toggle_theme: "Design wechseln"
     }
 };
