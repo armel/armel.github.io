@@ -108,6 +108,11 @@ function updateUI() {
         element.textContent = t(key);
     });
     
+    document.querySelectorAll('[data-i18n-title]').forEach(element => {
+        const key = element.getAttribute('data-i18n-title');
+        if (key) element.setAttribute('title', t(key));
+    });
+
     // Update status
     if (!isConnected) {
         updateStatus(t('ready_to_connect'));
