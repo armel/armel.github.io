@@ -61,14 +61,16 @@ if (!isNaN(pixelLcdLocal)) {
     pixelLcd = pixelLcdLocal;
 }
 
-const invertLcdLocal = parseInt(localStorage.getItem('invertLcd'), 10);
-if (!isNaN(invertLcdLocal)) {
-    invertLcd = invertLcdLocal;
-}
-
 const currentColorKeyLocal = localStorage.getItem('currentColorKey');
 if (currentColorKeyLocal && currentColorKeyLocal in COLOR_SETS) {
     currentColorKey = currentColorKeyLocal;
+}
+
+const invertLcdLocal = parseInt(localStorage.getItem('invertLcd'), 10);
+if (!isNaN(invertLcdLocal)) {
+    invertLcd = invertLcdLocal;
+    if(invertLcd != 0)
+        toggleColors();
 }
 
 const currentLanguageLocal = localStorage.getItem('currentLanguage');
