@@ -69,7 +69,7 @@ if (currentColorKeyLocal && currentColorKeyLocal in COLOR_SETS) {
 const invertLcdLocal = parseInt(localStorage.getItem('invertLcd'), 10);
 if (!isNaN(invertLcdLocal)) {
     invertLcd = invertLcdLocal;
-    if(invertLcd != 0)
+    if(invertLcd == 1)
         toggleColors();
 }
 
