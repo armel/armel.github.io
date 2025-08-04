@@ -28,6 +28,7 @@ let writer = null;
 let isConnected = false;
 let pixelSize = 5;
 let pixelLcd = 0;
+let invertLcd = 0;
 let currentColorKey = DEFAULT_COLOR;
 let frameCount = 0;
 let frameLost = 0;
@@ -58,6 +59,11 @@ if (!isNaN(pixelSizeLocal) && pixelSizeLocal >= 3 && pixelSizeLocal <= 12) {
 const pixelLcdLocal = parseInt(localStorage.getItem('pixelLcd'), 10);
 if (!isNaN(pixelLcdLocal)) {
     pixelLcd = pixelLcdLocal;
+}
+
+const invertLcdLocal = parseInt(localStorage.getItem('invertLcd'), 10);
+if (!isNaN(invertLcdLocal)) {
+    invertLcd = invertLcdLocal;
 }
 
 const currentColorKeyLocal = localStorage.getItem('currentColorKey');
@@ -112,7 +118,6 @@ function changeLanguage(lang) {
         document.documentElement.lang = lang;
         updateUI();
         localStorage.setItem('currentLanguage', currentLanguage);
-        console.log(`Language changed to: ${lang}`);
     }
 }
 
@@ -419,7 +424,6 @@ function changePixelSize(delta) {
         pixelSize = newSize;
         updateCanvasSize();
         showNotification('pixel_size', { size: pixelSize - 2}, 'info');
-        localStorage.setItem('pixelSize', pixelSize);
     }
 }
 
@@ -429,7 +433,6 @@ function changeColorSet(key) {
         const [name] = COLOR_SETS[key];
         showNotification('color_changed', { color: name }, 'info');
         drawFrame();
-        localStorage.setItem('currentColorKey', currentColorKey);
     }
 }
 
@@ -481,17 +484,21 @@ document.addEventListener('keydown', (event) => {
             break;
             
         case 'i':
+            invertLcd = 1 - invertLcd;
             toggleColors();
+            localStorage.setItem('invertLcd', invertLcd);
             break;
             
         case 'arrowup':
             event.preventDefault();
             changePixelSize(1);
+            localStorage.setItem('pixelSize', pixelSize);
             break;
             
         case 'arrowdown':
             event.preventDefault();
             changePixelSize(-1);
+            localStorage.setItem('pixelSize', pixelSize);
             break;
             
         case 'q':
@@ -505,6 +512,7 @@ document.addEventListener('keydown', (event) => {
         case 'b':
         case 'w':
             changeColorSet(key);
+            localStorage.setItem('currentColorKey', currentColorKey);
             break;
             
         case 'h':
