@@ -10,12 +10,12 @@ const HEADER = new Uint8Array([0xAA, 0x55]);
 const TYPE_SCREENSHOT = 0x01;
 const TYPE_DIFF = 0x02;
 
-// Color sets - same as Python version
+// Color sets 
 const COLOR_SETS = {
-    'g': ['Grey', '#000000', '#CACACA'],
-    'o': ['Orange', '#000000', '#FFC125'], 
-    'b': ['Blue', '#000000', '#1C86E4'],
-    'w': ['White', '#000000', '#FFFFFF']
+    'g': ['color_grey', '#000000', '#CACACA'],
+    'o': ['color_orange', '#000000', '#FFC125'], 
+    'b': ['color_blue', '#000000', '#1C86E4'],
+    'w': ['color_white', '#000000', '#FFFFFF']
 };
 
 let DEFAULT_COLOR = 'g';
@@ -407,7 +407,7 @@ function saveScreenshot() {
 }
 
 function toggleColors() {
-    // Invert colors like in Python version
+    // Invert colors
     const [, fgColor, bgColor] = COLOR_SETS[currentColorKey];
     if (bgColor === '#000000') {
         COLOR_SETS[currentColorKey][2] = fgColor;
@@ -432,7 +432,8 @@ function changePixelSize(delta) {
 function changeColorSet(key) {
     if (key in COLOR_SETS) {
         currentColorKey = key;
-        const [name] = COLOR_SETS[key];
+        const [labelKey] = COLOR_SETS[key];
+        const name = t(labelKey);
         showNotification('color_changed', { color: name }, 'info');
         drawFrame();
     }
