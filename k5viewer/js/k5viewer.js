@@ -514,6 +514,8 @@ document.addEventListener('keydown', (event) => {
         case 'b':
         case 'w':
             changeColorSet(key);
+            invertLcd = 0;
+            localStorage.setItem('invertLcd', invertLcd);
             localStorage.setItem('currentColorKey', currentColorKey);
             break;
             
