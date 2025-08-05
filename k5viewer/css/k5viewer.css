@@ -9,6 +9,7 @@
     --accent-hover: #2563eb;
     --success: #10b981;
     --error: #ef4444;
+    --error-hover: #b22222;
     --radius: 8px;
     --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -23,9 +24,10 @@
     --text-secondary: #cbd5e1;
     --text-muted: #64748b;
     --accent: #3b82f6;
-    --accent-hover: #60a5fa;
+    --accent-hover: #2563eb;
     --success: #10b981;
     --error: #ef4444;
+    --error-hover: #b22222;
 }
 
 * {
@@ -72,12 +74,20 @@ body {
     color: var(--text);
 }
 
+.brand-author {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+    line-height: 1.2;
+}
+
 .status-pill {
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 10px;
-    border-radius: 20px;
+    padding: 4px 20px;
+    border-radius: 10px;
     font-size: 12px;
     font-weight: 500;
     background: var(--bg);
@@ -135,22 +145,26 @@ body {
 
 .btn.primary {
     background: var(--accent);
-    color: white;
     border-color: var(--accent);
+    color: white;
 }
 
 .btn.primary:hover:not(:disabled) {
     background: var(--accent-hover);
     border-color: var(--accent-hover);
+    color: white;
 }
 
 .btn.danger {
-    color: var(--error);
+    background: var(--error);
+    border-color: var(--error);
+    color: white;
     border-color: var(--error);
 }
 
 .btn.danger:hover:not(:disabled) {
-    background: var(--error);
+    border-color: var(--error-hover);
+    background: var(--error-hover);
     color: white;
 }
 
