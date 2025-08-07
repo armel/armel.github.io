@@ -384,7 +384,7 @@ function updateFPS() {
     
     if (now - lastTime >= 1000) {
         const fps = Math.ceil(frameCount / ((now - lastTime) / 1000));
-        updateStatus(t('connected_fps', { fps: fps.toFixed(1).padStart(4, '0') }));
+        updateStatus(t('connected_fps', { fps: fps.toFixed(1) }));
         frameCount = 0;
         lastTime = now;
         frameLost = 0;
