@@ -69,8 +69,6 @@ if (currentColorKeyLocal && currentColorKeyLocal in COLOR_SETS) {
 const invertLcdLocal = parseInt(localStorage.getItem('invertLcd'), 10);
 if (!isNaN(invertLcdLocal)) {
     invertLcd = invertLcdLocal;
-    if(invertLcd == 1)
-        toggleColors();
 }
 
 const currentLanguageLocal = localStorage.getItem('currentLanguage');
@@ -354,7 +352,11 @@ function getBit(bitIdx) {
 }
 
 function drawFrame() {
-    const [, fgColor, bgColor] = COLOR_SETS[currentColorKey];
+    const [, originalFg, originalBg] = COLOR_SETS[currentColorKey];
+    
+    // Apply invert if necessary
+    const fgColor = invertLcd ? originalBg : originalFg;
+    const bgColor = invertLcd ? originalFg : originalBg;
     
     // Clear canvas with background color
     ctx.fillStyle = bgColor;
@@ -412,17 +414,10 @@ function saveScreenshot() {
 }
 
 function toggleColors() {
-    // Invert colors
-    const [, fgColor, bgColor] = COLOR_SETS[currentColorKey];
-    if (bgColor === '#000000') {
-        COLOR_SETS[currentColorKey][2] = fgColor;
-        COLOR_SETS[currentColorKey][1] = '#000000';
-    } else {
-        COLOR_SETS[currentColorKey][1] = bgColor;
-        COLOR_SETS[currentColorKey][2] = '#000000';
-    }
+    invertLcd = 1 - invertLcd;
     drawFrame();
     showNotification('colors_inverted', {}, 'info');
+    localStorage.setItem('invertLcd', invertLcd);
 }
 
 function changePixelSize(delta) {
@@ -492,7 +487,6 @@ document.addEventListener('keydown', (event) => {
             break;
             
         case 'i':
-            invertLcd = 1 - invertLcd;
             toggleColors();
             localStorage.setItem('invertLcd', invertLcd);
             break;
@@ -520,8 +514,8 @@ document.addEventListener('keydown', (event) => {
         case 'b':
         case 'w':
             changeColorSet(key);
-            invertLcd = 0;
-            localStorage.setItem('invertLcd', invertLcd);
+            //invertLcd = 0;
+            //localStorage.setItem('invertLcd', invertLcd);
             localStorage.setItem('currentColorKey', currentColorKey);
             break;
             
