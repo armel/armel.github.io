@@ -1,0 +1,370 @@
+/* === UV-K5 Web Flasher — Apple Green Theme === */
+/* Design by ChatGPT 🍏 — fresh, clean and accessible */
+/* Notes:
+   - Progress % is centered via .progress-label (absolute over .progress-bar)
+   - You can hide the whole gauge from JS (display:none) after flashing
+   - Optional fade helpers provided (.is-hidden, .fade) if you prefer opacity transitions
+*/
+
+/* ---------- Reset & base ---------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ---------- Color system ---------- */
+:root {
+  --primary-1: #7ED957; /* Apple green */
+  --primary-2: #34C759; /* iOS green */
+  --bg-grad: linear-gradient(135deg, #E9FBE6 0%, #CFF6C6 50%, #B9F2B2 100%);
+  --text: #19361f;
+  --muted: #45634d;
+  --border: #d6ead3;
+  --card: #ffffff;
+}
+
+/* ---------- Layout ---------- */
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+  background: var(--bg-grad);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.container {
+  background: color-mix(in oklab, var(--card), #f0fff3 15%);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  max-width: 720px;
+  width: 100%;
+  padding: 40px;
+}
+
+/* ---------- Header ---------- */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.h1,
+h1 {
+  color: var(--primary-2);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.language-selector select {
+  padding: 8px 12px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+.language-selector select:hover {
+  border-color: var(--primary-2);
+}
+
+.subtitle {
+  color: var(--muted);
+  margin-bottom: 30px;
+  font-size: 14px;
+}
+
+/* ---------- Sections & form controls ---------- */
+.section {
+  margin-bottom: 25px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--primary-2);
+}
+
+/* ---------- Custom file input ---------- */
+.file-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+input[type="file"] {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.file-input-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: #f7fff5;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.file-input-label:hover {
+  border-color: var(--primary-2);
+  background: #e8fbe5;
+}
+
+.file-input-label.has-file {
+  border-color: var(--primary-2);
+  background: #e0f9d8;
+}
+
+.file-name {
+  color: #666;
+  font-size: 14px;
+}
+
+.file-name.has-file {
+  color: #19361f;
+  font-weight: 500;
+}
+
+.file-button {
+  background: linear-gradient(135deg, var(--primary-1) 0%, var(--primary-2) 100%);
+  color: #0d1b10;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ---------- Buttons ---------- */
+button {
+  background: linear-gradient(135deg, var(--primary-1) 0%, var(--primary-2) 100%);
+  color: #0d1b10;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  width: 100%;
+  margin-top: 10px;
+  box-shadow: 0 6px 24px rgba(52, 199, 89, 0.25);
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(52, 199, 89, 0.35);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- Focus visibility ---------- */
+:where(button, input, select, .file-input-label):focus-visible {
+  outline: 3px solid #34C759;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgba(52, 199, 89, 0.25);
+}
+
+/* ---------- Progress bar ---------- */
+/* Container is toggled from JS: show when flashing, hide when done */
+.progress-container {
+  margin-top: 20px;
+  display: none; /* shown programmatically: block */
+}
+
+.progress-bar {
+  position: relative; /* anchor for centered label */
+  width: 100%;
+  height: 30px;
+  background: #e0e0e0;
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7ED957 0%, #34C759 50%, #22a64b 100%);
+  width: 0%;
+  transition: width 0.3s;
+}
+
+/* Centered percentage text (not inside the fill) */
+.progress-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 13px;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  pointer-events: none;
+}
+
+/* ---------- Log / console ---------- */
+.log-container {
+  margin-top: 25px;
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.log-header h3 {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.log-toggle {
+  background: #f5f5f5;
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #45634d;
+  transition: background 0.2s;
+}
+
+.log-toggle:hover {
+  background: #e0f4dc;
+}
+
+.log {
+  background: #f7fff5;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 15px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  display: none;
+}
+
+.log.visible {
+  display: block;
+}
+
+.log-entry {
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+.log-entry.error {
+  color: #d32f2f;
+  font-weight: 600;
+}
+
+.log-entry.success {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.log-entry.info {
+  color: #1976d2;
+}
+
+/* ---------- Info block ---------- */
+.info-box {
+  background: #eefcf0;
+  border: 1px solid #98e6a8;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 15px;
+  color: #0f3b1d;
+  font-size: 13px;
+}
+
+/* ---------- Accessibility helpers ---------- */
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Optional fade helpers ----------
+   Add .fade to an element, then toggle .is-hidden from JS for smooth opacity.
+   (We still recommend display:none after the fade completes if you want it removed from layout.)
+*/
+.fade {
+  transition: opacity 300ms ease;
+}
+.fade.is-hidden {
+  opacity: 0;
+}
+
+/* ---------- Dark mode (automatic) ---------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-grad: linear-gradient(135deg, #112114 0%, #0d1a10 100%);
+    --text: #e7f6eb;
+    --muted: #a7c9b1;
+    --border: #22442a;
+    --card: #0f1b12;
+  }
+
+  .container {
+    border-color: var(--border);
+  }
+
+  .log,
+  .file-input-label {
+    background: #122416;
+  }
+
+  .info-box {
+    background: #0f2616;
+    border-color: #1e5c30;
+    color: #c9f2d3;
+  }
+
+  button,
+  .file-button {
+    color: #06230e;
+    box-shadow: 0 8px 28px rgba(126, 217, 87, 0.25);
+  }
+}

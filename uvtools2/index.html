@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UV-K5 V3 & UV-K1 Web Flasher</title>
+  <link rel="preload" href="locales/en.json" as="fetch" type="application/json" crossorigin="anonymous">
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="header" role="banner">
+      <h1 id="title" class="h1">UV-K5 V3 & UV-K1 Web Flasher</h1>
+      <div class="language-selector">
+        <label for="languageSelect" class="sr-only">Language</label>
+        <select id="languageSelect" aria-label="Language">
+          <option value="en">English</option>
+          <option value="fr">Français</option>
+          <!-- Add it/es/de once their JSON files are added -->
+        </select>
+      </div>
+    </header>
+
+    <p class="subtitle" id="subtitle">Firmware flasher for UV-K5 via Web Serial API</p>
+
+    <section class="section" aria-labelledby="blVersionLabel">
+      <label for="blVersion" id="labelBlVersion">Bootloader Version (max 4 characters)</label>
+      <input type="text" id="blVersion" value="7.00" maxlength="4" placeholder="Ex: 7.00 or 7.02" inputmode="text" />
+    </section>
+
+    <section class="section" aria-labelledby="labelFirmwareFile">
+      <label id="labelFirmwareFile">Firmware File (.bin)</label>
+      <div class="file-input-wrapper">
+        <input type="file" id="firmwareFile" accept=".bin" />
+        <div class="file-input-label" id="fileLabel">
+          <span class="file-name" id="fileName">No file selected</span>
+          <span class="file-button" id="fileButton">Choose file</span>
+        </div>
+      </div>
+    </section>
+
+    <button id="flashBtn" disabled aria-live="polite">Flash firmware</button>
+
+    <section class="progress-container" id="progressContainer" aria-live="polite">
+      <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="progress-fill" id="progressFill"></div>
+        <div class="progress-label" id="progressLabel">0%</div>
+      </div>
+    </section>
+
+
+    <section class="log-container" aria-labelledby="logTitle">
+      <div class="log-header">
+        <button class="log-toggle" id="logToggle" type="button" aria-expanded="false">Show Console</button>
+      </div>
+      <div class="log" id="log" aria-live="polite"></div>
+    </section>
+
+    <aside class="info-box" id="infoBox">
+      <strong>Note:</strong> This application requires Chrome/Edge/Opera. Make sure your radio is in DFU (flash mode) before flashing.
+    </aside>
+  </main>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/flash.js" type="module"></script>
+</body>
+</html>
