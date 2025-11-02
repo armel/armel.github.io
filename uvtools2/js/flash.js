@@ -1,10 +1,12 @@
 // js/flash.js
 // UV-K5 Web Flasher core logic (Web Serial + protocol)
-// Notes:
-//  - Requires i18n.js to be loaded first (window.i18n.t is used).
-//  - Shows progress bar during flashing, hides it after successful completion.
-//  - Percentage text is centered via #progressLabel overlay.
-//  - All comments are in EN as requested.
+// - Requires i18n.js to be loaded first (window.i18nReady).
+// - Defines window.updateUI() to (re)apply translations to the DOM.
+// - Shows progress bar during flashing, hides it after successful completion.
+// - Percentage text is centered via #progressLabel overlay.
+// - Comments in English.
+
+'use strict';
 
 // ---------- Constants ----------
 const BAUDRATE = 38400;
@@ -25,73 +27,122 @@ let isReading = false;
 const flashBtn          = document.getElementById('flashBtn');
 const blVersionInput    = document.getElementById('blVersion');
 const firmwareFileInput = document.getElementById('firmwareFile');
+const titleEl           = document.getElementById('title');
+const subtitleEl        = document.getElementById('subtitle');
+const labelBlVersionEl  = document.getElementById('labelBlVersion');
+const labelFwFileEl     = document.getElementById('labelFirmwareFile');
 const logDiv            = document.getElementById('log');
+const logTitleEl        = document.getElementById('logTitle');
+const infoBoxEl         = document.getElementById('infoBox');
 const progressContainer = document.getElementById('progressContainer');
 const progressFill      = document.getElementById('progressFill');
 const progressLabel     = document.getElementById('progressLabel'); // centered percentage text
+const logToggle         = document.getElementById('logToggle');
 const fileLabel         = document.getElementById('fileLabel');
 const fileName          = document.getElementById('fileName');
+const fileButton        = document.getElementById('fileButton');
+const languageSelect    = document.getElementById('languageSelect');
 
 // ---------- i18n helper ----------
-function t(key, ...args) { return window.i18n.t(key, ...args); }
+function t(key, ...args) { return window.i18n && window.i18n.t ? window.i18n.t(key, ...args) : key; }
 
-// ---------- Initial UI text binding ----------
+// ---------- Translations application ----------
+// This function safely updates all user-visible strings using i18n.t()
 window.updateUI = function updateUI() {
-  document.getElementById('title').textContent = t('title');
-  document.getElementById('subtitle').textContent = t('subtitle');
-  document.getElementById('labelBlVersion').textContent = t('labelBlVersion');
-  document.getElementById('labelFirmwareFile').textContent = t('labelFirmwareFile');
-  document.getElementById('infoBox').innerHTML = t('infoBox');
-  document.getElementById('fileButton').textContent = t('fileChoose');
-  flashBtn.textContent = t('flashBtn');
-  logToggle.textContent = logDiv.classList.contains('visible') ? t('logHide') : t('logShow');
+  // Core headings and labels
+  if (titleEl)          titleEl.textContent = t('title');
+  if (subtitleEl)       subtitleEl.textContent = t('subtitle');
+  if (labelBlVersionEl) labelBlVersionEl.textContent = t('labelBlVersion');
+  if (labelFwFileEl)    labelFwFileEl.textContent = t('labelFirmwareFile');
+  if (logTitleEl)       logTitleEl.textContent = t('logTitle');
 
-  if (!firmwareData) {
+  // Info box can contain inline HTML (e.g., <strong>Note:</strong>)
+  if (infoBoxEl)        infoBoxEl.innerHTML = t('infoBox');
+
+  // Buttons and dynamic labels
+  if (flashBtn)         flashBtn.textContent = t('flashBtn');
+  if (fileButton)       fileButton.textContent = t('fileChoose');
+
+  // Log toggle text depends on current state
+  if (logToggle) {
+    const visible = logDiv && logDiv.classList.contains('visible');
+    logToggle.textContent = visible ? t('logHide') : t('logShow');
+    logToggle.setAttribute('aria-expanded', visible ? 'true' : 'false');
+  }
+
+  // File name placeholder when nothing is selected
+  if (fileName && !firmwareData) {
     fileName.textContent = t('fileNoFile');
     fileName.classList.remove('has-file');
-    fileLabel.classList.remove('has-file');
+    if (fileLabel) fileLabel.classList.remove('has-file');
+  }
+
+  // Keep language selector in sync with current i18n language
+  if (languageSelect && window.i18n && window.i18n.lang) {
+    languageSelect.value = window.i18n.lang;
   }
 };
-updateUI();
+
+// Re-apply UI when i18n signals readiness (first load or any future re-init)
+window.addEventListener('i18n:ready', () => {
+  if (window.updateUI) window.updateUI();
+});
+
+// Also perform an initial application after i18nReady resolves
+(async () => {
+  if (window.i18nReady) {
+    await window.i18nReady;
+  }
+  if (window.updateUI) window.updateUI();
+})();
 
 // ---------- Log visibility toggle ----------
-logToggle.addEventListener('click', () => {
-  logDiv.classList.toggle('visible');
-  logToggle.textContent = logDiv.classList.contains('visible') ? t('logHide') : t('logShow');
-  logToggle.setAttribute('aria-expanded', logDiv.classList.contains('visible') ? 'true' : 'false');
-});
+if (logToggle) {
+  logToggle.addEventListener('click', () => {
+    if (!logDiv) return;
+    logDiv.classList.toggle('visible');
+    logToggle.textContent = logDiv.classList.contains('visible') ? t('logHide') : t('logShow');
+    logToggle.setAttribute('aria-expanded', logDiv.classList.contains('visible') ? 'true' : 'false');
+  });
+}
 
 // ---------- Firmware file input ----------
-firmwareFileInput.addEventListener('change', (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  const fr = new FileReader();
-  fr.onload = (ev) => {
-    firmwareData = new Uint8Array(ev.target.result);
-    fileName.textContent = file.name;
-    fileName.classList.add('has-file');
-    fileLabel.classList.add('has-file');
-    log(t('firmwareLoaded', file.name, firmwareData.length), 'success');
-    updateFlashButton();
-  };
-  fr.readAsArrayBuffer(file);
-});
+if (firmwareFileInput) {
+  firmwareFileInput.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fr = new FileReader();
+    fr.onload = (ev) => {
+      firmwareData = new Uint8Array(ev.target.result);
+      if (fileName) {
+        fileName.textContent = file.name;
+        fileName.classList.add('has-file');
+      }
+      if (fileLabel) fileLabel.classList.add('has-file');
+      log(t('firmwareLoaded', file.name, firmwareData.length), 'success');
+      updateFlashButton();
+    };
+    fr.readAsArrayBuffer(file);
+  });
+}
 
 // ---------- Flash button ----------
-flashBtn.addEventListener('click', async () => {
-  if (!firmwareData) return;
-  try {
-    if (!port) await connect();
-    await flashFirmware(); // will show progress; hides it on success
-  } catch (e) {
-    log(t('flashError', e?.message ?? String(e)), 'error');
-    isFlashing = false;
-    updateFlashButton();
-    // Intentionally keep the progress visible on failure (for diagnosis).
-  } finally {
-    if (port) await disconnect();
-  }
-});
+if (flashBtn) {
+  flashBtn.addEventListener('click', async () => {
+    if (!firmwareData) return;
+    try {
+      if (!port) await connect();
+      await flashFirmware(); // will show progress; hides it on success
+    } catch (e) {
+      log(t('flashError', e?.message ?? String(e)), 'error');
+      isFlashing = false;
+      updateFlashButton();
+      // Keep the progress visible on failure for debugging
+    } finally {
+      if (port) await disconnect();
+    }
+  });
+}
 
 // ---------- Serial connection ----------
 async function connect() {
@@ -121,9 +172,9 @@ async function connect() {
 
 async function disconnect() {
   isReading = false;
-  if (reader) { try { await reader.cancel(); } catch {} reader.releaseLock(); reader = null; }
+  if (reader) { try { await reader.cancel(); } catch {} try { reader.releaseLock(); } catch {} reader = null; }
   if (writer) { try { await writer.close(); } catch {} writer = null; }
-  if (port)   { await port.close(); port = null; }
+  if (port)   { try { await port.close(); } catch {} port = null; }
   log(t('disconnected'), 'info');
 }
 
@@ -151,14 +202,14 @@ async function readLoop() {
 }
 
 // ---------- Flash workflow ----------
-function updateFlashButton() { flashBtn.disabled = !firmwareData || isFlashing; }
+function updateFlashButton() { if (flashBtn) flashBtn.disabled = !firmwareData || isFlashing; }
 
 async function flashFirmware() {
   isFlashing = true;
   updateFlashButton();
 
   // Show and reset the progress bar (0%)
-  progressContainer.style.display = 'block';
+  if (progressContainer) progressContainer.style.display = 'block';
   updateProgress(0);
 
   // Reset buffer; give device some time to spam DEV_INFO
@@ -174,8 +225,8 @@ async function flashFirmware() {
     log(t('blVersionLabel', devInfo.blVersion), 'info');
 
     // Optional BL version check (user text input)
-    const expectedBl = blVersionInput.value.trim();
-    if (expectedBl !== '*' && expectedBl !== '?' && devInfo.blVersion !== expectedBl) {
+    const expectedBl = blVersionInput?.value?.trim?.() ?? '';
+    if (expectedBl !== '*' && expectedBl !== '?' && expectedBl !== '' && devInfo.blVersion !== expectedBl) {
       log(t('blWarning', expectedBl, devInfo.blVersion), 'error');
     }
     log(t('deviceDetected'), 'success');
@@ -193,7 +244,7 @@ async function flashFirmware() {
     log(t('programmingComplete'), 'success');
 
     setTimeout(() => {
-      progressContainer.style.display = 'none'; // hide gauge after success
+      if (progressContainer) progressContainer.style.display = 'none'; // hide gauge after success
       updateProgress(0); // reset for next session
     }, 800);
   } finally {
@@ -244,7 +295,7 @@ async function waitForDeviceInfo() {
 async function performHandshake(blVersion) {
   let acc = 0;
 
-  // Send BL version 3 times (mirrors original behavior, robust against noise)
+  // Send BL version 3 times (robust against noise)
   while (acc < 3) {
     await sleep(50);
     const msg = fetchMessage(readBuffer);
@@ -260,7 +311,7 @@ async function performHandshake(blVersion) {
     }
   }
 
-  // Give device time to stop flooding DEV_INFO and then drain remaining messages
+  // Wait and drain any remaining messages
   log(t('waitingStop'), 'info');
   await sleep(200);
 
@@ -284,32 +335,29 @@ async function programFirmware() {
   while (pageIndex < pageCount) {
     updateProgress((pageIndex / pageCount) * 100);
 
-    // Build MSG_PROG_FW packet (268 bytes data: 4 timestamp + 2 idx + 2 count + 256 page)
+    // Build MSG_PROG_FW packet (268 bytes data)
     const msg = createMessage(MSG_PROG_FW, 268);
     const view = new DataView(msg.buffer);
     view.setUint32(4, timestamp, true);
     view.setUint16(8, pageIndex, true);
     view.setUint16(10, pageCount, true);
 
-    // Copy up to 256 bytes for this page
     const offset = pageIndex * 256;
     const len = Math.min(256, firmwareData.length - offset);
     for (let i = 0; i < len; i++) msg[16 + i] = firmwareData[offset + i];
 
-    // Send page
     await sendMessage(msg);
 
     // Await response for this page
     let gotResponse = false;
-    for (let i = 0; i < 300 && !gotResponse; i++) { // up to ~3s (300 * 10ms)
+    for (let i = 0; i < 300 && !gotResponse; i++) { // up to ~3s
       await sleep(10);
       const resp = fetchMessage(readBuffer);
       if (!resp) continue;
-      if (resp.msgType === MSG_NOTIFY_DEV_INFO) continue; // ignore noise
+      if (resp.msgType === MSG_NOTIFY_DEV_INFO) continue;
 
       if (resp.msgType === MSG_PROG_FW_RESP) {
         const dv = new DataView(resp.data.buffer);
-        // const x4 = dv.getUint32(0, true); // not used
         const respPageIndex = dv.getUint16(4, true);
         const err = dv.getUint16(6, true);
 
@@ -340,8 +388,6 @@ async function programFirmware() {
       // else retry same page
     }
   }
-
-  // 100% is set by the caller after loop completes
 }
 
 // ---------- Protocol helpers ----------
@@ -359,9 +405,8 @@ async function sendMessage(msg) {
 }
 
 function makePacket(msg) {
-  // Packet: [0..1]=0xCDAB, [2..3]=msgLenEven, [4..(3+msgLen)]=msg, [4+msgLen..5+msgLen]=CRC16, [6+msgLen..7+msgLen]=0xBADC
   let msgLen = msg.length;
-  if (msgLen % 2 !== 0) msgLen++; // even length
+  if (msgLen % 2 !== 0) msgLen++;
   const buf = new Uint8Array(8 + msgLen);
   const view = new DataView(buf.buffer);
 
@@ -374,7 +419,6 @@ function makePacket(msg) {
   const crc = calcCRC(buf, 4, msgLen);
   view.setUint16(4 + msgLen, crc, true);
 
-  // Obfuscate payload + CRC (2 bytes)
   obfuscate(buf, 4, 2 + msgLen);
   return buf;
 }
@@ -382,7 +426,6 @@ function makePacket(msg) {
 function fetchMessage(buf) {
   if (buf.length < 8) return null;
 
-  // Find header 0xAB 0xCD in raw buffer (obfuscated stream level header bytes appear as AB CD)
   let packBegin = -1;
   for (let i = 0; i < buf.length - 1; i++) {
     if (buf[i] === 0xab && buf[i + 1] === 0xcd) { packBegin = i; break; }
@@ -398,27 +441,20 @@ function fetchMessage(buf) {
   const packEnd = packBegin + 6 + msgLen;
   if (buf.length < packEnd + 2) return null;
 
-  // Check trailer 0xDC 0xBA
   if (buf[packEnd] !== 0xdc || buf[packEnd + 1] !== 0xba) {
-    // Bad framing; skip header bytes and try again
     buf.splice(0, packBegin + 2);
     return null;
   }
 
-  // Copy obfuscated message + CRC (msgLen + 2)
   const msgBuf = new Uint8Array(msgLen + 2);
   for (let i = 0; i < msgLen + 2; i++) msgBuf[i] = buf[packBegin + 4 + i];
-
-  // De-obfuscate in place
   obfuscate(msgBuf, 0, msgLen + 2);
 
   const view = new DataView(msgBuf.buffer);
   const msgType = view.getUint16(0, true);
   const data = msgBuf.slice(4);
 
-  // Move read head
   buf.splice(0, packEnd + 2);
-
   return { msgType, data, rawData: msgBuf };
 }
 
@@ -448,8 +484,12 @@ function log(message, type = '') {
   const entry = document.createElement('div');
   entry.className = `log-entry ${type}`;
   entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-  logDiv.appendChild(entry);
-  logDiv.scrollTop = logDiv.scrollHeight;
+  if (logDiv) {
+    logDiv.appendChild(entry);
+    logDiv.scrollTop = logDiv.scrollHeight;
+  } else {
+    console.log(message);
+  }
 }
 
 function updateProgress(percent) {
@@ -465,5 +505,5 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 // ---------- Capability check ----------
 if (!('serial' in navigator)) {
   log(t('webSerialNotSupported'), 'error');
-  flashBtn.disabled = true;
+  if (flashBtn) flashBtn.disabled = true;
 }
