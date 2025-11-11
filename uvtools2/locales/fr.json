@@ -57,5 +57,9 @@
   "validMessage": "Message valide, acc={0}/5",
   "timeoutNoDevice": "Timeout : aucun appareil détecté",
   "webSerialNotSupported": "⚠️ Web Serial API non supportée. Utilisez Chrome/Edge/Opera.",
-  "loopError": "Erreur boucle lecture : {0}"
+  "loopError": "Erreur boucle lecture : {0}",
+  "loadingFromUrl": "Chargement du firmware depuis l’URL : {0}",
+  "urlInvalid": "Paramètre firmwareURL invalide.",
+  "urlHttpNotHttps": "L’URL doit être en HTTPS.",
+  "urlFetchError": "Échec du téléchargement du firmware depuis l’URL."
 }

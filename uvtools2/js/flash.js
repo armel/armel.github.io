@@ -1,10 +1,10 @@
 // js/flash.js
 // UV-K5 Web Flasher core logic (Web Serial + protocol)
+// Adds: auto-load of firmware from URL param ?firmwareURL=... (or ?fw=...)
 // - Requires i18n.js to be loaded first (window.i18nReady).
 // - Defines window.updateUI() to (re)apply translations to the DOM.
 // - Shows progress bar during flashing, hides it after successful completion.
 // - Percentage text is centered via #progressLabel overlay.
-// - Comments in English.
 
 'use strict';
 
@@ -47,53 +47,44 @@ const languageSelect    = document.getElementById('languageSelect');
 function t(key, ...args) { return window.i18n && window.i18n.t ? window.i18n.t(key, ...args) : key; }
 
 // ---------- Translations application ----------
-// This function safely updates all user-visible strings using i18n.t()
 window.updateUI = function updateUI() {
-  // Core headings and labels
   if (titleEl)          titleEl.textContent = t('title');
   if (subtitleEl)       subtitleEl.textContent = t('subtitle');
   if (labelBlVersionEl) labelBlVersionEl.textContent = t('labelBlVersion');
   if (labelFwFileEl)    labelFwFileEl.textContent = t('labelFirmwareFile');
   if (logTitleEl)       logTitleEl.textContent = t('logTitle');
-
-  // Info box can contain inline HTML (e.g., <strong>Note:</strong>)
   if (infoBoxEl)        infoBoxEl.innerHTML = t('infoBox');
-
-  // Buttons and dynamic labels
   if (flashBtn)         flashBtn.textContent = t('flashBtn');
   if (fileButton)       fileButton.textContent = t('fileChoose');
 
-  // Log toggle text depends on current state
   if (logToggle) {
     const visible = logDiv && logDiv.classList.contains('visible');
     logToggle.textContent = visible ? t('logHide') : t('logShow');
     logToggle.setAttribute('aria-expanded', visible ? 'true' : 'false');
   }
 
-  // File name placeholder when nothing is selected
   if (fileName && !firmwareData) {
     fileName.textContent = t('fileNoFile');
     fileName.classList.remove('has-file');
     if (fileLabel) fileLabel.classList.remove('has-file');
   }
 
-  // Keep language selector in sync with current i18n language
   if (languageSelect && window.i18n && window.i18n.lang) {
     languageSelect.value = window.i18n.lang;
   }
 };
 
-// Re-apply UI when i18n signals readiness (first load or any future re-init)
+// Re-apply UI when i18n signals readiness
 window.addEventListener('i18n:ready', () => {
   if (window.updateUI) window.updateUI();
 });
 
-// Also perform an initial application after i18nReady resolves
+// Initial i18n sync
 (async () => {
-  if (window.i18nReady) {
-    await window.i18nReady;
-  }
+  if (window.i18nReady) { await window.i18nReady; }
   if (window.updateUI) window.updateUI();
+  // After i18n is ready, check URL params for firmwareURL
+  await maybeLoadFirmwareFromQuery();
 })();
 
 // ---------- Log visibility toggle ----------
@@ -106,22 +97,77 @@ if (logToggle) {
   });
 }
 
+// ---------- Firmware helpers ----------
+function setFirmwareBuffer(buf, name = 'firmware.bin') {
+  firmwareData = new Uint8Array(buf);
+  if (fileName) {
+    fileName.textContent = name;
+    fileName.classList.add('has-file');
+  }
+  if (fileLabel) fileLabel.classList.add('has-file');
+  log(t('firmwareLoaded', name, firmwareData.length), 'success');
+  updateFlashButton();
+}
+
+async function loadFirmwareFromURL(url) {
+  try {
+    log(t('loadingFromUrl', url), 'info');
+
+    // Only HTTPS
+    const urlObj = new URL(url);
+    if (urlObj.protocol !== 'https:') {
+      throw new Error(t('urlHttpNotHttps'));
+    }
+
+    // GitHub convenience: transform github.com/.../raw/... → raw.githubusercontent.com/...
+    if (urlObj.hostname === 'github.com' && urlObj.pathname.includes('/raw/')) {
+      const parts = urlObj.pathname.split('/').filter(Boolean); // ["user","repo","raw","branch",...]
+      const i = parts.indexOf('raw');
+      if (i > 1 && i < parts.length - 1) {
+        const user = parts[0], repo = parts[1], branch = parts[i + 1];
+        const rest = parts.slice(i + 2).join('/');
+        urlObj.hostname = 'raw.githubusercontent.com';
+        urlObj.pathname = `/${user}/${repo}/${branch}/${rest}`;
+      }
+    }
+
+    // Fetch binary
+    const res = await fetch(urlObj.toString(), { cache: 'no-cache', mode: 'cors' });
+    if (!res.ok) throw new Error(`${t('urlFetchError')} HTTP ${res.status}`);
+    const buf = await res.arrayBuffer();
+
+    // Filename
+    const fname = (urlObj.pathname.split('/').pop() || 'firmware.bin').split('?')[0];
+    setFirmwareBuffer(buf, fname);
+
+    // Clean URL (remove param so refresh won't auto-reload)
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete('firmwareURL');
+    clean.searchParams.delete('fw');
+    window.history.replaceState({}, '', clean.toString());
+  } catch (err) {
+    log(`${t('urlFetchError')} ${err?.message ?? String(err)}`, 'error');
+  }
+}
+
+async function maybeLoadFirmwareFromQuery() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const param = params.get('firmwareURL') || params.get('fw');
+    if (!param) return;
+    await loadFirmwareFromURL(decodeURIComponent(param));
+  } catch (e) {
+    log(t('urlInvalid'), 'error');
+  }
+}
+
 // ---------- Firmware file input ----------
 if (firmwareFileInput) {
   firmwareFileInput.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const fr = new FileReader();
-    fr.onload = (ev) => {
-      firmwareData = new Uint8Array(ev.target.result);
-      if (fileName) {
-        fileName.textContent = file.name;
-        fileName.classList.add('has-file');
-      }
-      if (fileLabel) fileLabel.classList.add('has-file');
-      log(t('firmwareLoaded', file.name, firmwareData.length), 'success');
-      updateFlashButton();
-    };
+    fr.onload = (ev) => setFirmwareBuffer(ev.target.result, file.name);
     fr.readAsArrayBuffer(file);
   });
 }
@@ -132,12 +178,11 @@ if (flashBtn) {
     if (!firmwareData) return;
     try {
       if (!port) await connect();
-      await flashFirmware(); // will show progress; hides it on success
+      await flashFirmware();
     } catch (e) {
       log(t('flashError', e?.message ?? String(e)), 'error');
       isFlashing = false;
       updateFlashButton();
-      // Keep the progress visible on failure for debugging
     } finally {
       if (port) await disconnect();
     }
@@ -208,11 +253,9 @@ async function flashFirmware() {
   isFlashing = true;
   updateFlashButton();
 
-  // Show and reset the progress bar (0%)
   if (progressContainer) progressContainer.style.display = 'block';
   updateProgress(0);
 
-  // Reset buffer; give device some time to spam DEV_INFO
   readBuffer = [];
   log(t('bufferEmpty'), 'info');
   await sleep(1000);
@@ -224,28 +267,24 @@ async function flashFirmware() {
     log(t('uidLabel', arrayToHex(devInfo.uid)), 'info');
     log(t('blVersionLabel', devInfo.blVersion), 'info');
 
-    // Optional BL version check (user text input)
     const expectedBl = blVersionInput?.value?.trim?.() ?? '';
     if (expectedBl !== '*' && expectedBl !== '?' && expectedBl !== '' && devInfo.blVersion !== expectedBl) {
       log(t('blWarning', expectedBl, devInfo.blVersion), 'error');
     }
     log(t('deviceDetected'), 'success');
 
-    // Handshake with reported BL version
     log(t('handshake'), 'info');
     await performHandshake(devInfo.blVersion);
     log(t('handshakeComplete'), 'success');
 
-    // Program firmware pages
     await programFirmware();
 
-    // Done: set to 100% and hide the progress gauge after a short delay
     updateProgress(100);
     log(t('programmingComplete'), 'success');
 
     setTimeout(() => {
-      if (progressContainer) progressContainer.style.display = 'none'; // hide gauge after success
-      updateProgress(0); // reset for next session
+      if (progressContainer) progressContainer.style.display = 'none';
+      updateProgress(0);
     }, 800);
   } finally {
     isFlashing = false;
@@ -285,7 +324,7 @@ async function waitForDeviceInfo() {
         }
       } else {
         if (dt < 5 || dt > 1000) log(t('invalidInterval', dt), 'error');
-        acc = 0; // reset accumulator if timing is off
+        acc = 0;
       }
     }
   }
@@ -295,7 +334,6 @@ async function waitForDeviceInfo() {
 async function performHandshake(blVersion) {
   let acc = 0;
 
-  // Send BL version 3 times (robust against noise)
   while (acc < 3) {
     await sleep(50);
     const msg = fetchMessage(readBuffer);
@@ -311,7 +349,6 @@ async function performHandshake(blVersion) {
     }
   }
 
-  // Wait and drain any remaining messages
   log(t('waitingStop'), 'info');
   await sleep(200);
 
@@ -335,7 +372,6 @@ async function programFirmware() {
   while (pageIndex < pageCount) {
     updateProgress((pageIndex / pageCount) * 100);
 
-    // Build MSG_PROG_FW packet (268 bytes data)
     const msg = createMessage(MSG_PROG_FW, 268);
     const view = new DataView(msg.buffer);
     view.setUint32(4, timestamp, true);
@@ -348,7 +384,6 @@ async function programFirmware() {
 
     await sendMessage(msg);
 
-    // Await response for this page
     let gotResponse = false;
     for (let i = 0; i < 300 && !gotResponse; i++) { // up to ~3s
       await sleep(10);
