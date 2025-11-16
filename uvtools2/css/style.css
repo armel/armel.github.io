@@ -1,10 +1,5 @@
-/* === UV-K5 Web Flasher — Apple Green Theme === */
-/* Design by ChatGPT 🍏 — fresh, clean and accessible */
-/* Notes:
-   - Progress % is centered via .progress-label (absolute over .progress-bar)
-   - You can hide the whole gauge from JS (display:none) after flashing
-   - Optional fade helpers provided (.is-hidden, .fade) if you prefer opacity transitions
-*/
+/* === UV-K5 Web Tool – Apple Green Theme === */
+/* Design by ChatGPT 🍏 – fresh, clean and accessible */
 
 /* ---------- Reset & base ---------- */
 * {
@@ -79,6 +74,55 @@ h1 {
   color: var(--muted);
   margin-bottom: 30px;
   font-size: 14px;
+}
+
+/* ---------- Tabs ---------- */
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid var(--border);
+}
+
+.tab {
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: none;
+  margin-top: 0;
+  width: auto;
+}
+
+.tab:hover {
+  color: var(--primary-2);
+  transform: none;
+  box-shadow: none;
+}
+
+.tab.active {
+  color: var(--primary-2);
+  border-bottom-color: var(--primary-2);
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.tab-description {
+  color: var(--muted);
+  margin-bottom: 20px;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 /* ---------- Sections & form controls ---------- */
@@ -164,7 +208,7 @@ input[type="file"] {
 }
 
 /* ---------- Buttons ---------- */
-button {
+button:not(.tab):not(.log-toggle) {
   background: linear-gradient(135deg, var(--primary-1) 0%, var(--primary-2) 100%);
   color: #0d1b10;
   border: none;
@@ -179,7 +223,7 @@ button {
   box-shadow: 0 6px 24px rgba(52, 199, 89, 0.25);
 }
 
-button:hover:not(:disabled) {
+button:not(.tab):not(.log-toggle):hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 10px 30px rgba(52, 199, 89, 0.35);
 }
@@ -197,14 +241,13 @@ button:disabled {
 }
 
 /* ---------- Progress bar ---------- */
-/* Container is toggled from JS: show when flashing, hide when done */
 .progress-container {
   margin-top: 20px;
-  display: none; /* shown programmatically: block */
+  display: none;
 }
 
 .progress-bar {
-  position: relative; /* anchor for centered label */
+  position: relative;
   width: 100%;
   height: 30px;
   background: #e0e0e0;
@@ -219,7 +262,6 @@ button:disabled {
   transition: width 0.3s;
 }
 
-/* Centered percentage text (not inside the fill) */
 .progress-label {
   position: absolute;
   inset: 0;
@@ -231,6 +273,31 @@ button:disabled {
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0,0,0,0.25);
   pointer-events: none;
+}
+
+/* ---------- Download link ---------- */
+.download-link {
+  display: none;
+  margin-top: 20px;
+  padding: 15px;
+  background: #e0f9d8;
+  border: 2px solid var(--primary-2);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.download-link a {
+  color: var(--primary-2);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.download-link a:hover {
+  text-decoration: underline;
 }
 
 /* ---------- Log / console ---------- */
@@ -245,11 +312,6 @@ button:disabled {
   margin-bottom: 10px;
 }
 
-.log-header h3 {
-  color: var(--text);
-  font-size: 16px;
-}
-
 .log-toggle {
   background: #f5f5f5;
   border: 1px solid var(--border);
@@ -259,10 +321,15 @@ button:disabled {
   font-size: 13px;
   color: #45634d;
   transition: background 0.2s;
+  width: auto;
+  margin-top: 0;
+  box-shadow: none;
 }
 
 .log-toggle:hover {
   background: #e0f4dc;
+  transform: none;
+  box-shadow: none;
 }
 
 .log {
@@ -326,17 +393,6 @@ button:disabled {
   border: 0;
 }
 
-/* ---------- Optional fade helpers ----------
-   Add .fade to an element, then toggle .is-hidden from JS for smooth opacity.
-   (We still recommend display:none after the fade completes if you want it removed from layout.)
-*/
-.fade {
-  transition: opacity 300ms ease;
-}
-.fade.is-hidden {
-  opacity: 0;
-}
-
 /* ---------- Dark mode (automatic) ---------- */
 @media (prefers-color-scheme: dark) {
   :root {
@@ -362,9 +418,18 @@ button:disabled {
     color: #c9f2d3;
   }
 
-  button,
+  button:not(.tab):not(.log-toggle),
   .file-button {
     color: #06230e;
     box-shadow: 0 8px 28px rgba(126, 217, 87, 0.25);
+  }
+
+  .download-link {
+    background: #1e3d25;
+    border-color: #34C759;
+  }
+
+  .download-link a {
+    color: #7ED957;
   }
 }
