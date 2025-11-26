@@ -821,3 +821,22 @@ if (!('serial' in navigator)) {
   if (dumpBtn) dumpBtn.disabled = true;
   if (restoreBtn) restoreBtn.disabled = true;
 }
+
+// ========== AUTO TAB SELECT VIA ?mode=flash|dump|restore ==========
+
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get("mode") || "flash";
+
+  const modeMap = {
+    flash: "tabFlash",
+    dump: "tabDump",
+    restore: "tabRestore"
+  };
+
+  const tabId = modeMap[mode];
+  if (tabId) {
+    const el = document.getElementById(tabId);
+    if (el) el.click();
+  }
+})();
