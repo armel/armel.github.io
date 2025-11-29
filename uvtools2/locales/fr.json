@@ -83,5 +83,6 @@
   "validMessage": "Message valide, acc={0}/5",
   "timeoutNoDevice": "Timeout : aucun appareil détecté",
   "webSerialNotSupported": "⚠️ Web Serial API non supportée. Utilisez Chrome/Edge/Opera.",
-  "loopError": "Erreur boucle lecture : {0}"
+  "loopError": "Erreur boucle lecture : {0}",
+  "baselineDeveloped": "développé par"
 }

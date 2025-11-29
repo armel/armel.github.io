@@ -83,5 +83,6 @@
   "validMessage": "Valid message, acc={0}/5",
   "timeoutNoDevice": "Timeout: no device detected",
   "webSerialNotSupported": "⚠️ Web Serial API not supported. Use Chrome/Edge/Opera.",
-  "loopError": "Loop read error: {0}"
+  "loopError": "Loop read error: {0}",
+  "baselineDeveloped": "developed by"
 }

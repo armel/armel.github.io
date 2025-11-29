@@ -69,6 +69,7 @@ const logToggle = document.getElementById('logToggle');
 const languageSelect = document.getElementById('languageSelect');
 const dumpDownload = document.getElementById('dumpDownload');
 const dumpLink = document.getElementById('dumpLink');
+const baselineDev = document.getElementById("baseline-developed");
 
 // File input labels
 const fileLabel = document.getElementById('fileLabel');
@@ -90,7 +91,8 @@ window.updateUI = function updateUI() {
   if (labelBlVersionEl) labelBlVersionEl.textContent = t('labelBlVersion');
   if (labelFwFileEl) labelFwFileEl.textContent = t('labelFirmwareFile');
   if (labelCalibFileEl) labelCalibFileEl.textContent = t('labelCalibFile');
-  
+  if (baselineDev) baselineDev.textContent = t('baselineDeveloped');
+
   // Update info box based on active tab
   updateInfoBox();
   
@@ -840,3 +842,15 @@ if (!('serial' in navigator)) {
     if (el) el.click();
   }
 })();
+
+// ========== Version ==========
+
+document.addEventListener("DOMContentLoaded", () => {
+  fetch("locales/version.json")
+    .then(r => r.json())
+    .then(v => {
+      const bl = document.getElementById("uvtools-baseline-version");
+      if (bl) bl.textContent = `UVTools2 v${v.version}`;
+    })
+    .catch(() => console.warn("Impossible to load version.json"));
+});
