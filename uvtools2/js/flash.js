@@ -164,6 +164,7 @@ window.addEventListener('i18n:ready', () => {
 (async () => {
   if (window.i18nReady) await window.i18nReady;
   if (window.updateUI) window.updateUI();
+  await maybeLoadFirmwareFromQuery();
 })();
 
 // ========== TABS ==========
@@ -214,6 +215,64 @@ function setFirmwareBuffer(buf, name = 'firmware.bin') {
   if (fileLabel) fileLabel.classList.add('has-file');
   log(t('firmwareLoaded', name, firmwareData.length), 'success');
   updateFlashButton();
+}
+
+// ---------- Auto-load firmware from URL ----------
+
+async function loadFirmwareFromURL(url) {
+  try {
+    log(t('loadingFromUrl', url), 'info');
+
+    const urlObj = new URL(url);
+
+    // Only HTTPS
+    if (urlObj.protocol !== 'https:') {
+      throw new Error(t('urlHttpNotHttps'));
+    }
+
+    // GitHub convenience: github.com/.../raw/... → raw.githubusercontent.com/...
+    if (urlObj.hostname === 'github.com' && urlObj.pathname.includes('/raw/')) {
+      const parts = urlObj.pathname.split('/').filter(Boolean);
+      const i = parts.indexOf('raw');
+      if (i > 1 && i < parts.length - 1) {
+        const user = parts[0];
+        const repo = parts[1];
+        const branch = parts[i + 1];
+        const rest = parts.slice(i + 2).join('/');
+        urlObj.hostname = 'raw.githubusercontent.com';
+        urlObj.pathname = `/${user}/${repo}/${branch}/${rest}`;
+      }
+    }
+
+    const res = await fetch(urlObj.toString(), { cache: 'no-cache', mode: 'cors' });
+    if (!res.ok) {
+      throw new Error(`${t('urlFetchError')} HTTP ${res.status}`);
+    }
+
+    const buf = await res.arrayBuffer();
+    const fname = (urlObj.pathname.split('/').pop() || 'firmware.bin').split('?')[0];
+
+    setFirmwareBuffer(buf, fname);
+
+    // Clean URL so refresh does not re-trigger auto-load
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete('firmwareURL');
+    clean.searchParams.delete('fw');
+    window.history.replaceState({}, '', clean.toString());
+  } catch (err) {
+    log(`${t('urlFetchError')} ${err?.message ?? String(err)}`, 'error');
+  }
+}
+
+async function maybeLoadFirmwareFromQuery() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const param = params.get('firmwareURL') || params.get('fw');
+    if (!param) return;
+    await loadFirmwareFromURL(decodeURIComponent(param));
+  } catch (e) {
+    log(t('urlInvalid'), 'error');
+  }
 }
 
 function updateFlashButton() {
