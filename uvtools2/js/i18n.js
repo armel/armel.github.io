@@ -6,7 +6,7 @@
 
 (function () {
   const DEFAULT_LANG = localStorage.getItem('uv-k5-flasher-lang') || 'en';
-  const supported = ['en', 'fr']; // add other codes (it, es, de) when files exist
+  const supported = ['en', 'fr', 'zh']; // add other codes (it, es, de) when files exist
 
   // Load a locale JSON file, throws on file:// or fetch errors
   async function loadLocale(lang) {
