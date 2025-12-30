@@ -32,9 +32,9 @@ const OBFUS_TBL = new Uint8Array([
 ]);
 
 // Calibration memory layout
-const CALIB_OFFSET = 0x1E00;
-const CALIB_SIZE = 0x2000 - 0x1E00; // 512 bytes
+const CALIB_SIZE = 512; // bytes
 const CHUNK_SIZE = 16;
+let CALIB_OFFSET = 0x1E00; // Default for firmware < v5.0.0
 
 // ========== STATE ==========
 let port = null;
@@ -843,11 +843,53 @@ async function requestDeviceInfo() {
     log(t('messageReceived', resp.msgType.toString(16).padStart(4, '0')), 'info');
     
     if (resp.msgType === MSG_DEV_INFO_RESP) {
+      // Log raw device info data
+      logDeviceInfo(resp.data);
       log(t('deviceDetected'), 'success');
       return { timestamp: ts };
     }
   }
   throw new Error(t('timeoutNoDevice'));
+}
+
+// Helper to display device info response
+function logDeviceInfo(data) {
+  // Extract ASCII string from device info
+  let deviceInfoStr = '';
+  for (let i = 0; i < data.length; i++) {
+    const c = data[i];
+    if (c === 0x00 || c === 0xFF) break; // Stop at null or padding
+    if (c >= 32 && c < 127) {
+      deviceInfoStr += String.fromCharCode(c);
+    }
+  }
+  
+  if (deviceInfoStr) {
+    log(`Device: ${deviceInfoStr}`, 'success');
+    
+    // Extract version from string (e.g., "F4HWN v4.3.3" -> "4.3.3")
+    const versionMatch = deviceInfoStr.match(/v(\d+\.\d+\.\d+)/);
+    if (versionMatch) {
+      const version = versionMatch[1];
+      const [major, minor, patch] = version.split('.').map(Number);
+      
+      // Set CALIB_OFFSET based on version
+      if (major >= 5) {
+        CALIB_OFFSET = 0xB000;
+        log(`Firmware v${version} detected: CALIB_OFFSET = 0xB000`, 'info');
+      } else {
+        CALIB_OFFSET = 0x1E00;
+        log(`Firmware v${version} detected: CALIB_OFFSET = 0x1E00`, 'info');
+      }
+    }
+  } else {
+    // Fallback to hex dump if no ASCII found
+    let hexStr = 'Device Info (hex): ';
+    for (let i = 0; i < Math.min(data.length, 40); i++) {
+      hexStr += data[i].toString(16).padStart(2, '0').toUpperCase() + ' ';
+    }
+    log(hexStr, 'info');
+  }
 }
 
 // ========== UI HELPERS ==========
