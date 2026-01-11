@@ -265,7 +265,7 @@ async function sendKeepalive() {
 async function readFrames() {
     const buffer = new Uint8Array(4096);
     let bufferPos = 0;
-    
+
     while (isConnected && reader) {
         try {
             const { value, done } = await reader.read();
@@ -278,28 +278,48 @@ async function readFrames() {
             }
             buffer.set(value, bufferPos);
             bufferPos += value.length;
-            
+
             // Process frames in buffer
             let processed = 0;
             while (processed < bufferPos - 4) {
-                if (buffer[processed] === HEADER[0] && buffer[processed + 1] === HEADER[1]) {
-                    const type = buffer[processed + 2];
-                    const size = (buffer[processed + 3] << 8) | buffer[processed + 4];
-                    
-                    if (processed + 5 + size <= bufferPos) {
-                        const payload = buffer.slice(processed + 5, processed + 5 + size);
-                        
+                // Check for version marker (new format)
+                let isNewFormat = false;
+                let headerStart = processed;
+
+                if (buffer[processed] === 0xFF) {
+                    // New format: version marker present
+                    isNewFormat = true;
+                    headerStart = processed + 1;
+                }
+
+                // Now check for standard header
+                if (headerStart + 4 < bufferPos &&
+                    buffer[headerStart] === HEADER[0] &&
+                    buffer[headerStart + 1] === HEADER[1]) {
+
+                    const type = buffer[headerStart + 2];
+                    const size = (buffer[headerStart + 3] << 8) | buffer[headerStart + 4];
+
+                    // Calculate total frame size: marker(if new) + header + payload + end
+                    const markerSize = isNewFormat ? 1 : 0;
+                    const totalSize = markerSize + 5 + size + 1;
+
+                    if (processed + totalSize <= bufferPos) {
+                        const payloadStart = headerStart + 5;
+                        const payload = buffer.slice(payloadStart, payloadStart + size);
+
                         if (type === TYPE_SCREENSHOT && size === FRAME_SIZE) {
                             framebuffer = new Uint8Array(payload);
                             drawFrame();
                             updateFPS();
                         } else if (type === TYPE_DIFF && size % 9 === 0) {
-                            applyDiff(payload);
+                            // Apply diff with format awareness
+                            applyDiff(payload, isNewFormat);
                             drawFrame();
                             updateFPS();
                         }
-                        
-                        processed += 5 + size;
+
+                        processed += totalSize;
                     } else {
                         break; // Not enough data for complete frame
                     }
@@ -307,13 +327,13 @@ async function readFrames() {
                     processed++;
                 }
             }
-            
+
             // Remove processed data from buffer
             if (processed > 0) {
                 buffer.copyWithin(0, processed);
                 bufferPos -= processed;
             }
-            
+
         } catch (error) {
             if (isConnected) {
                 console.error('Read error:', error);
@@ -325,20 +345,41 @@ async function readFrames() {
     }
 }
 
-function applyDiff(diffPayload) {
+// Updated applyDiff with format parameter
+function applyDiff(diffPayload, isNewFormat) {
     let i = 0;
-    while (i + 9 <= diffPayload.length) {
-        const blockIndex = diffPayload[i];
-        i++;
-        if (blockIndex >= 128) break;
-        
-        const startPos = blockIndex * 8;
-        for (let j = 0; j < 8; j++) {
-            if (startPos + j < framebuffer.length) {
-                framebuffer[startPos + j] = diffPayload[i + j];
+
+    if (isNewFormat) {
+        // New format: chunk_index (0-127) maps directly to framebuffer[chunk*8...]
+        while (i + 9 <= diffPayload.length) {
+            const chunkIndex = diffPayload[i];
+            i++;
+
+            if (chunkIndex >= 128) break;
+
+            const startPos = chunkIndex * 8;
+            for (let j = 0; j < 8; j++) {
+                if (startPos + j < framebuffer.length) {
+                    framebuffer[startPos + j] = diffPayload[i + j];
+                }
             }
+            i += 8;
         }
-        i += 8;
+    } else {
+        // Old format: block_index (0-127) with special packing
+        while (i + 9 <= diffPayload.length) {
+            const blockIndex = diffPayload[i];
+            i++;
+            if (blockIndex >= 128) break;
+
+            const startPos = blockIndex * 8;
+            for (let j = 0; j < 8; j++) {
+                if (startPos + j < framebuffer.length) {
+                    framebuffer[startPos + j] = diffPayload[i + j];
+                }
+            }
+            i += 8;
+        }
     }
 }
 
