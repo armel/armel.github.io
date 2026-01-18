@@ -343,6 +343,7 @@ const TRANSLATIONS = {
         help: "Pomoc",
         toggle_theme: "Zmień motyw"
     },
+    
     zh: {
         ready_to_connect: "准备连接",
         connected_waiting: "已连接 - 等待数据",
@@ -385,6 +386,7 @@ const TRANSLATIONS = {
         help: "帮助",
         toggle_theme: "切换主题"
     },
+
     nl: {
         ready_to_connect: "Klaar om verbinding te maken",
         connected_waiting: "Verbonden - Wachten op gegevens",
@@ -426,5 +428,5 @@ const TRANSLATIONS = {
         app_loaded: "Applicatie geladen. Klik op "Verbinden" om te starten.",
         help: "Help",
         toggle_theme: "Thema wisselen"
-    },
+    }
 };
