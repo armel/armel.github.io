@@ -343,7 +343,7 @@ const TRANSLATIONS = {
         help: "Pomoc",
         toggle_theme: "Zmień motyw"
     },
-    
+
     zh: {
         ready_to_connect: "准备连接",
         connected_waiting: "已连接 - 等待数据",
@@ -425,7 +425,7 @@ const TRANSLATIONS = {
         disconnection_error: "Verbindingsfout: {fout}",
         serial_read_error: "Seriële leesfout",
         web_serial_not_supported: "Web Serial API wordt niet ondersteund. Gebruik Chrome 89+ of Edge 89+",
-        app_loaded: "Applicatie geladen. Klik op "Verbinden" om te starten.",
+        app_loaded: "Applicatie geladen. Klik op « Verbinden » om te starten.",
         help: "Help",
         toggle_theme: "Thema wisselen"
     }
