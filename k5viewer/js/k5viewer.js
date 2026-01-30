@@ -403,22 +403,55 @@ function drawFrame() {
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
+    // Calculate off-pixel color (subtle blend toward foreground) for LCD effect
+    let offColor = null;
+    if (pixelLcd) {
+        offColor = blendColors(bgColor, fgColor, 0.04);
+    }
+    
     // Draw pixels
-    ctx.fillStyle = fgColor;
     let bitIndex = 0;
     
     for (let y = 0; y < HEIGHT; y++) {
         for (let x = 0; x < WIDTH; x++) {
+            const px = x * (pixelSize - 1);
+            const py = y * pixelSize;
+            const width = pixelSize - 1 - pixelLcd;
+            const height = pixelSize - pixelLcd;
+            
             if (getBit(bitIndex)) {
-                const px = x * (pixelSize - 1);
-                const py = y * pixelSize;
-                const width = pixelSize - 1 - pixelLcd;
-                const height = pixelSize - pixelLcd;
+                // Pixel ON
+                ctx.fillStyle = fgColor;
+                ctx.fillRect(px, py, width, height);
+            } else if (pixelLcd && offColor) {
+                // Pixel OFF but visible (LCD effect)
+                ctx.fillStyle = offColor;
                 ctx.fillRect(px, py, width, height);
             }
             bitIndex++;
         }
     }
+}
+
+// Blend two hex colors by a given ratio (0 = color1, 1 = color2)
+function blendColors(color1, color2, ratio) {
+    const c1 = hexToRgb(color1);
+    const c2 = hexToRgb(color2);
+    
+    const r = Math.round(c1.r + (c2.r - c1.r) * ratio);
+    const g = Math.round(c1.g + (c2.g - c1.g) * ratio);
+    const b = Math.round(c1.b + (c2.b - c1.b) * ratio);
+    
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : { r: 0, g: 0, b: 0 };
 }
 
 function updateFPS() {
