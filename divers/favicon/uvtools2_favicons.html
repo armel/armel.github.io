@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UVTools2 Favicons</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .favicon-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .favicon-item {
+            text-align: center;
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        .favicon-item h3 {
+            margin-bottom: 15px;
+            color: #444;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .preview {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .preview-box {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .size-label {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+        }
+        code {
+            display: block;
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 UVTools2 - Favicons</h1>
+        <p class="subtitle">Outil de flashage firmware pour UV-K5 V3 & UV-K1</p>
+        
+        <div class="favicon-grid">
+            <!-- Version Monochrome -->
+            <div class="favicon-item">
+                <h3>Version Monochrome</h3>
+                <div class="preview">
+                    <div class="preview-box">
+                        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Microchip outline -->
+                            <rect x="8" y="8" width="16" height="16" fill="none" stroke="#000" stroke-width="2" rx="2"/>
+                            <!-- Pins left -->
+                            <line x1="4" y1="10" x2="8" y2="10" stroke="#000" stroke-width="2"/>
+                            <line x1="4" y1="14" x2="8" y2="14" stroke="#000" stroke-width="2"/>
+                            <line x1="4" y1="18" x2="8" y2="18" stroke="#000" stroke-width="2"/>
+                            <line x1="4" y1="22" x2="8" y2="22" stroke="#000" stroke-width="2"/>
+                            <!-- Pins right -->
+                            <line x1="24" y1="10" x2="28" y2="10" stroke="#000" stroke-width="2"/>
+                            <line x1="24" y1="14" x2="28" y2="14" stroke="#000" stroke-width="2"/>
+                            <line x1="24" y1="18" x2="28" y2="18" stroke="#000" stroke-width="2"/>
+                            <line x1="24" y1="22" x2="28" y2="22" stroke="#000" stroke-width="2"/>
+                            <!-- Flash arrow -->
+                            <path d="M 18 12 L 14 16 L 16 16 L 14 20 L 18 16 L 16 16 Z" fill="#000"/>
+                        </svg>
+                        <div class="size-label">32×32</div>
+                    </div>
+                    <div class="preview-box">
+                        <svg width="16" height="16" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="8" y="8" width="16" height="16" fill="none" stroke="#000" stroke-width="2" rx="2"/>
+                            <line x1="4" y1="10" x2="8" y2="10" stroke="#000" stroke-width="2"/>
+                            <line x1="4" y1="14" x2="8" y2="14" stroke="#000" stroke-width="2"/>
+                            <line x1="4" y1="18" x2="8" y2="18" stroke="#000" stroke-width="2"/>
+                            <line x1="4" y1="22" x2="8" y2="22" stroke="#000" stroke-width="2"/>
+                            <line x1="24" y1="10" x2="28" y2="10" stroke="#000" stroke-width="2"/>
+                            <line x1="24" y1="14" x2="28" y2="14" stroke="#000" stroke-width="2"/>
+                            <line x1="24" y1="18" x2="28" y2="18" stroke="#000" stroke-width="2"/>
+                            <line x1="24" y1="22" x2="28" y2="22" stroke="#000" stroke-width="2"/>
+                            <path d="M 18 12 L 14 16 L 16 16 L 14 20 L 18 16 L 16 16 Z" fill="#000"/>
+                        </svg>
+                        <div class="size-label">16×16</div>
+                    </div>
+                </div>
+                <code>&lt;link rel="icon" type="image/svg+xml" href="favicon-mono.svg"&gt;</code>
+            </div>
+
+            <!-- Version Couleur -->
+            <div class="favicon-item">
+                <h3>Version Couleur</h3>
+                <div class="preview">
+                    <div class="preview-box">
+                        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Microchip avec gradient -->
+                            <defs>
+                                <linearGradient id="chipGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <rect x="8" y="8" width="16" height="16" fill="url(#chipGrad)" stroke="#1e40af" stroke-width="1.5" rx="2"/>
+                            <!-- Pins gauche -->
+                            <line x1="4" y1="10" x2="8" y2="10" stroke="#64748b" stroke-width="2"/>
+                            <line x1="4" y1="14" x2="8" y2="14" stroke="#64748b" stroke-width="2"/>
+                            <line x1="4" y1="18" x2="8" y2="18" stroke="#64748b" stroke-width="2"/>
+                            <line x1="4" y1="22" x2="8" y2="22" stroke="#64748b" stroke-width="2"/>
+                            <!-- Pins droite -->
+                            <line x1="24" y1="10" x2="28" y2="10" stroke="#64748b" stroke-width="2"/>
+                            <line x1="24" y1="14" x2="28" y2="14" stroke="#64748b" stroke-width="2"/>
+                            <line x1="24" y1="18" x2="28" y2="18" stroke="#64748b" stroke-width="2"/>
+                            <line x1="24" y1="22" x2="28" y2="22" stroke="#64748b" stroke-width="2"/>
+                            <!-- Flash arrow en jaune/orange -->
+                            <path d="M 18 12 L 14 16 L 16 16 L 14 20 L 18 16 L 16 16 Z" fill="#fbbf24" stroke="#f59e0b" stroke-width="0.5"/>
+                        </svg>
+                        <div class="size-label">32×32</div>
+                    </div>
+                    <div class="preview-box">
+                        <svg width="16" height="16" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="chipGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <rect x="8" y="8" width="16" height="16" fill="url(#chipGrad2)" stroke="#1e40af" stroke-width="1.5" rx="2"/>
+                            <line x1="4" y1="10" x2="8" y2="10" stroke="#64748b" stroke-width="2"/>
+                            <line x1="4" y1="14" x2="8" y2="14" stroke="#64748b" stroke-width="2"/>
+                            <line x1="4" y1="18" x2="8" y2="18" stroke="#64748b" stroke-width="2"/>
+                            <line x1="4" y1="22" x2="8" y2="22" stroke="#64748b" stroke-width="2"/>
+                            <line x1="24" y1="10" x2="28" y2="10" stroke="#64748b" stroke-width="2"/>
+                            <line x1="24" y1="14" x2="28" y2="14" stroke="#64748b" stroke-width="2"/>
+                            <line x1="24" y1="18" x2="28" y2="18" stroke="#64748b" stroke-width="2"/>
+                            <line x1="24" y1="22" x2="28" y2="22" stroke="#64748b" stroke-width="2"/>
+                            <path d="M 18 12 L 14 16 L 16 16 L 14 20 L 18 16 L 16 16 Z" fill="#fbbf24" stroke="#f59e0b" stroke-width="0.5"/>
+                        </svg>
+                        <div class="size-label">16×16</div>
+                    </div>
+                </div>
+                <code>&lt;link rel="icon" type="image/svg+xml" href="favicon-color.svg"&gt;</code>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px; padding: 15px; background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 4px;">
+            <strong>💡 Concept :</strong> Microcontrôleur avec éclair de flashage<br>
+            <small style="color: #666;">Représente le processus de programmation/flashage du firmware sur la puce</small>
+        </div>
+    </div>
+</body>
+</html>

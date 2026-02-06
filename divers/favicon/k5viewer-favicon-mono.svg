@@ -1,0 +1,12 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+    <!-- Écran/moniteur -->
+    <rect x="5" y="6" width="22" height="16" fill="none" stroke="#000" stroke-width="2" rx="1"/>
+    <!-- Stand -->
+    <rect x="13" y="22" width="6" height="3" fill="#000" rx="0.5"/>
+    <rect x="10" y="25" width="12" height="2" fill="#000" rx="0.5"/>
+    <!-- Contenu écran - forme d'onde radio -->
+    <path d="M 8 14 Q 10 10, 12 14 T 16 14 Q 18 18, 20 14 T 24 14" 
+          fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Point de réception -->
+    <circle cx="16" cy="14" r="1.5" fill="#000"/>
+</svg>
