@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparaison Favicons v1 vs v2</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .app-section {
+            background: #fafafa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+        .app-section h2 {
+            margin-bottom: 20px;
+            color: #444;
+            font-size: 18px;
+        }
+        .version-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .version-box {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .version-box h3 {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .size-preview {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .icon-display {
+            padding: 10px;
+            background: #f9f9f9;
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+        }
+        .size-label {
+            font-size: 10px;
+            color: #999;
+            margin-top: 5px;
+        }
+        .improvement {
+            background: #ecfdf5;
+            border-left: 3px solid #10b981;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #065f46;
+        }
+        .recommendation {
+            background: #fff7ed;
+            border: 2px solid #fb923c;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+        .recommendation strong {
+            color: #ea580c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Comparaison Favicons v1 vs v2</h1>
+        <p class="subtitle">Versions améliorées pour une meilleure visibilité à petite taille</p>
+
+        <div class="comparison-grid">
+            <!-- UVTools2 -->
+            <div class="app-section">
+                <h2>🔧 UVTools2 (Flashage Firmware)</h2>
+                
+                <div class="version-compare">
+                    <div class="version-box">
+                        <h3>Version 1 (originale)</h3>
+                        <div class="size-preview">
+                            <div class="icon-display">
+                                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="8" y="8" width="16" height="16" fill="none" stroke="#000" stroke-width="2" rx="2"/>
+                                    <line x1="4" y1="10" x2="8" y2="10" stroke="#000" stroke-width="2"/>
+                                    <line x1="4" y1="14" x2="8" y2="14" stroke="#000" stroke-width="2"/>
+                                    <line x1="4" y1="18" x2="8" y2="18" stroke="#000" stroke-width="2"/>
+                                    <line x1="4" y1="22" x2="8" y2="22" stroke="#000" stroke-width="2"/>
+                                    <line x1="24" y1="10" x2="28" y2="10" stroke="#000" stroke-width="2"/>
+                                    <line x1="24" y1="14" x2="28" y2="14" stroke="#000" stroke-width="2"/>
+                                    <line x1="24" y1="18" x2="28" y2="18" stroke="#000" stroke-width="2"/>
+                                    <line x1="24" y1="22" x2="28" y2="22" stroke="#000" stroke-width="2"/>
+                                    <path d="M 18 12 L 14 16 L 16 16 L 14 20 L 18 16 L 16 16 Z" fill="#000"/>
+                                </svg>
+                                <div class="size-label">32px</div>
+                            </div>
+                            <div class="icon-display">
+                                <svg width="16" height="16" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="8" y="8" width="16" height="16" fill="none" stroke="#000" stroke-width="2" rx="2"/>
+                                    <line x1="4" y1="10" x2="8" y2="10" stroke="#000" stroke-width="2"/>
+                                    <line x1="4" y1="14" x2="8" y2="14" stroke="#000" stroke-width="2"/>
+                                    <line x1="4" y1="18" x2="8" y2="18" stroke="#000" stroke-width="2"/>
+                                    <line x1="4" y1="22" x2="8" y2="22" stroke="#000" stroke-width="2"/>
+                                    <line x1="24" y1="10" x2="28" y2="10" stroke="#000" stroke-width="2"/>
+                                    <line x1="24" y1="14" x2="28" y2="14" stroke="#000" stroke-width="2"/>
+                                    <line x1="24" y1="18" x2="28" y2="18" stroke="#000" stroke-width="2"/>
+                                    <line x1="24" y1="22" x2="28" y2="22" stroke="#000" stroke-width="2"/>
+                                    <path d="M 18 12 L 14 16 L 16 16 L 14 20 L 18 16 L 16 16 Z" fill="#000"/>
+                                </svg>
+                                <div class="size-label">16px</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="version-box">
+                        <h3>Version 2 (améliorée) ⭐</h3>
+                        <div class="size-preview">
+                            <div class="icon-display">
+                                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="6" y="6" width="20" height="20" fill="none" stroke="#000" stroke-width="2.5" rx="2"/>
+                                    <line x1="2" y1="9" x2="6" y2="9" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="2" y1="13" x2="6" y2="13" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="2" y1="16" x2="6" y2="16" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="2" y1="19" x2="6" y2="19" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="2" y1="23" x2="6" y2="23" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="26" y1="9" x2="30" y2="9" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="26" y1="13" x2="30" y2="13" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="26" y1="16" x2="30" y2="16" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="26" y1="19" x2="30" y2="19" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="26" y1="23" x2="30" y2="23" stroke="#000" stroke-width="2.5"/>
+                                    <path d="M 19 11 L 13 16 L 16 16 L 13 21 L 19 16 L 16 16 Z" fill="#000"/>
+                                </svg>
+                                <div class="size-label">32px</div>
+                            </div>
+                            <div class="icon-display">
+                                <svg width="16" height="16" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="6" y="6" width="20" height="20" fill="none" stroke="#000" stroke-width="2.5" rx="2"/>
+                                    <line x1="2" y1="9" x2="6" y2="9" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="2" y1="13" x2="6" y2="13" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="2" y1="16" x2="6" y2="16" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="2" y1="19" x2="6" y2="19" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="2" y1="23" x2="6" y2="23" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="26" y1="9" x2="30" y2="9" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="26" y1="13" x2="30" y2="13" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="26" y1="16" x2="30" y2="16" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="26" y1="19" x2="30" y2="19" stroke="#000" stroke-width="2.5"/>
+                                    <line x1="26" y1="23" x2="30" y2="23" stroke="#000" stroke-width="2.5"/>
+                                    <path d="M 19 11 L 13 16 L 16 16 L 13 21 L 19 16 L 16 16 Z" fill="#000"/>
+                                </svg>
+                                <div class="size-label">16px</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="improvement">
+                    ✓ Microchip agrandi (16×16 → 20×20)<br>
+                    ✓ Traits plus épais (2px → 2.5px)<br>
+                    ✓ Plus de pins (4 → 5 de chaque côté)<br>
+                    ✓ Éclair plus grand et visible
+                </div>
+            </div>
+
+            <!-- K5Viewer -->
+            <div class="app-section">
+                <h2>📺 K5Viewer (Visualiseur d'écran)</h2>
+                
+                <div class="version-compare">
+                    <div class="version-box">
+                        <h3>Version 1 (originale)</h3>
+                        <div class="size-preview">
+                            <div class="icon-display">
+                                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="5" y="6" width="22" height="16" fill="none" stroke="#000" stroke-width="2" rx="1"/>
+                                    <rect x="13" y="22" width="6" height="3" fill="#000" rx="0.5"/>
+                                    <rect x="10" y="25" width="12" height="2" fill="#000" rx="0.5"/>
+                                    <path d="M 8 14 Q 10 10, 12 14 T 16 14 Q 18 18, 20 14 T 24 14" 
+                                          fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round"/>
+                                    <circle cx="16" cy="14" r="1.5" fill="#000"/>
+                                </svg>
+                                <div class="size-label">32px</div>
+                            </div>
+                            <div class="icon-display">
+                                <svg width="16" height="16" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="5" y="6" width="22" height="16" fill="none" stroke="#000" stroke-width="2" rx="1"/>
+                                    <rect x="13" y="22" width="6" height="3" fill="#000" rx="0.5"/>
+                                    <rect x="10" y="25" width="12" height="2" fill="#000" rx="0.5"/>
+                                    <path d="M 8 14 Q 10 10, 12 14 T 16 14 Q 18 18, 20 14 T 24 14" 
+                                          fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round"/>
+                                    <circle cx="16" cy="14" r="1.5" fill="#000"/>
+                                </svg>
+                                <div class="size-label">16px</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="version-box">
+                        <h3>Version 2 (améliorée) ⭐</h3>
+                        <div class="size-preview">
+                            <div class="icon-display">
+                                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="3" y="4" width="26" height="18" fill="none" stroke="#000" stroke-width="2.5" rx="1.5"/>
+                                    <rect x="12" y="22" width="8" height="3" fill="#000" rx="0.5"/>
+                                    <rect x="9" y="25" width="14" height="3" fill="#000" rx="1"/>
+                                    <path d="M 6 13 Q 9 8, 12 13 T 18 13 Q 21 18, 24 13 T 26 13" 
+                                          fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+                                    <circle cx="16" cy="13" r="2.5" fill="#000"/>
+                                </svg>
+                                <div class="size-label">32px</div>
+                            </div>
+                            <div class="icon-display">
+                                <svg width="16" height="16" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="3" y="4" width="26" height="18" fill="none" stroke="#000" stroke-width="2.5" rx="1.5"/>
+                                    <rect x="12" y="22" width="8" height="3" fill="#000" rx="0.5"/>
+                                    <rect x="9" y="25" width="14" height="3" fill="#000" rx="1"/>
+                                    <path d="M 6 13 Q 9 8, 12 13 T 18 13 Q 21 18, 24 13 T 26 13" 
+                                          fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+                                    <circle cx="16" cy="13" r="2.5" fill="#000"/>
+                                </svg>
+                                <div class="size-label">16px</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="improvement">
+                    ✓ Écran agrandi (22×16 → 26×18)<br>
+                    ✓ Cadre plus épais (2px → 2.5px)<br>
+                    ✓ Forme d'onde plus épaisse et visible<br>
+                    ✓ Point central plus gros (1.5px → 2.5px)<br>
+                    ✓ Stand plus robuste
+                </div>
+            </div>
+        </div>
+
+        <div class="recommendation">
+            <strong>🎯 Recommandation :</strong> Utilise les versions V2 pour une meilleure visibilité dans les onglets du navigateur. Les icônes occupent mieux l'espace disponible et restent lisibles même à très petite taille (16×16px).
+        </div>
+
+        <div style="margin-top: 20px; padding: 15px; background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 4px;">
+            <strong>💾 Intégration HTML :</strong><br>
+            <code style="display: block; margin-top: 10px; background: white; padding: 10px; border-radius: 4px;">
+                &lt;link rel="icon" type="image/svg+xml" href="uvtools2-favicon-color-v2.svg"&gt;
+            </code>
+        </div>
+    </div>
+</body>
+</html>
