@@ -1,0 +1,18 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+    <!-- Microchip plus large -->
+    <rect x="6" y="6" width="20" height="20" fill="none" stroke="#000" stroke-width="2.5" rx="2"/>
+    <!-- Pins gauche - plus épaisses -->
+    <line x1="2" y1="9" x2="6" y2="9" stroke="#000" stroke-width="2.5"/>
+    <line x1="2" y1="13" x2="6" y2="13" stroke="#000" stroke-width="2.5"/>
+    <line x1="2" y1="16" x2="6" y2="16" stroke="#000" stroke-width="2.5"/>
+    <line x1="2" y1="19" x2="6" y2="19" stroke="#000" stroke-width="2.5"/>
+    <line x1="2" y1="23" x2="6" y2="23" stroke="#000" stroke-width="2.5"/>
+    <!-- Pins droite - plus épaisses -->
+    <line x1="26" y1="9" x2="30" y2="9" stroke="#000" stroke-width="2.5"/>
+    <line x1="26" y1="13" x2="30" y2="13" stroke="#000" stroke-width="2.5"/>
+    <line x1="26" y1="16" x2="30" y2="16" stroke="#000" stroke-width="2.5"/>
+    <line x1="26" y1="19" x2="30" y2="19" stroke="#000" stroke-width="2.5"/>
+    <line x1="26" y1="23" x2="30" y2="23" stroke="#000" stroke-width="2.5"/>
+    <!-- Flash arrow plus gros et plus visible -->
+    <path d="M 19 11 L 13 16 L 16 16 L 13 21 L 19 16 L 16 16 Z" fill="#000"/>
+</svg>
