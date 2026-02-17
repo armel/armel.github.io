@@ -79,6 +79,27 @@ const calibFileLabel = document.getElementById('calibFileLabel');
 const calibFileName = document.getElementById('calibFileName');
 const calibFileButton = document.getElementById('calibFileButton');
 
+// ========== VERSION COMPARISON ==========
+function isBootloaderCompatible(version, minVersion) {
+  // Parse version strings (e.g., "7.02.02")
+  const parseVersion = (v) => {
+    const parts = v.split('.').map(p => parseInt(p, 10) || 0);
+    while (parts.length < 3) parts.push(0);
+    return parts;
+  };
+  
+  const current = parseVersion(version);
+  const required = parseVersion(minVersion);
+  
+  // Compare major.minor.patch
+  for (let i = 0; i < 3; i++) {
+    if (current[i] > required[i]) return true;
+    if (current[i] < required[i]) return false;
+  }
+  
+  return true; // Equal versions are compatible
+}
+
 // ========== i18n HELPER ==========
 function t(key, ...args) {
   return window.i18n && window.i18n.t ? window.i18n.t(key, ...args) : key;
@@ -504,6 +525,23 @@ async function flashFirmware() {
     const devInfo = await waitForDeviceInfo();
     log(t('uidLabel', arrayToHex(devInfo.uid)), 'info');
     log(t('blVersionLabel', devInfo.blVersion), 'info');
+
+    // Check bootloader version compatibility
+    const minVersion = '7.00.07';
+    if (!isBootloaderCompatible(devInfo.blVersion, minVersion)) {
+      log('==============================================', 'error');
+      log('❌ INCOMPATIBLE BOOTLOADER VERSION', 'error');
+      log(`   Detected: ${devInfo.blVersion}`, 'error');
+      log(`   Required: ${minVersion} or higher`, 'error');
+      log('', 'error');
+      log('This radio does not seem compatible with this firmware.', 'error');
+      log('Please open an issue on GitHub:', 'error');
+      log('https://github.com/armel/uv-k1-k5v3-firmware-custom', 'error');
+      log('Please, include your bootloader version in the issue:', 'error');
+      log(`   Bootloader: ${devInfo.blVersion}`, 'error');
+      log('==============================================', 'error');
+      throw new Error('Bootloader version too old');
+    }
 
     const expectedBl = blVersionInput?.value?.trim?.() ?? '';
     if (expectedBl !== '*' && expectedBl !== '?' && expectedBl !== '' && devInfo.blVersion !== expectedBl) {
