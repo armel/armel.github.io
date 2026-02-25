@@ -23,9 +23,9 @@
                 <button class="btn danger" id="disconnectBtn" data-i18n="disconnect" disabled>Disconnect</button>
                 
                 <div style="width: 1px; height: 20px; background: var(--border); margin: 0 8px;"></div>
-
+                
                 <button class="btn" id="keyboardToggleBtn" data-i18n="toggle_keyboard_short" data-i18n-title="toggle_keyboard">Keypad</button>
-
+                
                 <div style="width: 1px; height: 20px; background: var(--border); margin: 0 8px;"></div>
                 
                 <button class="btn" id="helpBtn" data-i18n="help" data-i18n-title="help">Help</button>
@@ -56,7 +56,10 @@
                 <!-- UV-K1 Virtual Keyboard -->
                 <div class="k1-keyboard" id="k1Keyboard">
                     <div class="k1-keyboard-header">
-                        <span class="k1-keyboard-label">UV-K1</span>
+                        <div class="k1-model-tabs">
+                            <button class="k1-model-tab" id="tabK1">UV-K1</button>
+                            <button class="k1-model-tab" id="tabK5">UV-K5</button>
+                        </div>
                     </div>
 
                     <!-- Side buttons (vertical, left of main grid) -->
@@ -82,10 +85,10 @@
                             <button class="k1-btn k1-menu" data-key="0x0A">
                                 <span class="k1-btn-label">MENU</span>
                             </button>
-                            <button class="k1-btn k1-nav" data-key="0x0B">
+                            <button class="k1-btn k1-nav" data-key="0x0B" id="btnUp">
                                 <span class="k1-btn-label">◀</span>
                             </button>
-                            <button class="k1-btn k1-nav" data-key="0x0C">
+                            <button class="k1-btn k1-nav" data-key="0x0C" id="btnDown">
                                 <span class="k1-btn-label">▶</span>
                             </button>
                             <button class="k1-btn k1-exit" data-key="0x0D">

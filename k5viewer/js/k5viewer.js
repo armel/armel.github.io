@@ -647,7 +647,6 @@ async function sendKey(keyCode, long = false) {
 // Attach events to all k1 buttons
 function initKeyboard() {
     document.querySelectorAll('.k1-btn[data-key]').forEach(btn => {
-        const keyCode = parseInt(btn.dataset.key, 16);
         let longPressTimer = null;
         let wasLong = false;
 
@@ -658,7 +657,7 @@ function initKeyboard() {
             longPressTimer = setTimeout(() => {
                 wasLong = true;
                 btn.classList.add('long');
-                sendKey(keyCode, true);
+                sendKey(parseInt(btn.dataset.key, 16), true);
             }, 500);
         }
 
@@ -669,20 +668,19 @@ function initKeyboard() {
                 longPressTimer = null;
             }
             if (!wasLong) {
-                sendKey(keyCode, false);
+                sendKey(parseInt(btn.dataset.key, 16), false);
             }
             wasLong = false;
         }
 
         // Mouse
-        btn.addEventListener('mousedown',  startPress);
-        btn.addEventListener('mouseup',    endPress);
-        //btn.addEventListener('mouseleave', endPress);
+        btn.addEventListener('mousedown', startPress);
+        btn.addEventListener('mouseup',   endPress);
 
         // Touch (mobile)
-        btn.addEventListener('touchstart', startPress, { passive: false });
-        btn.addEventListener('touchend',   endPress);
-        btn.addEventListener('touchcancel',endPress);
+        btn.addEventListener('touchstart',  startPress, { passive: false });
+        btn.addEventListener('touchend',    endPress);
+        btn.addEventListener('touchcancel', endPress);
     });
 }
 
@@ -703,6 +701,35 @@ if (keyboardHiddenLocal === 'true') {
     k1Keyboard.classList.add('hidden');
     keyboardToggleBtn.style.opacity = '0.4';
 }
+
+// Model toggle: UV-K1 (◀ ▶) vs UV-K5 (▲ ▼)
+const tabK1  = document.getElementById('tabK1');
+const tabK5  = document.getElementById('tabK5');
+
+let kbdModel = localStorage.getItem('kbdModel') || 'K1';
+
+function applyKbdModel(model) {
+    if (model === 'K1') {
+        btnUp.querySelector('.k1-btn-label').textContent   = '◀';
+        btnDown.querySelector('.k1-btn-label').textContent = '▶';
+        btnUp.dataset.key   = '0x0B';
+        btnDown.dataset.key = '0x0C';
+        tabK1.classList.add('active');
+        tabK5.classList.remove('active');
+    } else {
+        btnUp.querySelector('.k1-btn-label').textContent   = '▲';
+        btnDown.querySelector('.k1-btn-label').textContent = '▼';
+        btnUp.dataset.key   = '0x0B';
+        btnDown.dataset.key = '0x0C';
+        tabK1.classList.remove('active');
+        tabK5.classList.add('active');
+    }
+}
+
+tabK1.addEventListener('click', () => { kbdModel = 'K1'; localStorage.setItem('kbdModel', kbdModel); applyKbdModel(kbdModel); });
+tabK5.addEventListener('click', () => { kbdModel = 'K5'; localStorage.setItem('kbdModel', kbdModel); applyKbdModel(kbdModel); });
+
+applyKbdModel(kbdModel);
 
 // Sync keyboard enabled/disabled with connection state
 function updateKeyboardState() {
