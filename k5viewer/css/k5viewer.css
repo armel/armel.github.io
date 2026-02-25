@@ -462,6 +462,13 @@ select:focus {
     background: color-mix(in srgb, var(--accent) 15%, var(--bg));
 }
 
+.k1-btn.long {
+    transform: translateY(2px);
+    box-shadow: 0 0px 0 var(--border);
+    background: color-mix(in srgb, var(--accent) 40%, var(--bg));
+    outline: 2px solid var(--accent);
+}
+
 .k1-btn-label {
     font-size: 13px;
     font-weight: 700;

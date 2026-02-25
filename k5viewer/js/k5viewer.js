@@ -627,17 +627,17 @@ drawFrame();
 
 
 // ─── UV-K1 Virtual Keyboard ──────────────────────────────────
-const TYPE_KEY = 0x03;
-
+const TYPE_KEY      = 0x03;
+const TYPE_KEY_LONG = 0x04;
 const k1Keyboard = document.getElementById('k1Keyboard');
 const keyboardToggle = document.getElementById('keyboardToggle');
 
 // Send a key event to the radio via serial
-async function sendKey(keyCode) {
+async function sendKey(keyCode, long = false) {
     if (!writer || !isConnected) return;
     try {
-        // Packet: AA 55 TYPE_KEY keycode
-        const packet = new Uint8Array([0xAA, 0x55, TYPE_KEY, keyCode]);
+        const type   = long ? TYPE_KEY_LONG : TYPE_KEY;
+        const packet = new Uint8Array([0xAA, 0x55, type, keyCode]);
         await writer.write(packet);
     } catch (error) {
         console.error('Key send error:', error);
@@ -648,23 +648,41 @@ async function sendKey(keyCode) {
 function initKeyboard() {
     document.querySelectorAll('.k1-btn[data-key]').forEach(btn => {
         const keyCode = parseInt(btn.dataset.key, 16);
+        let longPressTimer = null;
+        let wasLong = false;
+
+        function startPress(e) {
+            e.preventDefault();
+            btn.classList.add('pressed');
+            wasLong = false;
+            longPressTimer = setTimeout(() => {
+                wasLong = true;
+                btn.classList.add('long');
+                sendKey(keyCode, true);
+            }, 500);
+        }
+
+        function endPress() {
+            btn.classList.remove('pressed', 'long');
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+            if (!wasLong) {
+                sendKey(keyCode, false);
+            }
+            wasLong = false;
+        }
 
         // Mouse
-        btn.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            btn.classList.add('pressed');
-            sendKey(keyCode);
-        });
-        btn.addEventListener('mouseup', () => btn.classList.remove('pressed'));
-        btn.addEventListener('mouseleave', () => btn.classList.remove('pressed'));
+        btn.addEventListener('mousedown',  startPress);
+        btn.addEventListener('mouseup',    endPress);
+        //btn.addEventListener('mouseleave', endPress);
 
         // Touch (mobile)
-        btn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            btn.classList.add('pressed');
-            sendKey(keyCode);
-        }, { passive: false });
-        btn.addEventListener('touchend', () => btn.classList.remove('pressed'));
+        btn.addEventListener('touchstart', startPress, { passive: false });
+        btn.addEventListener('touchend',   endPress);
+        btn.addEventListener('touchcancel',endPress);
     });
 }
 
