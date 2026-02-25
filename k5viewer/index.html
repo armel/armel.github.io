@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>K5Viewer v1.4 by F4HWN</title>
+<title>K5Viewer v1.5 by F4HWN</title>
 <link rel="icon" type="image/svg+xml" href="img/k5viewer-favicon-color-v2.svg">
 <link href="css/k5viewer.css" rel="stylesheet">
 </head>
@@ -12,7 +12,7 @@
         <!-- Header -->
         <header class="header">
             <div class="brand">
-                <h1><span>K5Viewer v1.4</span> <span class="brand-author">by F4HWN</span></h1>
+                <h1><span>K5Viewer v1.5</span> <span class="brand-author">by F4HWN</span></h1>
                 <div class="status-pill" id="status">
                     <span data-i18n="ready_to_connect">Ready to connect</span>
                 </div>
@@ -22,6 +22,10 @@
                 <button class="btn primary" id="connectBtn" data-i18n="connect">Connect</button>
                 <button class="btn danger" id="disconnectBtn" data-i18n="disconnect" disabled>Disconnect</button>
                 
+                <div style="width: 1px; height: 20px; background: var(--border); margin: 0 8px;"></div>
+
+                <button class="btn" id="keyboardToggleBtn" data-i18n="toggle_keyboard_short" data-i18n-title="toggle_keyboard">Keypad</button>
+
                 <div style="width: 1px; height: 20px; background: var(--border); margin: 0 8px;"></div>
                 
                 <button class="btn" id="helpBtn" data-i18n="help" data-i18n-title="help">Help</button>
@@ -44,8 +48,106 @@
         
         <!-- Main -->
         <main class="main">
-            <div class="display-container">
-                <canvas id="display" width="635" height="320"></canvas>
+            <div class="viewer-layout">
+                <div class="display-container">
+                    <canvas id="display" width="635" height="320"></canvas>
+                </div>
+
+                <!-- UV-K1 Virtual Keyboard -->
+                <div class="k1-keyboard" id="k1Keyboard">
+                    <div class="k1-keyboard-header">
+                        <span class="k1-keyboard-label">UV-K1</span>
+                    </div>
+
+                    <!-- Side buttons (vertical, left of main grid) -->
+                    <div class="k1-body">
+                        <div class="k1-side-col">
+                            <button class="k1-btn k1-ptt" disabled title="PTT not available via serial">
+                                <span class="k1-btn-label">PTT</span>
+                                <span class="k1-btn-sub">N/A</span>
+                            </button>
+                            <button class="k1-btn k1-side" data-key="0x12">
+                                <span class="k1-btn-label">F1</span>
+                                <span class="k1-btn-sub">SIDE1</span>
+                            </button>
+                            <button class="k1-btn k1-side" data-key="0x11">
+                                <span class="k1-btn-label">F2</span>
+                                <span class="k1-btn-sub">SIDE2</span>
+                            </button>
+                        </div>
+
+                        <!-- Main 4×4 grid -->
+                        <div class="k1-grid">
+                            <!-- Row 1: nav -->
+                            <button class="k1-btn k1-menu" data-key="0x0A">
+                                <span class="k1-btn-label">MENU</span>
+                            </button>
+                            <button class="k1-btn k1-nav" data-key="0x0B">
+                                <span class="k1-btn-label">◀</span>
+                            </button>
+                            <button class="k1-btn k1-nav" data-key="0x0C">
+                                <span class="k1-btn-label">▶</span>
+                            </button>
+                            <button class="k1-btn k1-exit" data-key="0x0D">
+                                <span class="k1-btn-label">EXIT</span>
+                            </button>
+
+                            <!-- Row 2 -->
+                            <button class="k1-btn k1-num" data-key="0x01">
+                                <span class="k1-btn-label">1</span>
+                                <span class="k1-btn-sub">Band ,.?</span>
+                            </button>
+                            <button class="k1-btn k1-num" data-key="0x02">
+                                <span class="k1-btn-label">2</span>
+                                <span class="k1-btn-sub">A/B abc</span>
+                            </button>
+                            <button class="k1-btn k1-num" data-key="0x03">
+                                <span class="k1-btn-label">3</span>
+                                <span class="k1-btn-sub">V/M def</span>
+                            </button>
+                            <button class="k1-btn k1-star" data-key="0x0E">
+                                <span class="k1-btn-label">✱</span>
+                                <span class="k1-btn-sub">Scan</span>
+                            </button>
+
+                            <!-- Row 3 -->
+                            <button class="k1-btn k1-num" data-key="0x04">
+                                <span class="k1-btn-label">4</span>
+                                <span class="k1-btn-sub">FC ghi</span>
+                            </button>
+                            <button class="k1-btn k1-num" data-key="0x05">
+                                <span class="k1-btn-label">5</span>
+                                <span class="k1-btn-sub">WX jkl</span>
+                            </button>
+                            <button class="k1-btn k1-num" data-key="0x06">
+                                <span class="k1-btn-label">6</span>
+                                <span class="k1-btn-sub">H/L mno</span>
+                            </button>
+                            <button class="k1-btn k1-num" data-key="0x00">
+                                <span class="k1-btn-label">0</span>
+                                <span class="k1-btn-sub">FM</span>
+                            </button>
+
+                            <!-- Row 4 -->
+                            <button class="k1-btn k1-num" data-key="0x07">
+                                <span class="k1-btn-label">7</span>
+                                <span class="k1-btn-sub">VOX pqrs</span>
+                            </button>
+                            <button class="k1-btn k1-num" data-key="0x08">
+                                <span class="k1-btn-label">8</span>
+                                <span class="k1-btn-sub">R tuv</span>
+                            </button>
+                            <button class="k1-btn k1-num" data-key="0x09">
+                                <span class="k1-btn-label">9</span>
+                                <span class="k1-btn-sub">Call wxyz</span>
+                            </button>
+                            <button class="k1-btn k1-hash" data-key="0x0F">
+                                <span class="k1-btn-label">#</span>
+                                <span class="k1-btn-sub">🔑 F</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>

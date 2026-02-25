@@ -40,7 +40,9 @@ const TRANSLATIONS = {
         web_serial_not_supported: "Web Serial API not supported. Use Chrome 89+ or Edge 89+",
         app_loaded: "Application loaded. Click \"Connect\" to start.",
         help: "Help",
-        toggle_theme: "Toggle theme"
+        toggle_theme: "Toggle theme",
+        toggle_keyboard: "Toggle virtual keyboard",
+        toggle_keyboard_short: "Keypad"
     },
 
     fr: {
@@ -83,7 +85,9 @@ const TRANSLATIONS = {
         web_serial_not_supported: "API Web Serial non supportée. Utilisez Chrome 89+ ou Edge 89+",
         app_loaded: "Application chargée. Cliquez sur « Connexion » pour commencer.",
         help: "Aide",
-        toggle_theme: "Changer le thème"
+        toggle_theme: "Changer le thème",
+        toggle_keyboard: "Afficher/masquer le clavier virtuel",
+        toggle_keyboard_short: "Clavier"
     },
 
     it: {
@@ -126,7 +130,9 @@ const TRANSLATIONS = {
         web_serial_not_supported: "Web Serial API non supportata. Usa Chrome 89+ o Edge 89+",
         app_loaded: "Applicazione caricata. Clicca su \"Connetti\" per iniziare.",
         help: "Aiuto",
-        toggle_theme: "Cambia tema"
+        toggle_theme: "Cambia tema",
+        toggle_keyboard: "Mostra/nascondi tastiera virtuale",
+        toggle_keyboard_short: "Tastiera"
     },
 
     es: {
@@ -169,7 +175,9 @@ const TRANSLATIONS = {
         web_serial_not_supported: "Web Serial API no compatible. Usa Chrome 89+ o Edge 89+",
         app_loaded: "Aplicación cargada. Haz clic en «Conectar» para comenzar.",
         help: "Ayuda",
-        toggle_theme: "Cambiar tema"
+        toggle_theme: "Cambiar tema",
+        toggle_keyboard: "Mostrar/ocultar teclado virtual",
+        toggle_keyboard_short: "Teclado"
     },
 
     de: {
@@ -212,7 +220,9 @@ const TRANSLATIONS = {
         web_serial_not_supported: "Web Serial API wird nicht unterstützt. Verwenden Sie Chrome 89+ oder Edge 89+",
         app_loaded: "Anwendung geladen. Klicke auf „Verbinden“, um zu starten.",
         help: "Hilfe",
-        toggle_theme: "Design wechseln"
+        toggle_theme: "Design wechseln",
+        toggle_keyboard: "Virtuelle Tastatur ein-/ausblenden",
+        toggle_keyboard_short: "Tastatur"
     },
 
     pt: {
@@ -255,7 +265,9 @@ const TRANSLATIONS = {
         web_serial_not_supported: "API Web Serial não suportada. Use Chrome 89+ ou Edge 89+",
         app_loaded: "Aplicativo carregado. Clique em \"Conectar\" para iniciar.",
         help: "Ajuda",
-        toggle_theme: "Alternar tema"
+        toggle_theme: "Alternar tema",
+        toggle_keyboard: "Mostrar/ocultar teclado virtual",
+        toggle_keyboard_short: "Teclado"
     },
     
     ru: {
@@ -298,7 +310,9 @@ const TRANSLATIONS = {
         web_serial_not_supported: "Web Serial API не поддерживается. Используйте Chrome 89+ или Edge 89+",
         app_loaded: "Приложение загружено. Нажмите «Подключить», чтобы начать.",
         help: "Помощь",
-        toggle_theme: "Сменить тему"
+        toggle_theme: "Сменить тему",
+        toggle_keyboard: "Показать/скрыть виртуальную клавиатуру",
+        toggle_keyboard_short: "Клавиши"
     },
 
     pl: {
@@ -341,7 +355,9 @@ const TRANSLATIONS = {
         web_serial_not_supported: "Web Serial API nie jest obsługiwane. Użyj Chrome 89+ lub Edge 89+",
         app_loaded: "Aplikacja załadowana. Kliknij „Połącz”, aby rozpocząć.",
         help: "Pomoc",
-        toggle_theme: "Zmień motyw"
+        toggle_theme: "Zmień motyw",
+        toggle_keyboard: "Pokaż/ukryj wirtualną klawiaturę",
+        toggle_keyboard_short: "Klawiatura"
     },
 
     zh: {
@@ -384,7 +400,9 @@ const TRANSLATIONS = {
         web_serial_not_supported: "不支持 Web Serial API。请使用 Chrome 89+ 或 Edge 89+",
         app_loaded: "应用程序已加载。点击“连接”以开始。",
         help: "帮助",
-        toggle_theme: "切换主题"
+        toggle_theme: "切换主题",
+        toggle_keyboard: "显示/隐藏虚拟键盘",
+        toggle_keyboard_short: "键盘"
     },
 
     nl: {
@@ -427,6 +445,8 @@ const TRANSLATIONS = {
         web_serial_not_supported: "Web Serial API wordt niet ondersteund. Gebruik Chrome 89+ of Edge 89+",
         app_loaded: "Applicatie geladen. Klik op « Verbinden » om te starten.",
         help: "Help",
-        toggle_theme: "Thema wisselen"
+        toggle_theme: "Thema wisselen",
+        toggle_keyboard: "Virtueel toetsenbord tonen/verbergen",
+        toggle_keyboard_short: "Toetsen"
     }
 };

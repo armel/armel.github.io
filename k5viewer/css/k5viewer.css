@@ -359,6 +359,182 @@ select:focus {
     font-size: 13px;
 }
 
+/* ─── UV-K1 Virtual Keyboard ──────────────────────────────── */
+
+.viewer-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+}
+
+.k1-keyboard {
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 12px;
+    box-shadow: var(--shadow-lg);
+    user-select: none;
+    transition: opacity 0.2s;
+}
+
+.k1-keyboard.hidden {
+    display: none;
+}
+
+.k1-keyboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.k1-keyboard-label {
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+/* Body = side col + main grid side by side */
+.k1-body {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+}
+
+/* Side column: PTT + F1 + F2 stacked vertically */
+.k1-side-col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 46px;
+    margin-right: 14px;
+}
+
+.k1-side-col .k1-btn {
+    flex: 1;
+    min-height: 44px;
+}
+
+/* Main 4×4 grid */
+.k1-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+
+/* Button base */
+.k1-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 52px;
+    min-height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.1s;
+    padding: 4px 3px;
+    line-height: 1.1;
+    box-shadow: 0 2px 0 var(--border);
+}
+
+.k1-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+    transform: translateY(-1px);
+    box-shadow: 0 3px 0 var(--accent);
+}
+
+.k1-btn:active,
+.k1-btn.pressed {
+    transform: translateY(2px);
+    box-shadow: 0 0px 0 var(--border);
+    background: color-mix(in srgb, var(--accent) 15%, var(--bg));
+}
+
+.k1-btn-label {
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+}
+
+.k1-btn-sub {
+    font-size: 7px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    margin-top: 2px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Special button colors */
+.k1-ptt {
+    background: color-mix(in srgb, #ef4444 12%, var(--bg));
+    border-color: #ef4444;
+    color: #ef4444;
+}
+.k1-ptt:hover:not(:disabled) {
+    background: color-mix(in srgb, #ef4444 22%, var(--bg));
+    border-color: #dc2626;
+    color: #dc2626;
+    box-shadow: 0 3px 0 #dc2626;
+}
+.k1-ptt:active, .k1-ptt.pressed { box-shadow: 0 0 0 #ef4444; }
+
+.k1-side {
+    background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.k1-menu {
+    background: color-mix(in srgb, #10b981 10%, var(--bg));
+    border-color: color-mix(in srgb, #10b981 50%, var(--border));
+    color: #059669;
+}
+.k1-menu:hover:not(:disabled) {
+    background: color-mix(in srgb, #10b981 20%, var(--bg));
+    border-color: #10b981;
+    color: #059669;
+    box-shadow: 0 3px 0 #10b981;
+}
+
+.k1-exit {
+    background: color-mix(in srgb, #f59e0b 10%, var(--bg));
+    border-color: color-mix(in srgb, #f59e0b 40%, var(--border));
+    color: #d97706;
+}
+.k1-exit:hover:not(:disabled) {
+    background: color-mix(in srgb, #f59e0b 20%, var(--bg));
+    border-color: #f59e0b;
+    color: #d97706;
+    box-shadow: 0 3px 0 #f59e0b;
+}
+
+.k1-hash {
+    background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+/* Disabled when not connected */
+.k1-keyboard.disabled .k1-btn {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────────────────── */
+
 /* Responsive */
 @media (max-width: 768px) {
     .header {

@@ -198,6 +198,7 @@ async function connectSerial() {
         isConnected = true;
         connectBtn.disabled = true;
         disconnectBtn.disabled = false;
+        updateKeyboardState();
         
         updateStatus(t('connected_waiting'));
         showNotification('serial_established', {}, 'success');
@@ -241,6 +242,7 @@ async function disconnectSerial() {
         
         connectBtn.disabled = false;
         disconnectBtn.disabled = true;
+        updateKeyboardState();
         
         updateStatus(t('disconnected'));
         showNotification('disconnected_success', {}, 'success');
@@ -623,5 +625,77 @@ if (!('serial' in navigator)) {
 updateUI();
 drawFrame();
 
-console.log('K5Viewer Web v' + VERSION + ' - Ready');
-console.log('Web Serial API supported:', 'serial' in navigator);
+
+// ─── UV-K1 Virtual Keyboard ──────────────────────────────────
+const TYPE_KEY = 0x03;
+
+const k1Keyboard = document.getElementById('k1Keyboard');
+const keyboardToggle = document.getElementById('keyboardToggle');
+
+// Send a key event to the radio via serial
+async function sendKey(keyCode) {
+    if (!writer || !isConnected) return;
+    try {
+        // Packet: AA 55 TYPE_KEY keycode
+        const packet = new Uint8Array([0xAA, 0x55, TYPE_KEY, keyCode]);
+        await writer.write(packet);
+    } catch (error) {
+        console.error('Key send error:', error);
+    }
+}
+
+// Attach events to all k1 buttons
+function initKeyboard() {
+    document.querySelectorAll('.k1-btn[data-key]').forEach(btn => {
+        const keyCode = parseInt(btn.dataset.key, 16);
+
+        // Mouse
+        btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            btn.classList.add('pressed');
+            sendKey(keyCode);
+        });
+        btn.addEventListener('mouseup', () => btn.classList.remove('pressed'));
+        btn.addEventListener('mouseleave', () => btn.classList.remove('pressed'));
+
+        // Touch (mobile)
+        btn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            btn.classList.add('pressed');
+            sendKey(keyCode);
+        }, { passive: false });
+        btn.addEventListener('touchend', () => btn.classList.remove('pressed'));
+    });
+}
+
+// Toggle keyboard visibility from header button
+const keyboardToggleBtn = document.getElementById('keyboardToggleBtn');
+
+function toggleKeyboard() {
+    const hidden = k1Keyboard.classList.toggle('hidden');
+    keyboardToggleBtn.style.opacity = hidden ? '0.4' : '1';
+    localStorage.setItem('keyboardHidden', hidden);
+}
+
+keyboardToggleBtn.addEventListener('click', toggleKeyboard);
+
+// Restore visibility state
+const keyboardHiddenLocal = localStorage.getItem('keyboardHidden');
+if (keyboardHiddenLocal === 'true') {
+    k1Keyboard.classList.add('hidden');
+    keyboardToggleBtn.style.opacity = '0.4';
+}
+
+// Sync keyboard enabled/disabled with connection state
+function updateKeyboardState() {
+    if (isConnected) {
+        k1Keyboard.classList.remove('disabled');
+    } else {
+        k1Keyboard.classList.add('disabled');
+    }
+}
+
+initKeyboard();
+updateKeyboardState();
+
+// ─────────────────────────────────────────────────────────────
