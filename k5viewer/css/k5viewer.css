@@ -344,6 +344,11 @@ select:focus {
     color: var(--error);
 }
 
+.notification.warning {
+    border-left: 3px solid #f59e0b;
+    color: #f59e0b;
+}
+
 .notification.info {
     border-left: 3px solid var(--accent);
     color: var(--accent);

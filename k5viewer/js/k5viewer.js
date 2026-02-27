@@ -198,6 +198,9 @@ async function connectSerial() {
         writer = port.writable.getWriter();
         
         isConnected = true;
+        lastPort = port;
+        lastPortInfo = port.getInfo();
+        userDisconnected = false;
         connectBtn.disabled = true;
         disconnectBtn.disabled = false;
         updateKeyboardState();
@@ -220,6 +223,9 @@ async function connectSerial() {
 async function disconnectSerial() {
     try {
         isConnected = false;
+        userDisconnected = true;
+        autoReconnecting = false;
+        clearTimeout(reconnectTimer);
         
         if (keepaliveInterval) {
             clearInterval(keepaliveInterval);
@@ -341,8 +347,11 @@ async function readFrames() {
         } catch (error) {
             if (isConnected) {
                 console.error('Read error:', error);
-                showNotification('serial_read_error', {}, 'error');
-                await disconnectSerial();
+                if (userDisconnected) {
+                    showNotification('serial_read_error', {}, 'error');
+                    await disconnectSerial();
+                }
+                // Hardware disconnect: the 'disconnect' event will handle cleanup + auto-reconnect
             }
             break;
         }
@@ -513,6 +522,12 @@ function hexToRgb(hex) {
 function updateFPS() {
     frameCount++;
     const now = performance.now();
+
+    // First real frame after auto-reconnect
+    if (firstFrameAfterReconnect) {
+        firstFrameAfterReconnect = false;
+        showNotification('serial_reconnected', {}, 'success');
+    }
     
     if (now - lastTime >= 1000) {
         const fps = Math.ceil(frameCount / ((now - lastTime) / 1000));
@@ -913,7 +928,69 @@ function updateKeyboardState() {
     }
 }
 
-initKeyboard();
-updateKeyboardState();
+// ─── Auto-reconnect on USB disconnect/reconnect ──────────────
+let autoReconnecting    = false;
+let reconnectTimer      = null;
+let lastPort            = null;
+let lastPortInfo        = null;   // { usbVendorId, usbProductId }
+let userDisconnected    = false;
+let firstFrameAfterReconnect = false;
+
+navigator.serial.addEventListener('disconnect', (event) => {
+    if (userDisconnected) return;
+    if (event.target !== lastPort) return;
+
+    isConnected = false;
+
+    if (keepaliveInterval) { clearInterval(keepaliveInterval); keepaliveInterval = null; }
+    if (reader) { try { reader.cancel(); } catch(_) {} reader = null; }
+    if (writer) { try { writer.close(); } catch(_) {} writer = null; }
+
+    connectBtn.disabled = true;
+    disconnectBtn.disabled = true;
+    updateKeyboardState();
+
+    autoReconnecting = true;
+    updateStatus(t('reconnecting'));
+    showNotification('serial_disconnected_auto', {}, 'warning');
+});
+
+navigator.serial.addEventListener('connect', async (event) => {
+    if (!autoReconnecting) return;
+    if (!lastPortInfo) return;
+
+    // Check if the reconnected port matches the one we lost
+    const info = event.target.getInfo();
+    if (info.usbVendorId  !== lastPortInfo.usbVendorId ||
+        info.usbProductId !== lastPortInfo.usbProductId) return;
+
+    // It's our port — wait a bit for the OS to finish enumeration
+    await new Promise(r => setTimeout(r, 500));
+
+    try {
+        port = event.target;
+        await port.open({ baudRate: BAUDRATE });
+
+        reader = port.readable.getReader();
+        writer = port.writable.getWriter();
+
+        isConnected = true;
+        autoReconnecting = false;
+        userDisconnected = false;
+        lastPort = port;
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
+        updateKeyboardState();
+
+        firstFrameAfterReconnect = true;
+        updateStatus(t('reconnecting'));
+
+        keepaliveInterval = setInterval(sendKeepalive, 1000);
+        readFrames();
+
+    } catch (error) {
+        console.error('Auto-reconnect failed:', error);
+    }
+});
 
 // ─────────────────────────────────────────────────────────────
