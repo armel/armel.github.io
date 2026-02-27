@@ -49,6 +49,8 @@ const themeToggle = document.getElementById('themeToggle');
 const helpBtn = document.getElementById('helpBtn');
 const helpModal = document.getElementById('helpModal');
 const closeModal = document.getElementById('closeModal');
+const fKeyIndicator  = document.getElementById('fKeyIndicator');
+const lockIndicator  = document.getElementById('lockIndicator');
 
 // Load local storage
 const pixelSizeLocal = parseInt(localStorage.getItem('pixelSize'), 10);
@@ -433,9 +435,61 @@ function drawFrame() {
             bitIndex++;
         }
     }
+
+    detectFKey();
+    detectKeyLock();
 }
 
-// Blend two hex colors by a given ratio (0 = color1, 1 = color2)
+// Detect the F key indicator (video-inverse block) in the status bar
+// gFontF is displayed at x >= 69 in the status line (framebuffer bytes 0-127)
+// When active, several consecutive bytes in that range will be high (>= 0x70)
+
+function detectFKey() {
+    // gFontF from bitmaps.c - each byte = one column, bits 0-7 = rows 0-7
+    const FONT_F = [0x7F, 0x00, 0x76, 0x76, 0x76, 0x76, 0x7E, 0x7F];
+
+    // Reconstruct column bytes from display pixels via getBit, then pattern-match
+    for (let baseX = 60; baseX <= 100 - FONT_F.length; baseX++) {
+        let match = true;
+        for (let col = 0; col < FONT_F.length && match; col++) {
+            const x = baseX + col;
+            let colValue = 0;
+            for (let y = 0; y < 8; y++) {
+                colValue |= getBit(y * WIDTH + x) << y;
+            }
+            if (colValue !== FONT_F[col]) match = false;
+        }
+        if (match) {
+            fKeyIndicator.classList.add('visible');
+            clearTimeout(longPressIndicatorTimer);
+            longPressIndicator.classList.remove('visible');
+            return;
+        }
+    }
+    fKeyIndicator.classList.remove('visible');
+}
+
+function detectKeyLock() {
+    // gFontKeyLock from bitmaps.c
+    const FONT_LOCK = [0x7c, 0x46, 0x45, 0x45, 0x45, 0x45, 0x45, 0x46, 0x7c];
+
+    for (let baseX = 60; baseX <= 100 - FONT_LOCK.length; baseX++) {
+        let match = true;
+        for (let col = 0; col < FONT_LOCK.length && match; col++) {
+            const x = baseX + col;
+            let colValue = 0;
+            for (let y = 0; y < 8; y++) {
+                colValue |= getBit(y * WIDTH + x) << y;
+            }
+            if (colValue !== FONT_LOCK[col]) match = false;
+        }
+        if (match) {
+            lockIndicator.classList.add('visible');
+            return;
+        }
+    }
+    lockIndicator.classList.remove('visible');
+}
 function blendColors(color1, color2, ratio) {
     const c1 = hexToRgb(color1);
     const c2 = hexToRgb(color2);
@@ -530,6 +584,40 @@ helpModal.addEventListener('click', (e) => {
 });
 
 // Close modal with Escape key
+// PC keyboard mapping (event.code = layout-independent)
+// 1-9 (physical)    → digit short press
+// Shift+1-9         → digit long press
+// Enter / M         → MENU short press
+// Shift+Enter / M   → MENU long press
+// Ctrl              → # (KEY_F alias)
+// Arrows            → radio UP/DOWN (short press only)
+// Shift+↑/↓         → zoom in/out
+// Esc/Backspace     → EXIT
+// F1/F2             → SIDE1/SIDE2
+// Space             → screenshot
+// P                 → toggle LCD pixel effect
+// I                 → toggle invert
+// Q                 → disconnect
+// G/O/B/W           → color scheme
+// H/?               → help
+
+const PC_CODE_MAP = {
+    'Digit0': 0x00, 'Digit1': 0x01, 'Digit2': 0x02, 'Digit3': 0x03,
+    'Digit4': 0x04, 'Digit5': 0x05, 'Digit6': 0x06, 'Digit7': 0x07,
+    'Digit8': 0x08, 'Digit9': 0x09,
+    'Enter':  0x0A, // MENU
+    'KeyM':   0x0A, // MENU (alias)
+};
+
+const PC_KEY_MAP = {
+    'escape':     0x0D, // EXIT
+    'backspace':  0x0D, // EXIT
+    'f1':         0x12, // SIDE1
+    'f2':         0x11, // SIDE2
+    '*': 0x0E, // STAR
+    '#': 0x0F, // F
+};
+
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && helpModal.classList.contains('show')) {
         hideModal();
@@ -537,66 +625,113 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-languageSelect.addEventListener('change', (event) => {
-    changeLanguage(event.target.value);
-});
-
-// Keyboard controls - same as Python version
 document.addEventListener('keydown', (event) => {
-    // Don't process keyboard shortcuts when modal is open
     if (helpModal.classList.contains('show')) return;
-    
-    const key = event.key.toLowerCase();
-    
-    switch (key) {
-        case ' ': // Space
+    if (event.repeat) return;
+
+    const key  = event.key;
+    const kl   = key.toLowerCase();
+    const long = event.shiftKey && !event.ctrlKey && !event.altKey;
+
+    // ── +/- → zoom ──────────────────────────────────────────────
+    if (!event.ctrlKey && !event.altKey) {
+        if (key === '+' || key === '=' || event.code === 'NumpadAdd') {
+            event.preventDefault();
+            changePixelSize(1);
+            localStorage.setItem('pixelSize', pixelSize);
+            return;
+        }
+        if (key === '-' || event.code === 'NumpadSubtract') {
+            event.preventDefault();
+            changePixelSize(-1);
+            localStorage.setItem('pixelSize', pixelSize);
+            return;
+        }
+    }
+
+    // ── Arrows → radio (short press only, no long press in firmware) ────
+    // UV-K1 (◀ ▶): only Left/Right arrows are active
+    // UV-K5 (▲ ▼): only Up/Down arrows are active
+    if (!event.shiftKey && !event.ctrlKey && !event.altKey) {
+        if (kbdModel === 'K5' && (key === 'ArrowUp' || key === 'ArrowDown')) {
+            event.preventDefault();
+            if (isConnected) {
+                const code = (key === 'ArrowUp')
+                    ? parseInt(btnUp.dataset.key, 16)
+                    : parseInt(btnDown.dataset.key, 16);
+                sendKey(code, false);
+            }
+            return;
+        }
+        if (kbdModel === 'K1' && key === 'ArrowLeft') {
+            event.preventDefault();
+            if (isConnected) sendKey(parseInt(btnUp.dataset.key, 16), false);
+            return;
+        }
+        if (kbdModel === 'K1' && key === 'ArrowRight') {
+            event.preventDefault();
+            if (isConnected) sendKey(parseInt(btnDown.dataset.key, 16), false);
+            return;
+        }
+    }
+
+    // ── Ctrl alone → send # (KEY_F alias) ────────────────────
+    if (event.code === 'ControlLeft' || event.code === 'ControlRight') {
+        event.preventDefault();
+        if (isConnected) sendKey(0x0F, shiftHeld);
+        return;
+    }
+
+    // ── Digit keys + MENU → radio ──────────────────────────────
+    // Plain      → short press
+    // Shift+     → long press
+    if (!event.altKey && !event.ctrlKey) {
+        // Use event.key for M to handle AZERTY (Shift+M gives event.code='Semicolon')
+        const isMKey = event.key === 'm' || event.key === 'M';
+        const code = isMKey ? 0x0A : PC_CODE_MAP[event.code];
+        if (code !== undefined) {
+            event.preventDefault();
+            if (isConnected) sendKey(code, long);
+            return;
+        }
+    }
+
+    // ── Fixed radio keys (Enter, Esc, F1, F2, *, #) ───────────
+    // No shiftKey guard here — * and # require Shift on AZERTY keyboards
+    if (isConnected && !event.ctrlKey && !event.altKey) {
+        const code = PC_KEY_MAP[kl] ?? PC_KEY_MAP[key];
+        if (code !== undefined) {
+            event.preventDefault();
+            sendKey(code, long);
+            return;
+        }
+    }
+
+    // ── UI shortcuts ───────────────────────────────────────────
+    if (event.ctrlKey || event.shiftKey || event.altKey) return;
+    switch (kl) {
+        case ' ':
             event.preventDefault();
             saveScreenshot();
             break;
-            
         case 'p':
             pixelLcd = 1 - pixelLcd;
             drawFrame();
-            const lcdStatus = pixelLcd ? t('lcd_on') : t('lcd_off');
-            showNotification('lcd_effect', { status: lcdStatus }, 'info');
+            showNotification('lcd_effect', { status: pixelLcd ? t('lcd_on') : t('lcd_off') }, 'info');
             localStorage.setItem('pixelLcd', pixelLcd);
             break;
-            
         case 'i':
             toggleColors();
             localStorage.setItem('invertLcd', invertLcd);
             break;
-            
-        case 'arrowup':
-            event.preventDefault();
-            changePixelSize(1);
-            localStorage.setItem('pixelSize', pixelSize);
-            break;
-            
-        case 'arrowdown':
-            event.preventDefault();
-            changePixelSize(-1);
-            localStorage.setItem('pixelSize', pixelSize);
-            break;
-            
         case 'q':
-            if (isConnected) {
-                disconnectSerial();
-            }
+            if (isConnected) disconnectSerial();
             break;
-            
-        case 'g':
-        case 'o':
-        case 'b':
-        case 'w':
-            changeColorSet(key);
-            //invertLcd = 0;
-            //localStorage.setItem('invertLcd', invertLcd);
+        case 'g': case 'o': case 'b': case 'w':
+            changeColorSet(kl);
             localStorage.setItem('currentColorKey', currentColorKey);
             break;
-            
-        case 'h':
-        case '?':
+        case 'h': case '?':
             showModal();
             break;
     }
@@ -610,6 +745,10 @@ function detectLanguage() {
         languageSelect.value = browserLang;
     }
 }
+
+languageSelect.addEventListener('change', (event) => {
+    changeLanguage(event.target.value);
+});
 
 // Check Web Serial API support
 if (!('serial' in navigator)) {
@@ -694,6 +833,40 @@ function toggleKeyboard() {
 }
 
 keyboardToggleBtn.addEventListener('click', toggleKeyboard);
+
+// Show/hide LONG PRESS / LOCK indicator when Shift/Ctrl is held
+const longPressIndicator = document.getElementById('longPressIndicator');
+let longPressIndicatorTimer = null;
+
+function updateShiftIndicator(shiftDown) {
+    clearTimeout(longPressIndicatorTimer);
+    longPressIndicator.classList.remove('visible');
+    if (shiftDown) {
+        longPressIndicatorTimer = setTimeout(() => {
+            if (!fKeyIndicator.classList.contains('visible')) {
+                longPressIndicator.classList.add('visible');
+            }
+        }, 150);
+    }
+}
+
+let shiftHeld = false;
+let ctrlHeld  = false;
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Shift') { shiftHeld = true;  updateShiftIndicator(shiftHeld); }
+    if (e.key === 'Control') { ctrlHeld = true;  updateShiftIndicator(shiftHeld); }
+});
+document.addEventListener('keyup', (e) => {
+    if (e.key === 'Shift')   { shiftHeld = false; updateShiftIndicator(shiftHeld); }
+    if (e.key === 'Control') { ctrlHeld  = false; updateShiftIndicator(shiftHeld); }
+});
+// Also hide if window loses focus
+window.addEventListener('blur', () => {
+    shiftHeld = false;
+    ctrlHeld  = false;
+    updateShiftIndicator(false);
+});
 
 // Restore visibility state
 const keyboardHiddenLocal = localStorage.getItem('keyboardHidden');
