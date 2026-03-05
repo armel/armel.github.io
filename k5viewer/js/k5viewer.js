@@ -1000,3 +1000,6 @@ navigator.serial.addEventListener('connect', async (event) => {
 });
 
 // ─────────────────────────────────────────────────────────────
+
+initKeyboard();
+updateKeyboardState();
