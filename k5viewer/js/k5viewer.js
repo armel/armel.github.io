@@ -690,10 +690,16 @@ document.addEventListener('keydown', (event) => {
         }
     }
 
-    // ── Ctrl alone → send # (KEY_F alias) ────────────────────
+    // ── Ctrl / F → send # (KEY_F alias) ──────────────────────
+    // Shift+Ctrl or Shift+F → long press
     if (event.code === 'ControlLeft' || event.code === 'ControlRight') {
         event.preventDefault();
         if (isConnected) sendKey(0x0F, shiftHeld);
+        return;
+    }
+    if ((event.key === 'f' || event.key === 'F') && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        if (isConnected) sendKey(0x0F, event.shiftKey);
         return;
     }
 
