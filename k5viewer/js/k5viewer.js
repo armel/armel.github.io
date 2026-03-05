@@ -36,6 +36,8 @@ let lastTime = performance.now();
 let keepaliveInterval = null;
 let currentLanguage = 'en';
 let isDarkTheme = false;
+let shiftHeld = false;
+let ctrlHeld  = false;
 
 // DOM elements
 const canvas = document.getElementById('display');
@@ -871,8 +873,6 @@ function updateShiftIndicator(shiftDown) {
     }
 }
 
-let shiftHeld = false;
-let ctrlHeld  = false;
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Shift') { shiftHeld = true;  updateShiftIndicator(shiftHeld); }
