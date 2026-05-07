@@ -433,7 +433,10 @@ button:disabled {
   width: 512px;
   max-width: 100%;
   height: auto;
-  aspect-ratio: 128 / 64;
+  /* Physical aspect ratio of the ST7565 LCD on UV-K5/K1 (~22x12 mm panel),
+     not the logical 128/64=2.0. Pixels render slightly taller than wide,
+     matching what the user actually sees on the radio. */
+  aspect-ratio: 22 / 16;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   background: #ffffff;
