@@ -32,6 +32,8 @@
       <button class="tab active" role="tab" aria-selected="true" data-tab="flash" id="tabFlash">Flash Firmware</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="dump" id="tabDump">Dump Calib</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="restore" id="tabRestore">Restore Calib</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="logo-upload" id="tabLogoUpload">Upload Logo</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="logo-dump" id="tabLogoDump">Download Logo</button>
     </div>
 
     <!-- FLASH FIRMWARE TAB -->
@@ -79,6 +81,66 @@
       </section>
 
       <button id="restoreBtn" disabled aria-live="polite">Restore Calibration Data</button>
+    </div>
+
+    <!-- UPLOAD LOGO TAB -->
+    <div class="tab-content" id="logo-upload-content" role="tabpanel">
+      <section class="section">
+        <p class="tab-description" id="logoUploadDescription">
+          Upload a custom 128x64 boot logo to your device. Any image format is accepted (PNG, JPG, BMP, etc.).
+        </p>
+      </section>
+
+      <section class="section" aria-labelledby="labelLogoFile">
+        <label id="labelLogoFile">Image File</label>
+        <div class="file-input-wrapper">
+          <input type="file" id="logoFile" accept="image/*" />
+          <div class="file-input-label" id="logoFileLabel">
+            <span class="file-name" id="logoFileName">No file selected</span>
+            <span class="file-button" id="logoFileButton">Choose file</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section logo-controls" id="logoControls" hidden>
+        <label for="logoThreshold">
+          <span id="labelLogoThreshold">Threshold</span>:
+          <span id="logoThresholdValue">128</span>
+        </label>
+        <input type="range" id="logoThreshold" min="0" max="255" value="128" />
+
+        <label class="logo-checkbox-label">
+          <input type="checkbox" id="logoInvert" />
+          <span id="labelLogoInvert">Invert colors</span>
+        </label>
+
+        <div class="logo-preview-wrapper">
+          <span id="labelLogoPreview" class="logo-preview-label">Preview (128x64):</span>
+          <canvas id="logoPreviewCanvas" width="128" height="64" class="logo-canvas"></canvas>
+        </div>
+      </section>
+
+      <button id="logoUploadBtn" disabled aria-live="polite">Upload Logo to Radio</button>
+    </div>
+
+    <!-- DUMP LOGO TAB -->
+    <div class="tab-content" id="logo-dump-content" role="tabpanel">
+      <section class="section">
+        <p class="tab-description" id="logoDumpDescription">
+          Read the current boot logo from your device and download it as a PNG.
+        </p>
+        <button id="logoDumpBtn">Download Logo from Radio</button>
+      </section>
+
+      <section class="section logo-dump-result" id="logoDumpResult" hidden>
+        <div class="logo-preview-wrapper">
+          <span class="logo-preview-label" id="logoDumpedLabel">Downloaded logo (128x64):</span>
+          <canvas id="logoDumpedCanvas" width="128" height="64" class="logo-canvas"></canvas>
+        </div>
+        <div class="download-link" id="logoDumpDownload" style="display:block;">
+          <a href="#" id="logoDumpLink" download="logo.png">💾 <span id="logoDumpDownloadText">Download logo.png</span></a>
+        </div>
+      </section>
     </div>
 
     <!-- PROGRESS BAR -->

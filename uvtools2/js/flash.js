@@ -36,6 +36,21 @@ const CALIB_SIZE = 512; // bytes
 const CHUNK_SIZE = 16;
 let CALIB_OFFSET = 0x1E00; // Default for firmware < v5.0.0
 
+// Boot logo memory layout (mirrors firmware App/ui/welcome.c)
+// Layout in flash sector starting at PY25Q16 0x011000, exposed via EEPROM
+// compat at 0x00C000:
+//   [0x00..0x07] 8-byte magic header "F4HWNLGO"
+//   [0x08..0x407] 1024-byte bitmap, ST7565-native column-major LSB-top
+const LOGO_EEPROM_OFFSET = 0xC000;
+const LOGO_HEADER_SIZE = 8;
+const LOGO_BITMAP_SIZE = 1024;
+const LOGO_TOTAL_SIZE = LOGO_HEADER_SIZE + LOGO_BITMAP_SIZE; // 1032
+// Padded to a CHUNK_SIZE multiple so we can stream by 16-byte chunks like calib.
+const LOGO_PADDED_SIZE = Math.ceil(LOGO_TOTAL_SIZE / CHUNK_SIZE) * CHUNK_SIZE; // 1040
+const LOGO_MAGIC = new Uint8Array([0x46, 0x34, 0x48, 0x57, 0x4E, 0x4C, 0x47, 0x4F]); // "F4HWNLGO"
+const LOGO_WIDTH = 128;
+const LOGO_HEIGHT = 64;
+
 // ========== STATE ==========
 let port = null;
 let reader = null;
@@ -45,8 +60,14 @@ let calibData = null;
 let isFlashing = false;
 let isDumping = false;
 let isRestoring = false;
+let isLogoUploading = false;
+let isLogoDumping = false;
 let readBuffer = [];
 let isReading = false;
+
+// Logo state
+let logoSourceImage = null;       // HTMLImageElement of the user-picked file
+let logoBitmap = null;            // Uint8Array(1024) ST7565-native, after threshold/invert
 
 // ========== UI ELEMENTS ==========
 const flashBtn = document.getElementById('flashBtn');
@@ -78,6 +99,22 @@ const fileButton = document.getElementById('fileButton');
 const calibFileLabel = document.getElementById('calibFileLabel');
 const calibFileName = document.getElementById('calibFileName');
 const calibFileButton = document.getElementById('calibFileButton');
+
+// Logo UI
+const logoFileInput = document.getElementById('logoFile');
+const logoFileLabel = document.getElementById('logoFileLabel');
+const logoFileName = document.getElementById('logoFileName');
+const logoFileButton = document.getElementById('logoFileButton');
+const logoControls = document.getElementById('logoControls');
+const logoThresholdInput = document.getElementById('logoThreshold');
+const logoThresholdValue = document.getElementById('logoThresholdValue');
+const logoInvertInput = document.getElementById('logoInvert');
+const logoPreviewCanvas = document.getElementById('logoPreviewCanvas');
+const logoUploadBtn = document.getElementById('logoUploadBtn');
+const logoDumpBtn = document.getElementById('logoDumpBtn');
+const logoDumpResult = document.getElementById('logoDumpResult');
+const logoDumpedCanvas = document.getElementById('logoDumpedCanvas');
+const logoDumpLink = document.getElementById('logoDumpLink');
 
 // ========== VERSION COMPARISON ==========
 function isBootloaderCompatible(version, minVersion) {
@@ -127,15 +164,45 @@ window.updateUI = function updateUI() {
   const tabFlash = document.getElementById('tabFlash');
   const tabDump = document.getElementById('tabDump');
   const tabRestore = document.getElementById('tabRestore');
+  const tabLogoUpload = document.getElementById('tabLogoUpload');
+  const tabLogoDump = document.getElementById('tabLogoDump');
   if (tabFlash) tabFlash.textContent = t('tabFlash');
   if (tabDump) tabDump.textContent = t('tabDump');
   if (tabRestore) tabRestore.textContent = t('tabRestore');
+  if (tabLogoUpload) tabLogoUpload.textContent = t('tabLogoUpload');
+  if (tabLogoDump) tabLogoDump.textContent = t('tabLogoDump');
 
   // Description
   const dumpDesc = document.getElementById('dumpDescription');
   const downloadText = document.getElementById('downloadText');
   if (dumpDesc) dumpDesc.textContent = t('dumpDescription');
   if (downloadText) downloadText.textContent = t('downloadText');
+
+  // Logo labels
+  const labelLogoFile = document.getElementById('labelLogoFile');
+  const labelLogoThreshold = document.getElementById('labelLogoThreshold');
+  const labelLogoInvert = document.getElementById('labelLogoInvert');
+  const labelLogoPreview = document.getElementById('labelLogoPreview');
+  const logoUploadDesc = document.getElementById('logoUploadDescription');
+  const logoDumpDesc = document.getElementById('logoDumpDescription');
+  const logoDumpedLabel = document.getElementById('logoDumpedLabel');
+  const logoDumpDownloadText = document.getElementById('logoDumpDownloadText');
+  if (labelLogoFile) labelLogoFile.textContent = t('labelLogoFile');
+  if (labelLogoThreshold) labelLogoThreshold.textContent = t('labelLogoThreshold');
+  if (labelLogoInvert) labelLogoInvert.textContent = t('labelLogoInvert');
+  if (labelLogoPreview) labelLogoPreview.textContent = t('labelLogoPreview');
+  if (logoUploadDesc) logoUploadDesc.textContent = t('logoUploadDescription');
+  if (logoDumpDesc) logoDumpDesc.textContent = t('logoDumpDescription');
+  if (logoDumpedLabel) logoDumpedLabel.textContent = t('logoDumpedLabel');
+  if (logoDumpDownloadText) logoDumpDownloadText.textContent = t('logoDumpDownloadText');
+  if (logoUploadBtn) logoUploadBtn.textContent = t('logoUploadBtn');
+  if (logoDumpBtn) logoDumpBtn.textContent = t('logoDumpBtn');
+  if (logoFileButton) logoFileButton.textContent = t('fileChoose');
+  if (logoFileName && !logoSourceImage) {
+    logoFileName.textContent = t('fileNoFile');
+    logoFileName.classList.remove('has-file');
+    if (logoFileLabel) logoFileLabel.classList.remove('has-file');
+  }
 
   // Log toggle
   if (logToggle) {
@@ -165,12 +232,14 @@ window.updateUI = function updateUI() {
 // Update info box based on active tab
 function updateInfoBox() {
   if (!infoBoxEl) return;
-  
+
   const activeTab = document.querySelector('.tab.active');
   const tabName = activeTab ? activeTab.dataset.tab : 'flash';
-  
+
   if (tabName === 'flash') {
     infoBoxEl.innerHTML = t('infoBox');
+  } else if (tabName === 'logo-upload' || tabName === 'logo-dump') {
+    infoBoxEl.innerHTML = t('infoBoxLogo');
   } else {
     infoBoxEl.innerHTML = t('infoBoxDump');
   }
@@ -930,6 +999,314 @@ function logDeviceInfo(data) {
   }
 }
 
+// ========== LOGO: IMAGE -> BITMAP CONVERSION ==========
+// Render the source image into a 128x64 canvas using "fit" (preserve ratio,
+// white letterboxing). Then apply threshold + optional invert and pack into
+// the ST7565-native column-major LSB-top layout (1024 bytes).
+function imageToLogoBitmap(image, threshold, invert) {
+  // Step 1: render image fitted in a 128x64 white canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = LOGO_WIDTH;
+  canvas.height = LOGO_HEIGHT;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, LOGO_WIDTH, LOGO_HEIGHT);
+
+  const srcRatio = image.naturalWidth / image.naturalHeight;
+  const dstRatio = LOGO_WIDTH / LOGO_HEIGHT;
+  let drawW, drawH, drawX, drawY;
+  if (srcRatio > dstRatio) {
+    // Source wider than 2:1 -> fit to width
+    drawW = LOGO_WIDTH;
+    drawH = Math.round(LOGO_WIDTH / srcRatio);
+    drawX = 0;
+    drawY = Math.round((LOGO_HEIGHT - drawH) / 2);
+  } else {
+    // Source taller than 2:1 -> fit to height
+    drawH = LOGO_HEIGHT;
+    drawW = Math.round(LOGO_HEIGHT * srcRatio);
+    drawX = Math.round((LOGO_WIDTH - drawW) / 2);
+    drawY = 0;
+  }
+  ctx.drawImage(image, drawX, drawY, drawW, drawH);
+
+  // Step 2: read pixels and pack into ST7565 native layout
+  const imgData = ctx.getImageData(0, 0, LOGO_WIDTH, LOGO_HEIGHT).data;
+  const bitmap = new Uint8Array(LOGO_BITMAP_SIZE);
+
+  for (let page = 0; page < 8; page++) {
+    for (let x = 0; x < LOGO_WIDTH; x++) {
+      let byte = 0;
+      for (let bit = 0; bit < 8; bit++) {
+        const y = page * 8 + bit;
+        const idx = (y * LOGO_WIDTH + x) * 4;
+        // Convert RGBA to luminance (Rec. 601)
+        const lum = 0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2];
+        // Pixel is "on" (LCD pixel lit, dark on screen) if luminance < threshold
+        let on = lum < threshold;
+        if (invert) on = !on;
+        if (on) byte |= (1 << bit);
+      }
+      bitmap[page * LOGO_WIDTH + x] = byte;
+    }
+  }
+
+  return bitmap;
+}
+
+// Render a 1024-byte ST7565-native bitmap onto a 128x64 canvas (each "on" bit
+// becomes a black pixel, "off" stays white).
+function bitmapToCanvas(bitmap, canvas) {
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.createImageData(LOGO_WIDTH, LOGO_HEIGHT);
+  for (let page = 0; page < 8; page++) {
+    for (let x = 0; x < LOGO_WIDTH; x++) {
+      const byte = bitmap[page * LOGO_WIDTH + x];
+      for (let bit = 0; bit < 8; bit++) {
+        const y = page * 8 + bit;
+        const on = (byte >> bit) & 1;
+        const idx = (y * LOGO_WIDTH + x) * 4;
+        const v = on ? 0 : 255;
+        imgData.data[idx] = v;
+        imgData.data[idx + 1] = v;
+        imgData.data[idx + 2] = v;
+        imgData.data[idx + 3] = 255;
+      }
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+// Refresh preview canvas from current source image + slider/checkbox state.
+function refreshLogoPreview() {
+  if (!logoSourceImage) return;
+  const threshold = parseInt(logoThresholdInput.value, 10);
+  const invert = logoInvertInput.checked;
+  logoBitmap = imageToLogoBitmap(logoSourceImage, threshold, invert);
+  if (logoPreviewCanvas) bitmapToCanvas(logoBitmap, logoPreviewCanvas);
+  updateLogoUploadButton();
+}
+
+function updateLogoUploadButton() {
+  if (logoUploadBtn) logoUploadBtn.disabled = !logoBitmap || isLogoUploading;
+}
+
+// ========== LOGO: FILE INPUT + LIVE PREVIEW ==========
+if (logoFileInput) {
+  logoFileInput.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fr = new FileReader();
+    fr.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        logoSourceImage = img;
+        if (logoFileName) {
+          logoFileName.textContent = file.name;
+          logoFileName.classList.add('has-file');
+        }
+        if (logoFileLabel) logoFileLabel.classList.add('has-file');
+        if (logoControls) logoControls.hidden = false;
+        log(t('logoLoaded', file.name), 'success');
+        refreshLogoPreview();
+      };
+      img.onerror = () => log(t('logoDecodeError'), 'error');
+      img.src = ev.target.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+if (logoThresholdInput) {
+  logoThresholdInput.addEventListener('input', () => {
+    if (logoThresholdValue) logoThresholdValue.textContent = logoThresholdInput.value;
+    refreshLogoPreview();
+  });
+}
+
+if (logoInvertInput) {
+  logoInvertInput.addEventListener('change', refreshLogoPreview);
+}
+
+// ========== LOGO: UPLOAD ==========
+if (logoUploadBtn) {
+  logoUploadBtn.addEventListener('click', async () => {
+    if (!logoBitmap || isLogoUploading) return;
+    isLogoUploading = true;
+    updateLogoUploadButton();
+    if (progressContainer) progressContainer.style.display = 'block';
+    updateProgress(0);
+
+    try {
+      if (!port) await connect();
+      readBuffer = [];
+      await sleep(1000);
+
+      const devInfo = await requestDeviceInfo();
+      log(t('logoUploading'), 'info');
+
+      // Build full payload: 8-byte magic + 1024-byte bitmap, padded to 16-byte chunks.
+      const payload = new Uint8Array(LOGO_PADDED_SIZE);
+      payload.fill(0xFF);
+      payload.set(LOGO_MAGIC, 0);
+      payload.set(logoBitmap, LOGO_HEADER_SIZE);
+
+      let offset = LOGO_EEPROM_OFFSET;
+      for (let i = 0; i < LOGO_PADDED_SIZE; i += CHUNK_SIZE) {
+        const pct = Math.round((i / LOGO_PADDED_SIZE) * 100);
+        updateProgress(pct);
+
+        const msg = createMessage(MSG_WRITE_EEPROM, 24);
+        const view = new DataView(msg.buffer);
+        view.setUint16(4, offset, true);
+        view.setUint16(6, CHUNK_SIZE, true);
+        msg[7] = 1;
+        view.setUint32(8, devInfo.timestamp, true);
+
+        for (let j = 0; j < CHUNK_SIZE; j++) {
+          msg[12 + j] = payload[i + j];
+        }
+
+        await sendMessage(msg);
+
+        let gotResponse = false;
+        for (let attempt = 0; attempt < 300 && !gotResponse; attempt++) {
+          await sleep(10);
+          const resp = fetchMessage(readBuffer);
+          if (!resp) continue;
+          if (resp.msgType === MSG_WRITE_EEPROM_RESP) {
+            const dv = new DataView(resp.data.buffer);
+            const respOffset = dv.getUint16(0, true);
+            if (respOffset === offset) {
+              gotResponse = true;
+              offset += CHUNK_SIZE;
+            }
+          }
+        }
+
+        if (!gotResponse) {
+          throw new Error(t('eepromError', offset.toString(16)));
+        }
+      }
+
+      updateProgress(100);
+      log(t('logoUploadComplete'), 'success');
+
+      log(t('rebooting'), 'info');
+      const rebootMsg = createMessage(MSG_REBOOT, 0);
+      await sendMessage(rebootMsg);
+      await sleep(500);
+      log(t('rebootComplete'), 'success');
+
+      setTimeout(() => {
+        if (progressContainer) progressContainer.style.display = 'none';
+        updateProgress(0);
+      }, 800);
+    } catch (e) {
+      log(t('error', e?.message ?? String(e)), 'error');
+    } finally {
+      isLogoUploading = false;
+      updateLogoUploadButton();
+      if (port) await disconnect();
+    }
+  });
+}
+
+// ========== LOGO: DUMP ==========
+if (logoDumpBtn) {
+  logoDumpBtn.addEventListener('click', async () => {
+    if (isLogoDumping) return;
+    isLogoDumping = true;
+    logoDumpBtn.disabled = true;
+    if (progressContainer) progressContainer.style.display = 'block';
+    updateProgress(0);
+    if (logoDumpResult) logoDumpResult.hidden = true;
+
+    try {
+      if (!port) await connect();
+      readBuffer = [];
+      await sleep(1000);
+
+      const devInfo = await requestDeviceInfo();
+      log(t('logoDumping'), 'info');
+
+      const dumped = new Uint8Array(LOGO_PADDED_SIZE);
+      let offset = LOGO_EEPROM_OFFSET;
+
+      for (let i = 0; i < LOGO_PADDED_SIZE; i += CHUNK_SIZE) {
+        const pct = Math.round((i / LOGO_PADDED_SIZE) * 100);
+        updateProgress(pct);
+
+        const msg = createMessage(MSG_READ_EEPROM, 8);
+        const view = new DataView(msg.buffer);
+        view.setUint16(4, offset, true);
+        view.setUint16(6, CHUNK_SIZE, true);
+        view.setUint32(8, devInfo.timestamp, true);
+        await sendMessage(msg);
+
+        let gotResponse = false;
+        for (let attempt = 0; attempt < 300 && !gotResponse; attempt++) {
+          await sleep(10);
+          const resp = fetchMessage(readBuffer);
+          if (!resp) continue;
+          if (resp.msgType === MSG_READ_EEPROM_RESP) {
+            const dv = new DataView(resp.data.buffer);
+            const respOffset = dv.getUint16(0, true);
+            const respSize = resp.data[2];
+            if (respOffset === offset && respSize === CHUNK_SIZE) {
+              for (let j = 0; j < CHUNK_SIZE; j++) {
+                dumped[i + j] = resp.data[4 + j];
+              }
+              gotResponse = true;
+              offset += CHUNK_SIZE;
+            }
+          }
+        }
+
+        if (!gotResponse) {
+          throw new Error(t('eepromError', offset.toString(16)));
+        }
+      }
+
+      updateProgress(100);
+
+      // Verify magic header (informational only, do not abort if missing).
+      let magicOk = true;
+      for (let i = 0; i < LOGO_HEADER_SIZE; i++) {
+        if (dumped[i] !== LOGO_MAGIC[i]) { magicOk = false; break; }
+      }
+      log(magicOk ? t('logoMagicOk') : t('logoMagicMissing'), magicOk ? 'success' : 'info');
+
+      // Extract bitmap and render
+      const bitmap = dumped.slice(LOGO_HEADER_SIZE, LOGO_HEADER_SIZE + LOGO_BITMAP_SIZE);
+      if (logoDumpedCanvas) {
+        bitmapToCanvas(bitmap, logoDumpedCanvas);
+        logoDumpedCanvas.toBlob((blob) => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          if (logoDumpLink) {
+            logoDumpLink.href = url;
+            logoDumpLink.download = 'logo.png';
+          }
+        }, 'image/png');
+      }
+      if (logoDumpResult) logoDumpResult.hidden = false;
+      log(t('logoDumpComplete'), 'success');
+
+      setTimeout(() => {
+        if (progressContainer) progressContainer.style.display = 'none';
+        updateProgress(0);
+      }, 800);
+    } catch (e) {
+      log(t('error', e?.message ?? String(e)), 'error');
+    } finally {
+      isLogoDumping = false;
+      logoDumpBtn.disabled = false;
+      if (port) await disconnect();
+    }
+  });
+}
+
 // ========== UI HELPERS ==========
 function log(message, type = '') {
   const entry = document.createElement('div');
@@ -961,6 +1338,8 @@ if (!('serial' in navigator)) {
   if (flashBtn) flashBtn.disabled = true;
   if (dumpBtn) dumpBtn.disabled = true;
   if (restoreBtn) restoreBtn.disabled = true;
+  if (logoUploadBtn) logoUploadBtn.disabled = true;
+  if (logoDumpBtn) logoDumpBtn.disabled = true;
 }
 
 // ========== AUTO TAB SELECT VIA ?mode=flash|dump|restore ==========
@@ -972,7 +1351,9 @@ if (!('serial' in navigator)) {
   const modeMap = {
     flash: "tabFlash",
     dump: "tabDump",
-    restore: "tabRestore"
+    restore: "tabRestore",
+    "logo-upload": "tabLogoUpload",
+    "logo-dump": "tabLogoDump"
   };
 
   const tabId = modeMap[mode];

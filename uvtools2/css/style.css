@@ -10,6 +10,7 @@
 
 /* ---------- Color system ---------- */
 :root {
+  color-scheme: light dark;
   --primary-1: #7ED957; /* Apple green */
   --primary-2: #34C759; /* iOS green */
   --bg-grad: linear-gradient(135deg, #E9FBE6 0%, #CFF6C6 50%, #B9F2B2 100%);
@@ -36,7 +37,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  max-width: 720px;
+  max-width: 1024px;
   width: 100%;
   padding: 40px;
 }
@@ -79,6 +80,7 @@ h1 {
 /* ---------- Tabs ---------- */
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 30px;
   border-bottom: 2px solid var(--border);
@@ -380,6 +382,66 @@ button:disabled {
   font-size: 13px;
 }
 
+/* ---------- Logo controls ---------- */
+.logo-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 15px;
+  background: #f7fff5;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.logo-controls input[type="range"] {
+  width: 100%;
+  accent-color: var(--primary-2);
+  cursor: pointer;
+}
+
+.logo-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-bottom: 0;
+}
+
+.logo-checkbox-label input[type="checkbox"] {
+  accent-color: var(--primary-2);
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.logo-preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.logo-preview-label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.logo-canvas {
+  width: 512px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 128 / 64;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #ffffff;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
 /* ---------- Accessibility helpers ---------- */
 .sr-only {
   position: absolute !important;
@@ -408,8 +470,14 @@ button:disabled {
   }
 
   .log,
-  .file-input-label {
+  .file-input-label,
+  .logo-controls {
     background: #122416;
+  }
+
+  .logo-canvas {
+    border-color: #2a5a36;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   }
 
   .info-box {
