@@ -475,6 +475,12 @@ button:disabled {
     background: #122416;
   }
 
+  .language-selector select {
+    background: #122416;
+    color: var(--text);
+    border-color: var(--border);
+  }
+
   .logo-canvas {
     border-color: #2a5a36;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
