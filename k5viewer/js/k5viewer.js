@@ -1,5 +1,5 @@
 // Constants - same as Python version
-const VERSION = '2.0';
+const VERSION = '1.6';
 const BAUDRATE = 38400;
 const WIDTH = 128;
 const HEIGHT = 64;
@@ -632,6 +632,7 @@ const PC_KEY_MAP = {
     'f1':         0x12, // SIDE1
     'f2':         0x11, // SIDE2
     '*': 0x0E, // STAR
+    'µ': 0x0E, // STAR with Shift on AZERTY
     '#': 0x0F, // F
 };
 
@@ -722,7 +723,8 @@ document.addEventListener('keydown', (event) => {
     // ── Fixed radio keys (Enter, Esc, F1, F2, *, #) ───────────
     // No shiftKey guard here — * and # require Shift on AZERTY keyboards
     if (isConnected && !event.ctrlKey && !event.altKey) {
-        const code = PC_KEY_MAP[kl] ?? PC_KEY_MAP[key];
+        const code = PC_KEY_MAP[kl] ?? PC_KEY_MAP[key]
+            ?? (event.code === 'NumpadMultiply' ? 0x0E : undefined);
         if (code !== undefined) {
             event.preventDefault();
             sendKey(code, long);
