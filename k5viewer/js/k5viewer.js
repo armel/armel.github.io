@@ -1,5 +1,5 @@
 // Constants - same as Python version
-const VERSION = '1.6';
+const VERSION = '1.7';
 const BAUDRATE = 38400;
 const WIDTH = 128;
 const HEIGHT = 64;
@@ -93,6 +93,14 @@ if (currentColorKeyLocal && currentColorKeyLocal in COLOR_SETS) {
 const invertLcdLocal = parseInt(localStorage.getItem('invertLcd'), 10);
 if (!isNaN(invertLcdLocal)) {
     invertLcd = invertLcdLocal;
+}
+
+const lcdRiseLocal = parseFloat(localStorage.getItem('LCD_RISE'));
+const lcdFallLocal = parseFloat(localStorage.getItem('LCD_FALL'));
+if ((lcdRiseLocal === LCD_RISE_DEFAULT || lcdRiseLocal === 1) &&
+    (lcdFallLocal === LCD_FALL_DEFAULT || lcdFallLocal === 1)) {
+    LCD_RISE = lcdRiseLocal;
+    LCD_FALL = lcdFallLocal;
 }
 
 const currentLanguageLocal = localStorage.getItem('currentLanguage');
@@ -478,10 +486,10 @@ function drawFrame() {
 
 function startLcdAnimation() {
     if (lcdAnimating) return;
+    lcdAnimating = true;
     
     const animate = () => {
         if (drawFrame()) {
-            lcdAnimating = true;
             requestAnimationFrame(animate);
         } else {
             lcdAnimating = false;
