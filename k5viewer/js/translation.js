@@ -14,6 +14,7 @@ const TRANSLATIONS = {
         other_controls: "Other",
         screenshot_desc: "Take a screenshot and download it",
         lcd_desc: "Toggle LCD pixel effect for realistic display",
+        ghosting_desc: "Toggle LCD ghosting effect",
         invert_desc: "Invert foreground and background colors",
         pixel_size_desc: "Increase/decrease pixel size (1-10)",
         grey_scheme: "Switch to grey screen",
@@ -60,7 +61,8 @@ const TRANSLATIONS = {
         help: "Help",
         toggle_theme: "Toggle theme",
         toggle_keyboard: "Toggle virtual keyboard",
-        toggle_keyboard_short: "Keypad"
+        toggle_keyboard_short: "Keypad",
+        ghosting_changed: "Ghosting effect: {status}"
     },
 
     fr: {
@@ -77,6 +79,7 @@ const TRANSLATIONS = {
         other_controls: "Autre",
         screenshot_desc: "Faire une capture d’écran et la télécharger",
         lcd_desc: "Activer l'effet LCD pour un affichage réaliste",
+        ghosting_desc: "Activer l'effet de rémanence de l'écran LCD",
         invert_desc: "Inverser les couleurs de premier plan et d’arrière-plan",
         pixel_size_desc: "Ajuster la taille des pixels (1 à 10)",
         grey_scheme: "Passer à l'écran gris",
@@ -120,7 +123,8 @@ const TRANSLATIONS = {
         help: "Aide",
         toggle_theme: "Changer le thème",
         toggle_keyboard: "Afficher/masquer le clavier virtuel",
-        toggle_keyboard_short: "Clavier"
+        toggle_keyboard_short: "Clavier",
+        ghosting_changed: "Effet de rémanence : {status}"
     },
 
     it: {
@@ -137,6 +141,7 @@ const TRANSLATIONS = {
         other_controls: "Altro",
         screenshot_desc: "Cattura uno screenshot e scaricalo",
         lcd_desc: "Attiva effetto LCD per un display realistico",
+        ghosting_desc: "Attiva l'effetto ghosting sul display LCD",
         invert_desc: "Inverti i colori di primo piano e sfondo",
         pixel_size_desc: "Modifica la dimensione dei pixel (1-10)",
         grey_scheme: "Passa allo schermo grigio",
@@ -180,7 +185,8 @@ const TRANSLATIONS = {
         help: "Aiuto",
         toggle_theme: "Cambia tema",
         toggle_keyboard: "Mostra/nascondi tastiera virtuale",
-        toggle_keyboard_short: "Tastiera"
+        toggle_keyboard_short: "Tastiera",
+        ghosting_changed: "Effetto ghosting: {status}"
     },
 
     es: {
@@ -197,6 +203,7 @@ const TRANSLATIONS = {
         other_controls: "Otros",
         screenshot_desc: "Tomar una captura y descargarla",
         lcd_desc: "Activar efecto LCD para una visualización realista",
+        ghosting_desc: "Activar el efecto de imagen fantasma en la pantalla LCD",
         invert_desc: "Invertir colores de fondo y primer plano",
         pixel_size_desc: "Ajustar tamaño de píxel (1-10)",
         grey_scheme: "Cambiar a pantalla gris",
@@ -240,7 +247,8 @@ const TRANSLATIONS = {
         help: "Ayuda",
         toggle_theme: "Cambiar tema",
         toggle_keyboard: "Mostrar/ocultar teclado virtual",
-        toggle_keyboard_short: "Teclado"
+        toggle_keyboard_short: "Teclado",
+        ghosting_changed: "Efecto fantasma: {status}"
     },
 
     de: {
@@ -257,6 +265,7 @@ const TRANSLATIONS = {
         other_controls: "Sonstiges",
         screenshot_desc: "Screenshot aufnehmen und herunterladen",
         lcd_desc: "LCD-Effekt für realistische Anzeige umschalten",
+        ghosting_desc: "LCD-Ghosting-Effekt",
         invert_desc: "Vorder- und Hintergrundfarben umkehren",
         pixel_size_desc: "Pixelgröße ändern (1–10)",
         grey_scheme: "Zum grauen Bildschirm wechseln",
@@ -300,7 +309,8 @@ const TRANSLATIONS = {
         help: "Hilfe",
         toggle_theme: "Design wechseln",
         toggle_keyboard: "Virtuelle Tastatur ein-/ausblenden",
-        toggle_keyboard_short: "Tastatur"
+        toggle_keyboard_short: "Tastatur",
+        ghosting_changed: "Ghosting-Effekt: {status}"
     },
 
     pt: {
@@ -317,6 +327,7 @@ const TRANSLATIONS = {
         other_controls: "Outros",
         screenshot_desc: "Fazer uma captura de tela e baixar",
         lcd_desc: "Alternar efeito de pixels LCD para exibição realista",
+        ghosting_desc: "Alternar efeito de imageamento no ecrã LCD",
         invert_desc: "Inverter as cores de fundo e de primeiro plano",
         pixel_size_desc: "Aumentar/diminuir o tamanho dos pixels (1-10)",
         grey_scheme: "Alternar para tela cinza",
@@ -360,7 +371,8 @@ const TRANSLATIONS = {
         help: "Ajuda",
         toggle_theme: "Alternar tema",
         toggle_keyboard: "Mostrar/ocultar teclado virtual",
-        toggle_keyboard_short: "Teclado"
+        toggle_keyboard_short: "Teclado",
+        ghosting_changed: "Efeito de ghosting: {status}"
     },
     
     ru: {
@@ -377,6 +389,7 @@ const TRANSLATIONS = {
         other_controls: "Другое",
         screenshot_desc: "Сделать снимок экрана и сохранить",
         lcd_desc: "Включить/выключить эффект пикселей LCD для реалистичного отображения",
+        ghosting_desc: "Включить/выключить эффект призрачного изображения",
         invert_desc: "Инвертировать цвета переднего и заднего плана",
         pixel_size_desc: "Увеличить/уменьшить размер пикселей (1-10)",
         grey_scheme: "Переключить на серый экран",
@@ -417,7 +430,8 @@ const TRANSLATIONS = {
         help: "Помощь",
         toggle_theme: "Сменить тему",
         toggle_keyboard: "Показать/скрыть виртуальную клавиатуру",
-        toggle_keyboard_short: "Клавиши"
+        toggle_keyboard_short: "Клавиши",
+        ghosting_changed: "Эффект призрачного изображения: {status}"
     },
 
     pl: {
@@ -434,6 +448,7 @@ const TRANSLATIONS = {
         other_controls: "Inne",
         screenshot_desc: "Zrób zrzut ekranu i zapisz go",
         lcd_desc: "Włącz/wyłącz efekt pikseli LCD dla realistycznego wyświetlania",
+        ghosting_desc: "Włącz/wyłącz efekt smużenia wyświetlacza LCD",
         invert_desc: "Odwróć kolory tła i pierwszego planu",
         pixel_size_desc: "Zwiększ/zmniejsz rozmiar pikseli (1-10)",
         grey_scheme: "Przełącz na szary ekran",
@@ -477,7 +492,8 @@ const TRANSLATIONS = {
         help: "Pomoc",
         toggle_theme: "Zmień motyw",
         toggle_keyboard: "Pokaż/ukryj wirtualną klawiaturę",
-        toggle_keyboard_short: "Klawiatura"
+        toggle_keyboard_short: "Klawiatura",
+        ghosting_changed: "Efekt smużenia: {status}"
     },
 
     zh: {
@@ -494,6 +510,7 @@ const TRANSLATIONS = {
         other_controls: "其他",
         screenshot_desc: "截图并下载",
         lcd_desc: "切换 LCD 像素效果以接近真实显示",
+        ghosting_desc: "切换 LCD 残影效果",
         invert_desc: "反转前景色和背景色",
         pixel_size_desc: "增加/减少像素大小 (1-10)",
         grey_scheme: "切换到灰色屏幕",
@@ -537,7 +554,8 @@ const TRANSLATIONS = {
         help: "帮助",
         toggle_theme: "切换主题",
         toggle_keyboard: "显示/隐藏虚拟键盘",
-        toggle_keyboard_short: "键盘"
+        toggle_keyboard_short: "键盘",
+        ghosting_changed: "重影现象: {status}"
     },
 
     nl: {
@@ -554,6 +572,7 @@ const TRANSLATIONS = {
         other_controls: "Overig",
         screenshot_desc: "Maak een screenshot en download deze",
         lcd_desc: "Schakel het LCD-pixeleffect in/uit voor een realistische weergave",
+        ghosting_desc: "Schakel het ghosting-effect op het LCD-scherm in/uit",
         invert_desc: "Voorgrond- en achtergrondkleuren omkeren",
         pixel_size_desc: "Pixelgrootte vergroten/verkleinen (1-10)",
         grey_scheme: "Schakel over naar een grijs scherm",
@@ -597,6 +616,7 @@ const TRANSLATIONS = {
         help: "Help",
         toggle_theme: "Thema wisselen",
         toggle_keyboard: "Virtueel toetsenbord tonen/verbergen",
-        toggle_keyboard_short: "Toetsen"
+        toggle_keyboard_short: "Toetsen",
+        ghosting_changed: "Het ghosting-effect: {status}"
     }
 };

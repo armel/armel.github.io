@@ -1,5 +1,5 @@
 // Constants - same as Python version
-const VERSION = '1.6';
+const VERSION = '1.7';
 const BAUDRATE = 38400;
 const WIDTH = 128;
 const HEIGHT = 64;
@@ -10,6 +10,19 @@ const HEADER = new Uint8Array([0xAA, 0x55]);
 const TYPE_SCREENSHOT = 0x01;
 const TYPE_DIFF = 0x02;
 
+const pixelState = new Float32Array(WIDTH * HEIGHT); 
+
+// LCD Ghosting
+
+const COLOR_TRANSITION_SPEED = 0.15;
+const LCD_RISE_DEFAULT = 0.25;
+const LCD_FALL_DEFAULT = 0.05;
+
+let LCD_RISE = LCD_RISE_DEFAULT;
+let LCD_FALL = LCD_FALL_DEFAULT;
+
+let lcdAnimating = false;
+
 // Color sets 
 const COLOR_SETS = {
     'g': ['color_grey', '#000000', '#CACACA'],
@@ -18,7 +31,14 @@ const COLOR_SETS = {
     'w': ['color_white', '#000000', '#FFFFFF']
 };
 
+let currentDisplayBg = { r: 202, g: 202, b: 202 };
+let currentDisplayFg = { r: 0, g: 0, b: 0 };
+
 let DEFAULT_COLOR = 'g';
+
+const offColors = hexToRgb(COLOR_SETS[DEFAULT_COLOR][2]);
+currentDisplayBg = { ...offColors };
+
 
 // State variables
 let framebuffer = new Uint8Array(FRAME_SIZE);
@@ -73,6 +93,14 @@ if (currentColorKeyLocal && currentColorKeyLocal in COLOR_SETS) {
 const invertLcdLocal = parseInt(localStorage.getItem('invertLcd'), 10);
 if (!isNaN(invertLcdLocal)) {
     invertLcd = invertLcdLocal;
+}
+
+const lcdRiseLocal = parseFloat(localStorage.getItem('LCD_RISE'));
+const lcdFallLocal = parseFloat(localStorage.getItem('LCD_FALL'));
+if ((lcdRiseLocal === LCD_RISE_DEFAULT || lcdRiseLocal === 1) &&
+    (lcdFallLocal === LCD_FALL_DEFAULT || lcdFallLocal === 1)) {
+    LCD_RISE = lcdRiseLocal;
+    LCD_FALL = lcdFallLocal;
 }
 
 const currentLanguageLocal = localStorage.getItem('currentLanguage');
@@ -140,7 +168,7 @@ function toggleTheme() {
 function updateCanvasSize() {
     canvas.width = WIDTH * (pixelSize - 1);
     canvas.height = HEIGHT * pixelSize;
-    drawFrame();
+    startLcdAnimation();
 }
 
 function showNotification(key, params = {}, type = 'info') {
@@ -322,14 +350,17 @@ async function readFrames() {
 
                         if (type === TYPE_SCREENSHOT && size === FRAME_SIZE) {
                             framebuffer = new Uint8Array(payload);
-                            drawFrame();
+                            startLcdAnimation();
                             updateFPS();
                         } else if (type === TYPE_DIFF && size % 9 === 0) {
                             // Apply diff with format awareness
                             applyDiff(payload, isNewFormat);
-                            drawFrame();
+                            startLcdAnimation();
                             updateFPS();
                         }
+
+                        detectFKey();
+                        detectKeyLock();
 
                         processed += totalSize;
                     } else {
@@ -408,25 +439,23 @@ function getBit(bitIdx) {
 }
 
 function drawFrame() {
-    const [, originalFg, originalBg] = COLOR_SETS[currentColorKey];
-    
-    // Apply invert if necessary
-    const fgColor = invertLcd ? originalBg : originalFg;
-    const bgColor = invertLcd ? originalFg : originalBg;
-    
-    // Clear canvas with background color
-    ctx.fillStyle = bgColor;
+    const theme = COLOR_SETS[currentColorKey];
+    const fgColor = hexToRgb(invertLcd ? theme[2] : theme[1]);
+    const bgColor = hexToRgb(invertLcd ? theme[1] : theme[2]);
+
+    let stillAnimating = false;
+
+    ['r', 'g', 'b'].forEach(c => {
+        const diffFg = (fgColor[c] - currentDisplayFg[c]) * COLOR_TRANSITION_SPEED;
+        const diffBg = (bgColor[c] - currentDisplayBg[c]) * COLOR_TRANSITION_SPEED;
+        
+        if (Math.abs(diffFg) > 0.1) { currentDisplayFg[c] += diffFg; stillAnimating = true; }
+        if (Math.abs(diffBg) > 0.1) { currentDisplayBg[c] += diffBg; stillAnimating = true; }
+    });
+
+    ctx.fillStyle = `rgb(${currentDisplayBg.r|0},${currentDisplayBg.g|0},${currentDisplayBg.b|0})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Calculate off-pixel color (subtle blend toward foreground) for LCD effect
-    let offColor = null;
-    if (pixelLcd) {
-        offColor = blendColors(bgColor, fgColor, 0.04);
-    }
-    
-    // Draw pixels
-    let bitIndex = 0;
-    
+
     for (let y = 0; y < HEIGHT; y++) {
         for (let x = 0; x < WIDTH; x++) {
             const px = x * (pixelSize - 1);
@@ -434,21 +463,39 @@ function drawFrame() {
             const width = pixelSize - 1 - pixelLcd;
             const height = pixelSize - pixelLcd;
             
-            if (getBit(bitIndex)) {
-                // Pixel ON
-                ctx.fillStyle = fgColor;
-                ctx.fillRect(px, py, width, height);
-            } else if (pixelLcd && offColor) {
-                // Pixel OFF but visible (LCD effect)
-                ctx.fillStyle = offColor;
+            const idx = y * WIDTH + x;
+
+            const diff = getBit(idx) - pixelState[idx];
+            if (Math.abs(diff) > 0.01) {
+                pixelState[idx] += diff * (diff > 0 ? LCD_RISE : LCD_FALL);
+                stillAnimating = true;
+            } else {
+                pixelState[idx] = getBit(idx);
+            }
+
+            const alpha = Math.max(pixelState[idx], pixelLcd ? 0.05 : 0);
+            if (alpha > 0.01) {
+                ctx.fillStyle = blendColors(currentDisplayBg, currentDisplayFg, alpha);
                 ctx.fillRect(px, py, width, height);
             }
-            bitIndex++;
         }
     }
 
-    detectFKey();
-    detectKeyLock();
+    return stillAnimating;
+}
+
+function startLcdAnimation() {
+    if (lcdAnimating) return;
+    lcdAnimating = true;
+    
+    const animate = () => {
+        if (drawFrame()) {
+            requestAnimationFrame(animate);
+        } else {
+            lcdAnimating = false;
+        }
+    };
+    requestAnimationFrame(animate);
 }
 
 // Detect the F key indicator (video-inverse block) in the status bar
@@ -502,13 +549,9 @@ function detectKeyLock() {
     lockIndicator.classList.remove('visible');
 }
 function blendColors(color1, color2, ratio) {
-    const c1 = hexToRgb(color1);
-    const c2 = hexToRgb(color2);
-    
-    const r = Math.round(c1.r + (c2.r - c1.r) * ratio);
-    const g = Math.round(c1.g + (c2.g - c1.g) * ratio);
-    const b = Math.round(c1.b + (c2.b - c1.b) * ratio);
-    
+    const r = (color1.r + (color2.r - color1.r) * ratio) | 0;
+    const g = (color1.g + (color2.g - color1.g) * ratio) | 0;
+    const b = (color1.b + (color2.b - color1.b) * ratio) | 0;
     return `rgb(${r}, ${g}, ${b})`;
 }
 
@@ -562,9 +605,17 @@ function saveScreenshot() {
 
 function toggleColors() {
     invertLcd = 1 - invertLcd;
-    drawFrame();
+    startLcdAnimation();
     showNotification('colors_inverted', {}, 'info');
     localStorage.setItem('invertLcd', invertLcd);
+}
+
+function toggleGhosting() {
+    LCD_RISE = LCD_RISE == 1 ? LCD_RISE_DEFAULT : 1;
+    LCD_FALL = LCD_FALL == 1 ? LCD_FALL_DEFAULT : 1;
+
+    localStorage.setItem('LCD_RISE', LCD_RISE);
+    localStorage.setItem('LCD_FALL', LCD_FALL);
 }
 
 function changePixelSize(delta) {
@@ -582,7 +633,7 @@ function changeColorSet(key) {
         const [labelKey] = COLOR_SETS[key];
         const name = t(labelKey);
         showNotification('color_changed', { color: name }, 'info');
-        drawFrame();
+        startLcdAnimation();
     }
 }
 
@@ -613,6 +664,7 @@ helpModal.addEventListener('click', (e) => {
 // F1/F2             → SIDE1/SIDE2
 // Space             → screenshot
 // P                 → toggle LCD pixel effect
+// K                 → toggle LCD ghosting effect
 // I                 → toggle invert
 // Q                 → disconnect
 // G/O/B/W           → color scheme
@@ -741,7 +793,7 @@ document.addEventListener('keydown', (event) => {
             break;
         case 'p':
             pixelLcd = 1 - pixelLcd;
-            drawFrame();
+            startLcdAnimation();
             showNotification('lcd_effect', { status: pixelLcd ? t('lcd_on') : t('lcd_off') }, 'info');
             localStorage.setItem('pixelLcd', pixelLcd);
             break;
@@ -758,6 +810,11 @@ document.addEventListener('keydown', (event) => {
             break;
         case 'h': case '?':
             showModal();
+            break;
+        case 'k':
+            toggleGhosting();
+            startLcdAnimation();
+            showNotification('ghosting_changed', { status: LCD_FALL == 1 ? t('lcd_off') : t('lcd_on')}, 'info');
             break;
     }
 });
@@ -787,7 +844,7 @@ if (!('serial' in navigator)) {
 // Initialize app
 //detectLanguage();
 updateUI();
-drawFrame();
+startLcdAnimation();
 
 
 // ─── UV-K1 Virtual Keyboard ──────────────────────────────────
