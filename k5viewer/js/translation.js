@@ -432,7 +432,7 @@ const TRANSLATIONS = {
         color_orange: "Оранжевый",
         color_blue: "Синий",
         color_white: "Белый",
-        color_olive: "Oливковый",
+        color_olive: "Оливковый",
         connection_error: "Ошибка подключения: {error}",
         disconnection_error: "Ошибка отключения: {error}",
         serial_read_error: "Ошибка чтения порта",
