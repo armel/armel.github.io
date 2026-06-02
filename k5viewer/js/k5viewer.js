@@ -1,5 +1,5 @@
 // Constants - same as Python version
-const VERSION = '1.6';
+const VERSION = '1.7';
 const BAUDRATE = 38400;
 const WIDTH = 128;
 const HEIGHT = 64;
@@ -25,9 +25,10 @@ let lcdAnimating = false;
 
 // Color sets 
 const COLOR_SETS = {
-    'g': ['color_grey', '#000000', '#CACACA'],
-    'o': ['color_orange', '#000000', '#FFC125'], 
-    'b': ['color_blue', '#000000', '#1C86E4'],
+    'x': ['color_olive', '#000000', '#394d2d'],
+    'g': ['color_grey', '#2a213f', '#e5e0ec'],
+    'o': ['color_orange', '#41310a', '#FFC125'], 
+    'b': ['color_blue', '#07223a', '#1C86E4'],
     'w': ['color_white', '#000000', '#FFFFFF']
 };
 
@@ -36,7 +37,7 @@ let currentDisplayFg = { r: 0, g: 0, b: 0 };
 
 let DEFAULT_COLOR = 'g';
 
-const offColors = hexToRgb(COLOR_SETS[DEFAULT_COLOR][2]);
+const offColors = hexToRgb(COLOR_SETS['x'][2]);
 currentDisplayBg = { ...offColors };
 
 
@@ -48,7 +49,9 @@ let writer = null;
 let isConnected = false;
 let pixelSize = 5;
 let pixelLcd = 0;
+let tempInvertLcd = 0;
 let invertLcd = 0;
+let tempColorKey = 'x';
 let currentColorKey = DEFAULT_COLOR;
 let frameCount = 0;
 let frameLost = 0;
@@ -93,6 +96,14 @@ if (currentColorKeyLocal && currentColorKeyLocal in COLOR_SETS) {
 const invertLcdLocal = parseInt(localStorage.getItem('invertLcd'), 10);
 if (!isNaN(invertLcdLocal)) {
     invertLcd = invertLcdLocal;
+}
+
+const lcdRiseLocal = parseFloat(localStorage.getItem('LCD_RISE'));
+const lcdFallLocal = parseFloat(localStorage.getItem('LCD_FALL'));
+if ((lcdRiseLocal === LCD_RISE_DEFAULT || lcdRiseLocal === 1) &&
+    (lcdFallLocal === LCD_FALL_DEFAULT || lcdFallLocal === 1)) {
+    LCD_RISE = lcdRiseLocal;
+    LCD_FALL = lcdFallLocal;
 }
 
 const currentLanguageLocal = localStorage.getItem('currentLanguage');
@@ -220,6 +231,9 @@ async function connectSerial() {
         writer = port.writable.getWriter();
         
         isConnected = true;
+        tempColorKey = currentColorKey;
+        tempInvertLcd = invertLcd;
+        startLcdAnimation();
         lastPort = port;
         lastPortInfo = port.getInfo();
         userDisconnected = false;
@@ -273,6 +287,10 @@ async function disconnectSerial() {
         connectBtn.disabled = false;
         disconnectBtn.disabled = true;
         updateKeyboardState();
+
+        tempColorKey = 'x';
+        tempInvertLcd = 0;
+        startLcdAnimation();
         
         updateStatus(t('disconnected'));
         showNotification('disconnected_success', {}, 'success');
@@ -431,9 +449,9 @@ function getBit(bitIdx) {
 }
 
 function drawFrame() {
-    const theme = COLOR_SETS[currentColorKey];
-    const fgColor = hexToRgb(invertLcd ? theme[2] : theme[1]);
-    const bgColor = hexToRgb(invertLcd ? theme[1] : theme[2]);
+    const theme = COLOR_SETS[tempColorKey];
+    const fgColor = hexToRgb(tempInvertLcd ? theme[2] : theme[1]);
+    const bgColor = hexToRgb(tempInvertLcd ? theme[1] : theme[2]);
 
     let stillAnimating = false;
 
@@ -478,10 +496,10 @@ function drawFrame() {
 
 function startLcdAnimation() {
     if (lcdAnimating) return;
+    lcdAnimating = true;
     
     const animate = () => {
         if (drawFrame()) {
-            lcdAnimating = true;
             requestAnimationFrame(animate);
         } else {
             lcdAnimating = false;
@@ -597,14 +615,25 @@ function saveScreenshot() {
 
 function toggleColors() {
     invertLcd = 1 - invertLcd;
-    startLcdAnimation();
-    showNotification('colors_inverted', {}, 'info');
+
+    if (isConnected) {
+        tempInvertLcd = invertLcd;
+        startLcdAnimation();
+    }
+    
+    showNotification('colors_inverted', { status: invertLcd == 0 ? t('lcd_off') : t('lcd_on')}, 'info');
     localStorage.setItem('invertLcd', invertLcd);
 }
 
 function toggleGhosting() {
-    LCD_RISE = LCD_RISE == 1 ? LCD_RISE_DEFAULT : 1;
-    LCD_FALL = LCD_FALL == 1 ? LCD_FALL_DEFAULT : 1;
+    if (LCD_RISE == 1) {
+        LCD_RISE = LCD_RISE_DEFAULT;
+        LCD_FALL = LCD_FALL_DEFAULT;
+    }
+    else {
+        LCD_RISE = 1;
+        LCD_FALL = 1;
+    }
 
     localStorage.setItem('LCD_RISE', LCD_RISE);
     localStorage.setItem('LCD_FALL', LCD_FALL);
@@ -622,10 +651,16 @@ function changePixelSize(delta) {
 function changeColorSet(key) {
     if (key in COLOR_SETS) {
         currentColorKey = key;
+        localStorage.setItem('currentColorKey', key);
+        
         const [labelKey] = COLOR_SETS[key];
         const name = t(labelKey);
         showNotification('color_changed', { color: name }, 'info');
-        startLcdAnimation();
+
+        if (isConnected) {
+            tempColorKey = key;
+            startLcdAnimation();
+        }
     }
 }
 
@@ -791,14 +826,12 @@ document.addEventListener('keydown', (event) => {
             break;
         case 'i':
             toggleColors();
-            localStorage.setItem('invertLcd', invertLcd);
             break;
         case 'q':
             if (isConnected) disconnectSerial();
             break;
-        case 'g': case 'o': case 'b': case 'w':
+        case 'g': case 'o': case 'b': case 'w': case 'x':
             changeColorSet(kl);
-            localStorage.setItem('currentColorKey', currentColorKey);
             break;
         case 'h': case '?':
             showModal();
@@ -998,6 +1031,9 @@ navigator.serial.addEventListener('disconnect', (event) => {
     if (event.target !== lastPort) return;
 
     isConnected = false;
+    tempColorKey = 'x';
+    tempInvertLcd = 0;
+    startLcdAnimation();
 
     if (keepaliveInterval) { clearInterval(keepaliveInterval); keepaliveInterval = null; }
     if (reader) { try { reader.cancel(); } catch(_) {} reader = null; }
@@ -1032,6 +1068,9 @@ navigator.serial.addEventListener('connect', async (event) => {
         writer = port.writable.getWriter();
 
         isConnected = true;
+        tempColorKey = currentColorKey;
+        tempInvertLcd = invertLcd;
+        startLcdAnimation();
         autoReconnecting = false;
         userDisconnected = false;
         lastPort = port;
