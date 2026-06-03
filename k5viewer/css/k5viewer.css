@@ -91,6 +91,7 @@ body {
     border-radius: var(--radius);
     font-size: 12px;
     font-weight: 600;
+    margin-right: 10px;
     /* Light: alu clair neutre */
     background: linear-gradient(160deg, #f9fafb 0%, #e5e7eb 100%);
     color: #6b7280;
@@ -296,8 +297,10 @@ select:focus {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 40px;
+    padding: 0 40px 0 40px;
     position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .display-container {
@@ -464,12 +467,23 @@ select:focus {
     font-size: 13px;
 }
 
+.brand_h1 {
+    display: flex;
+    align-items: baseline;
+    text-wrap: nowrap;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
 /* ─── UV-K1 Virtual Keyboard ──────────────────────────────── */
 
 .viewer-layout {
     display: flex;
     align-items: flex-start;
     gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    position: relative;
 }
 
 
@@ -481,6 +495,7 @@ select:focus {
 
 /* ── Structure commune ── */
 .k1-keyboard {
+    width: min-content;
     flex-shrink: 0;
     border-radius: 16px;
     padding: 14px 12px;
@@ -784,12 +799,8 @@ select:focus {
         justify-content: center;
     }
     
-    .main {
-        padding: 20px;
-    }
-    
     .notifications {
         right: 16px;
-        top: 120px;
+        top: 130px;
     }
 }
