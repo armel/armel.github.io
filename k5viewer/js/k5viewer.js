@@ -1,5 +1,5 @@
 // Constants - same as Python version
-const VERSION = '1.7';
+const VERSION = '1.8';
 const BAUDRATE = 38400;
 const WIDTH = 128;
 const HEIGHT = 64;
@@ -65,6 +65,7 @@ let ctrlHeld  = false;
 // DOM elements
 const canvas = document.getElementById('display');
 const ctx = canvas.getContext('2d');
+const appTitle = document.getElementById('appTitle');
 const status = document.getElementById('status');
 const connectionBtn = document.getElementById('connectionBtn');
 const notifications = document.getElementById('notifications');
@@ -75,6 +76,14 @@ const helpModal = document.getElementById('helpModal');
 const closeModal = document.getElementById('closeModal');
 const fKeyIndicator  = document.getElementById('fKeyIndicator');
 const lockIndicator  = document.getElementById('lockIndicator');
+
+function updateVersionLabels() {
+    const versionedName = `K5Viewer v${VERSION}`;
+    document.title = `${versionedName} by F4HWN`;
+    if (appTitle) appTitle.textContent = versionedName;
+}
+
+updateVersionLabels();
 
 // Load local storage
 const pixelSizeLocal = parseInt(localStorage.getItem('pixelSize'), 10);
