@@ -66,8 +66,7 @@ let ctrlHeld  = false;
 const canvas = document.getElementById('display');
 const ctx = canvas.getContext('2d');
 const status = document.getElementById('status');
-const connectBtn = document.getElementById('connectBtn');
-const disconnectBtn = document.getElementById('disconnectBtn');
+const connectionBtn = document.getElementById('connectionBtn');
 const notifications = document.getElementById('notifications');
 const languageSelect = document.getElementById('languageSelect');
 const themeToggle = document.getElementById('themeToggle');
@@ -118,6 +117,26 @@ if (isDarkThemeLocal !== null) {
     document.body.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
     themeToggle.textContent = isDarkTheme ? '◑' : '◐';
 }
+
+// Update Connect/Disconnect button
+function updateConnectionButtonState(state) {
+    if (!connectionBtn) return;
+    
+    if (state === 'connected') {
+        connectionBtn.disabled = false;
+        connectionBtn.className = 'btn danger';
+        connectionBtn.setAttribute('data-i18n', 'disconnect');
+        connectionBtn.textContent = t('disconnect');
+    } else if (state === 'disconnected') {
+        connectionBtn.disabled = false;
+        connectionBtn.className = 'btn primary';
+        connectionBtn.setAttribute('data-i18n', 'connect');
+        connectionBtn.textContent = t('connect');
+    } else if (state === 'disabled') {
+        connectionBtn.disabled = true;
+    }
+}
+
 
 // Initialize canvas
 updateCanvasSize();
@@ -237,8 +256,7 @@ async function connectSerial() {
         lastPort = port;
         lastPortInfo = port.getInfo();
         userDisconnected = false;
-        connectBtn.disabled = true;
-        disconnectBtn.disabled = false;
+        updateConnectionButtonState('connected');
         updateKeyboardState();
         
         updateStatus(t('connected_waiting'));
@@ -284,8 +302,7 @@ async function disconnectSerial() {
             port = null;
         }
         
-        connectBtn.disabled = false;
-        disconnectBtn.disabled = true;
+        updateConnectionButtonState('disconnected');
         updateKeyboardState();
 
         tempColorKey = 'x';
@@ -665,11 +682,16 @@ function changeColorSet(key) {
 }
 
 // Event listeners
-connectBtn.addEventListener('click', connectSerial);
-disconnectBtn.addEventListener('click', disconnectSerial);
 themeToggle.addEventListener('click', toggleTheme);
 helpBtn.addEventListener('click', showModal);
 closeModal.addEventListener('click', hideModal);
+connectionBtn.addEventListener('click', () => {
+    if (isConnected) {
+        disconnectSerial();
+    } else {
+        connectSerial();
+    }
+});
 
 // Close modal when clicking outside
 helpModal.addEventListener('click', (e) => {
@@ -860,7 +882,7 @@ languageSelect.addEventListener('change', (event) => {
 // Check Web Serial API support
 if (!('serial' in navigator)) {
     showNotification('web_serial_not_supported', {}, 'error');
-    connectBtn.disabled = true;
+    if (connectionBtn) connectionBtn.disabled = true;
 } else {
     // Show initial notification only if Web Serial is supported
     showNotification('app_loaded', {}, 'info');
@@ -1039,8 +1061,7 @@ navigator.serial.addEventListener('disconnect', (event) => {
     if (reader) { try { reader.cancel(); } catch(_) {} reader = null; }
     if (writer) { try { writer.close(); } catch(_) {} writer = null; }
 
-    connectBtn.disabled = true;
-    disconnectBtn.disabled = true;
+    updateConnectionButtonState('disabled');
     updateKeyboardState();
 
     autoReconnecting = true;
@@ -1074,8 +1095,7 @@ navigator.serial.addEventListener('connect', async (event) => {
         autoReconnecting = false;
         userDisconnected = false;
         lastPort = port;
-        connectBtn.disabled = true;
-        disconnectBtn.disabled = false;
+        updateConnectionButtonState('connected');
         updateKeyboardState();
 
         firstFrameAfterReconnect = true;
