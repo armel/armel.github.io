@@ -39,20 +39,7 @@ function loadFirmwareFromUrl(theUrl)
 
     document.getElementById('console').value = "";
     log("Loading file from url: "+ theUrl+'\n')
-    let res = null;
-
-    fetch('https://api.codetabs.com/v1/proxy?quest=' + theUrl).catch(err => {
-    return new Promise(resolve => setTimeout(resolve, 1000))
-        .then(() => fetch('https://api.codetabs.com/v1/proxy?quest=' + theUrl));
-    })
-    .then(res => {
-        if (res.ok) {
-            return res.arrayBuffer();
-        } else {
-            log(`Http error: ${res.status}`);
-            throw new Error(`Http error: ${res.status}`);
-        }
-    }).then(encoded_firmware => {
+    fetchFirmware(theUrl).then(encoded_firmware => {
         loadFW(new Uint8Array(encoded_firmware));
         customFileLabel.textContent = theUrl.substring(theUrl.lastIndexOf('/')+1);
     }).catch((error) => {
@@ -61,6 +48,63 @@ function loadFirmwareFromUrl(theUrl)
     }).finally(()=>{
         $("#spinner").addClass("d-none");
     });
+}
+
+function normalizeGithubRawUrl(theUrl)
+{
+    try {
+        const url = new URL(theUrl);
+
+        if (url.hostname !== 'github.com') return theUrl;
+
+        const pathParts = url.pathname.split('/').filter(Boolean);
+        const rawIndex = pathParts.indexOf('raw');
+
+        if (rawIndex < 2 || pathParts.length <= rawIndex + 2) return theUrl;
+
+        const owner = pathParts[0];
+        const repo = pathParts[1];
+        const branch = pathParts[rawIndex + 1];
+        const filePath = pathParts.slice(rawIndex + 2).join('/');
+
+        return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
+    } catch (error) {
+        return theUrl;
+    }
+}
+
+function codetabsProxyUrl(theUrl)
+{
+    return 'https://api.codetabs.com/v1/proxy?' + new URLSearchParams({quest: theUrl});
+}
+
+async function fetchFirmware(theUrl)
+{
+    const rawGithubUrl = normalizeGithubRawUrl(theUrl);
+    const candidates = [];
+
+    if (rawGithubUrl !== theUrl) candidates.push(rawGithubUrl);
+
+    candidates.push(theUrl);
+    candidates.push(codetabsProxyUrl(theUrl));
+
+    let lastError = null;
+
+    for (const candidateUrl of candidates) {
+        try {
+            const res = await fetch(candidateUrl);
+
+            if (res.ok) return res.arrayBuffer();
+
+            lastError = new Error(`Http error: ${res.status}`);
+            log(`${lastError.message} while loading ${candidateUrl}`);
+        } catch (error) {
+            lastError = error;
+            log(`Fetch error while loading ${candidateUrl}: ${error.message}`);
+        }
+    }
+
+    throw lastError;
 }
 
 
