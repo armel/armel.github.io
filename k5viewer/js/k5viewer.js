@@ -1,5 +1,5 @@
-// Constants - same as Python version
-const VERSION = '1.8';
+// Constants
+const VERSION = '1.9';
 const BAUDRATE = 38400;
 const WIDTH = 128;
 const HEIGHT = 64;
@@ -9,6 +9,11 @@ const FRAME_SIZE = 1024;
 const HEADER = new Uint8Array([0xAA, 0x55]);
 const TYPE_SCREENSHOT = 0x01;
 const TYPE_DIFF = 0x02;
+
+// Keepalive ping period. The firmware grants a budget of 15 frames per
+// ping received, so the max frame rate is 15 / (KEEPALIVE_INTERVAL_MS / 1000).
+// 200 ms -> up to 75 FPS, the real rate is then bound by the radio UI redraws.
+const KEEPALIVE_INTERVAL_MS = 200;
 
 const pixelState = new Float32Array(WIDTH * HEIGHT); 
 
@@ -272,7 +277,7 @@ async function connectSerial() {
         showNotification('serial_established', {}, 'success');
         
         // Start keepalive
-        keepaliveInterval = setInterval(sendKeepalive, 1000);
+        keepaliveInterval = setInterval(sendKeepalive, KEEPALIVE_INTERVAL_MS);
         
         // Start reading frames
         readFrames();
@@ -1110,7 +1115,7 @@ navigator.serial.addEventListener('connect', async (event) => {
         firstFrameAfterReconnect = true;
         updateStatus(t('reconnecting'));
 
-        keepaliveInterval = setInterval(sendKeepalive, 1000);
+        keepaliveInterval = setInterval(sendKeepalive, KEEPALIVE_INTERVAL_MS);
         readFrames();
 
     } catch (error) {
