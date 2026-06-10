@@ -1,5 +1,5 @@
-// Constants - same as Python version
-const VERSION = '1.8';
+// Constants
+const VERSION = '1.9';
 const BAUDRATE = 38400;
 const WIDTH = 128;
 const HEIGHT = 64;
