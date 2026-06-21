@@ -1,5 +1,5 @@
 // Constants
-const VERSION = '1.9';
+const VERSION = '2.0';
 const BAUDRATE = 38400;
 const WIDTH = 128;
 const HEIGHT = 64;
@@ -9,6 +9,12 @@ const FRAME_SIZE = 1024;
 const HEADER = new Uint8Array([0xAA, 0x55]);
 const TYPE_SCREENSHOT = 0x01;
 const TYPE_DIFF = 0x02;
+const PROTOCOL_LEGACY_MARKER = 0xFF;
+const PROTOCOL_FLAGS_MARKER_MASK = 0xF0;
+const PROTOCOL_FLAGS_MASK = 0x0F;
+const PROTOCOL_FLAG_DEEP_SLEEP = 1 << 0;
+const PROTOCOL_FLAG_LED_RED = 1 << 1;
+const PROTOCOL_FLAG_LED_GREEN = 1 << 2;
 
 // Keepalive ping period. The firmware grants a budget of 15 frames per
 // ping received, so the max frame rate is 15 / (KEEPALIVE_INTERVAL_MS / 1000).
@@ -66,6 +72,8 @@ let currentLanguage = 'en';
 let isDarkTheme = false;
 let shiftHeld = false;
 let ctrlHeld  = false;
+let radioDeepSleep = false;
+let radioLedState = { red: false, green: false };
 
 // DOM elements
 const canvas = document.getElementById('display');
@@ -81,6 +89,8 @@ const helpModal = document.getElementById('helpModal');
 const closeModal = document.getElementById('closeModal');
 const fKeyIndicator  = document.getElementById('fKeyIndicator');
 const lockIndicator  = document.getElementById('lockIndicator');
+const radioLedRed = document.getElementById('radioLedRed');
+const radioLedGreen = document.getElementById('radioLedGreen');
 
 function updateVersionLabels() {
     const versionedName = `K5Viewer v${VERSION}`;
@@ -264,6 +274,8 @@ async function connectSerial() {
         writer = port.writable.getWriter();
         
         isConnected = true;
+        radioDeepSleep = false;
+        updateRadioLeds(false, false);
         tempColorKey = currentColorKey;
         tempInvertLcd = invertLcd;
         startLcdAnimation();
@@ -291,6 +303,8 @@ async function connectSerial() {
 async function disconnectSerial() {
     try {
         isConnected = false;
+        radioDeepSleep = false;
+        updateRadioLeds(false, false);
         userDisconnected = true;
         autoReconnecting = false;
         clearTimeout(reconnectTimer);
@@ -363,13 +377,17 @@ async function readFrames() {
             // Process frames in buffer
             let processed = 0;
             while (processed < bufferPos - 4) {
-                // Check for version marker (new format)
+                // Check for version marker and optional state flags.
                 let isNewFormat = false;
+                let frameFlags = 0;
                 let headerStart = processed;
 
-                if (buffer[processed] === 0xFF) {
-                    // New format: version marker present
+                if (buffer[processed] === PROTOCOL_LEGACY_MARKER) {
                     isNewFormat = true;
+                    headerStart = processed + 1;
+                } else if ((buffer[processed] & PROTOCOL_FLAGS_MARKER_MASK) === PROTOCOL_FLAGS_MARKER_MASK) {
+                    isNewFormat = true;
+                    frameFlags = buffer[processed] & PROTOCOL_FLAGS_MASK;
                     headerStart = processed + 1;
                 }
 
@@ -391,11 +409,13 @@ async function readFrames() {
 
                         if (type === TYPE_SCREENSHOT && size === FRAME_SIZE) {
                             framebuffer = new Uint8Array(payload);
+                            applyFrameFlags(frameFlags);
                             startLcdAnimation();
                             updateFPS();
                         } else if (type === TYPE_DIFF && size % 9 === 0) {
                             // Apply diff with format awareness
                             applyDiff(payload, isNewFormat);
+                            applyFrameFlags(frameFlags);
                             startLcdAnimation();
                             updateFPS();
                         }
@@ -468,6 +488,34 @@ function applyDiff(diffPayload, isNewFormat) {
             i += 8;
         }
     }
+}
+
+function applyFrameFlags(flags) {
+    const deepSleep = !!(flags & PROTOCOL_FLAG_DEEP_SLEEP);
+    updateRadioLeds(
+        !!(flags & PROTOCOL_FLAG_LED_RED),
+        !!(flags & PROTOCOL_FLAG_LED_GREEN)
+    );
+
+    if (radioDeepSleep === deepSleep) return;
+
+    radioDeepSleep = deepSleep;
+    if (radioDeepSleep) {
+        tempColorKey = 'x';
+        tempInvertLcd = 0;
+        updateStatus(t('connected_deep_sleep'));
+    } else {
+        tempColorKey = currentColorKey;
+        tempInvertLcd = invertLcd;
+    }
+}
+
+function updateRadioLeds(redOn, greenOn) {
+    if (radioLedState.red === redOn && radioLedState.green === greenOn) return;
+
+    radioLedState = { red: redOn, green: greenOn };
+    radioLedRed.classList.toggle('on', redOn);
+    radioLedGreen.classList.toggle('on', greenOn);
 }
 
 function getBit(bitIdx) {
@@ -616,6 +664,14 @@ function updateFPS() {
     }
     
     if (now - lastTime >= 1000) {
+        if (radioDeepSleep) {
+            updateStatus(t('connected_deep_sleep'));
+            frameCount = 0;
+            lastTime = now;
+            frameLost = 0;
+            return;
+        }
+
         const fps = Math.ceil(frameCount / ((now - lastTime) / 1000));
         updateStatus(t('connected_fps', { fps: fps.toFixed(1) }));
         frameCount = 0;
@@ -647,7 +703,7 @@ function saveScreenshot() {
 function toggleColors() {
     invertLcd = 1 - invertLcd;
 
-    if (isConnected) {
+    if (isConnected && !radioDeepSleep) {
         tempInvertLcd = invertLcd;
         startLcdAnimation();
     }
@@ -688,7 +744,7 @@ function changeColorSet(key) {
         const name = t(labelKey);
         showNotification('color_changed', { color: name }, 'info');
 
-        if (isConnected) {
+        if (isConnected && !radioDeepSleep) {
             tempColorKey = key;
             startLcdAnimation();
         }
