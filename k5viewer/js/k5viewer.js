@@ -391,9 +391,12 @@ async function readFrames() {
                     headerStart = processed + 1;
                 }
 
+                if (headerStart + 4 >= bufferPos) {
+                    break;
+                }
+
                 // Now check for standard header
-                if (headerStart + 4 < bufferPos &&
-                    buffer[headerStart] === HEADER[0] &&
+                if (buffer[headerStart] === HEADER[0] &&
                     buffer[headerStart + 1] === HEADER[1]) {
 
                     const type = buffer[headerStart + 2];
@@ -1117,14 +1120,18 @@ let lastPort            = null;
 let lastPortInfo        = null;   // { usbVendorId, usbProductId }
 let userDisconnected    = false;
 let firstFrameAfterReconnect = false;
+let reconnectWasDeepSleep = false;
 
 navigator.serial.addEventListener('disconnect', (event) => {
     if (userDisconnected) return;
     if (event.target !== lastPort) return;
 
+    reconnectWasDeepSleep = radioDeepSleep;
     isConnected = false;
-    tempColorKey = 'x';
-    tempInvertLcd = 0;
+    if (reconnectWasDeepSleep) {
+        tempColorKey = 'x';
+        tempInvertLcd = 0;
+    }
     startLcdAnimation();
 
     if (keepaliveInterval) { clearInterval(keepaliveInterval); keepaliveInterval = null; }
@@ -1159,8 +1166,14 @@ navigator.serial.addEventListener('connect', async (event) => {
         writer = port.writable.getWriter();
 
         isConnected = true;
-        tempColorKey = currentColorKey;
-        tempInvertLcd = invertLcd;
+        radioDeepSleep = reconnectWasDeepSleep;
+        if (radioDeepSleep) {
+            tempColorKey = 'x';
+            tempInvertLcd = 0;
+        } else {
+            tempColorKey = currentColorKey;
+            tempInvertLcd = invertLcd;
+        }
         startLcdAnimation();
         autoReconnecting = false;
         userDisconnected = false;
@@ -1169,7 +1182,7 @@ navigator.serial.addEventListener('connect', async (event) => {
         updateKeyboardState();
 
         firstFrameAfterReconnect = true;
-        updateStatus(t('reconnecting'));
+        updateStatus(radioDeepSleep ? t('connected_deep_sleep') : t('reconnecting'));
 
         keepaliveInterval = setInterval(sendKeepalive, KEEPALIVE_INTERVAL_MS);
         readFrames();
