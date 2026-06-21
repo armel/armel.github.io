@@ -391,9 +391,12 @@ async function readFrames() {
                     headerStart = processed + 1;
                 }
 
+                if (headerStart + 4 >= bufferPos) {
+                    break;
+                }
+
                 // Now check for standard header
-                if (headerStart + 4 < bufferPos &&
-                    buffer[headerStart] === HEADER[0] &&
+                if (buffer[headerStart] === HEADER[0] &&
                     buffer[headerStart + 1] === HEADER[1]) {
 
                     const type = buffer[headerStart + 2];
