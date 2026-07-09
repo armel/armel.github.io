@@ -630,6 +630,192 @@ select:focus {
 
 .k1-body { display: flex; gap: 0; align-items: stretch; }
 
+.rf-log-panel {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0,0,0,0.14);
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    width: 100%;
+}
+
+.rf-log-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    gap: 8px;
+}
+
+.rf-log-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: #4b5563;
+    letter-spacing: 0;
+}
+
+.rf-log-state {
+    min-width: 52px;
+    text-align: center;
+    border-radius: 5px;
+    padding: 2px 6px;
+    background: rgba(255,255,255,0.45);
+    border: 1px solid rgba(107,114,128,0.45);
+    color: #6b7280;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.rf-log-state.active {
+    background: #dcfce7;
+    border-color: #22c55e;
+    color: #15803d;
+}
+
+.rf-log-state.clearing {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    color: #92400e;
+}
+
+.rf-log-scroll {
+    /* Nudge the scrollbar right of the table without moving the content:
+       the container overflows 6px right (calc + negative margin), the
+       padding pushes the rows back to their original width. */
+    max-width: calc(100% + 6px);
+    margin-right: -6px;
+    padding-right: 6px;
+    max-height: 190px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-top: 1px solid rgba(0,0,0,0.08);
+}
+
+.rf-log-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.rf-log-scroll::-webkit-scrollbar-thumb {
+    background: rgba(107,114,128,0.45);
+    border-radius: 4px;
+}
+
+.rf-log-table {
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 10px;
+    line-height: 1.25;
+}
+
+.rf-log-table th,
+.rf-log-table td {
+    padding: 3px 2px;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.rf-log-table th {
+    color: #6b7280;
+    font-weight: 800;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #d8dde5;
+}
+
+.rf-log-table th:first-child,
+.rf-log-table td:first-child {
+    text-align: left;
+    width: 8%;
+}
+
+.rf-log-table th:nth-child(2),
+.rf-log-table td:nth-child(2) {
+    text-align: left;
+    width: 24%;
+}
+.rf-log-table th:nth-child(3),
+.rf-log-table td:nth-child(3) {
+    text-align: left;
+    width: 28%;
+}
+.rf-log-table th:nth-child(4),
+.rf-log-table td:nth-child(4) {
+    text-align: left;
+    width: 13%;
+}
+.rf-log-table th:nth-child(5),
+.rf-log-table td:nth-child(5) { width: 14%; }
+.rf-log-table th:nth-child(6),
+.rf-log-table td:nth-child(6) { width: 13%; }
+
+.rf-log-live td {
+    color: #166534;
+    font-weight: 800;
+    background: rgba(34,197,94,0.12);
+}
+
+.rf-log-empty td {
+    text-align: center;
+    color: #6b7280;
+}
+
+[data-theme="dark"] .rf-log-panel {
+    border-top-color: rgba(255,255,255,0.08);
+}
+
+[data-theme="dark"] .rf-log-title,
+[data-theme="dark"] .rf-log-table th,
+[data-theme="dark"] .rf-log-empty td {
+    color: #64748b;
+}
+
+[data-theme="dark"] .rf-log-state {
+    background: rgba(15,23,42,0.35);
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .rf-log-state.active {
+    background: rgba(34,197,94,0.16);
+    border-color: rgba(34,197,94,0.5);
+    color: #86efac;
+}
+
+[data-theme="dark"] .rf-log-state.clearing {
+    background: rgba(245,158,11,0.16);
+    border-color: rgba(245,158,11,0.5);
+    color: #fcd34d;
+}
+
+[data-theme="dark"] .rf-log-scroll {
+    border-top-color: rgba(255,255,255,0.06);
+}
+
+[data-theme="dark"] .rf-log-scroll::-webkit-scrollbar-thumb {
+    background: rgba(100,116,139,0.55);
+}
+
+[data-theme="dark"] .rf-log-table td,
+[data-theme="dark"] .rf-log-table th {
+    border-bottom-color: rgba(255,255,255,0.06);
+}
+
+[data-theme="dark"] .rf-log-table th {
+    background: #1f2b3b;
+}
+
+[data-theme="dark"] .rf-log-live td {
+    color: #bbf7d0;
+    background: rgba(34,197,94,0.12);
+}
+
+
 .k1-side-col {
     display: flex;
     flex-direction: column;
