@@ -1,5 +1,5 @@
 // Constants
-const VERSION = '2.0';
+const VERSION = '2.3';
 const BAUDRATE = 38400;
 const WIDTH = 128;
 const HEIGHT = 64;
@@ -9,6 +9,21 @@ const FRAME_SIZE = 1024;
 const HEADER = new Uint8Array([0xAA, 0x55]);
 const TYPE_SCREENSHOT = 0x01;
 const TYPE_DIFF = 0x02;
+const TYPE_RF_LOG = 0x05;
+const VIEWER_FEATURE_RF_LOG = 0x01;
+const RF_LOG_PACKET_VERSION = 2;
+const RF_LOG_CHANNEL_NAME_LENGTH = 10;
+const RF_LOG_ROW_SIZE = 15 + RF_LOG_CHANNEL_NAME_LENGTH;
+const RF_LOG_ROW_COUNT = 64;
+const RF_LOG_PACKET_SIZE = 4 + (RF_LOG_ROW_SIZE * (RF_LOG_ROW_COUNT + 1));
+const RF_LOG_STATUS_ACTIVE = 1 << 0;
+const RF_LOG_STATUS_HAS_TRAFFIC = 1 << 1;
+const RF_LOG_STATUS_CLEARING = 1 << 2;
+const RF_LOG_FLAG_TX = 1 << 0;
+const RXTX_LOG_CHANNEL_NONE = 0xFFFF;
+const RF_LOG_BATT_UNKNOWN = 0xFF;
+const RF_LOG_BATT_OFFSET = 600;
+const RF_LOG_POWER_LABELS = ['USER', 'LOW1', 'LOW2', 'LOW3', 'LOW4', 'LOW5', 'MID', 'HIGH'];
 const PROTOCOL_LEGACY_MARKER = 0xFF;
 const PROTOCOL_FLAGS_MARKER_MASK = 0xF0;
 const PROTOCOL_FLAGS_MASK = 0x0F;
@@ -91,6 +106,9 @@ const fKeyIndicator  = document.getElementById('fKeyIndicator');
 const lockIndicator  = document.getElementById('lockIndicator');
 const radioLedRed = document.getElementById('radioLedRed');
 const radioLedGreen = document.getElementById('radioLedGreen');
+const rfLogPanel = document.getElementById('rfLogPanel');
+const rfLogState = document.getElementById('rfLogState');
+const rfLogRows = document.getElementById('rfLogRows');
 
 function updateVersionLabels() {
     const versionedName = `K5Viewer v${VERSION}`;
@@ -284,6 +302,7 @@ async function connectSerial() {
         userDisconnected = false;
         updateConnectionButtonState('connected');
         updateKeyboardState();
+        resetRfLogPanel();
         
         updateStatus(t('connected_waiting'));
         showNotification('serial_established', {}, 'success');
@@ -332,6 +351,7 @@ async function disconnectSerial() {
         
         updateConnectionButtonState('disconnected');
         updateKeyboardState();
+        resetRfLogPanel();
 
         tempColorKey = 'x';
         tempInvertLcd = 0;
@@ -351,10 +371,167 @@ async function sendKeepalive() {
     
     try {
         const keepalive = new Uint8Array([0x55, 0xAA, 0x00, 0x00]);
+        const featureKeepalive = new Uint8Array([0x55, 0xAA, 0x05, VIEWER_FEATURE_RF_LOG]);
         await writer.write(keepalive);
+        await writer.write(featureKeepalive);
     } catch (error) {
         console.error('Keepalive error:', error);
     }
+}
+
+function parseRfLogPacket(payload) {
+    if (payload.length !== RF_LOG_PACKET_SIZE) return;
+
+    const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+    const version = view.getUint8(0);
+    if (version !== RF_LOG_PACKET_VERSION) return;
+
+    const statusFlags = view.getUint8(1);
+    const rowCount = Math.min(view.getUint8(2), RF_LOG_ROW_COUNT);
+    const liveRow = parseRfLogRow(view, 4);
+    const rows = [];
+    let offset = 4 + RF_LOG_ROW_SIZE;
+
+    for (let i = 0; i < rowCount; i++, offset += RF_LOG_ROW_SIZE) {
+        const row = parseRfLogRow(view, offset);
+        if (row.frequency > 0) rows.push(row);
+    }
+
+    // A valid packet proves the firmware supports the RF log stream:
+    // reveal the panel, hidden by default for older firmwares.
+    if (rfLogPanel) rfLogPanel.hidden = false;
+
+    updateRfLogPanel(statusFlags, liveRow, rows);
+}
+
+function parseRfLogRow(view, offset) {
+    return {
+        frequency: view.getUint32(offset, true),
+        trafficSeq: view.getUint32(offset + 4, true),
+        durationSeconds: view.getUint16(offset + 8, true),
+        channel: view.getUint16(offset + 10, true),
+        flags: view.getUint8(offset + 12),
+        meter: view.getUint8(offset + 13),
+        battVolt: view.getUint8(offset + 14),
+        channelName: parseRfLogChannelName(view, offset)
+    };
+}
+
+function parseRfLogChannelName(view, offset) {
+    let name = '';
+    const nameOffset = offset + 15;
+    for (let i = 0; i < RF_LOG_CHANNEL_NAME_LENGTH; i++) {
+        const code = view.getUint8(nameOffset + i);
+        if (code === 0) break;
+        if (code >= 32 && code <= 126) name += String.fromCharCode(code);
+    }
+
+    return name.trim();
+}
+
+function updateRfLogPanel(statusFlags, liveRow, rows) {
+    if (!rfLogRows || !rfLogState) return;
+
+    const isClearing = (statusFlags & RF_LOG_STATUS_CLEARING) !== 0;
+    const isActive = (statusFlags & RF_LOG_STATUS_ACTIVE) !== 0;
+    const hasTraffic = (statusFlags & RF_LOG_STATUS_HAS_TRAFFIC) !== 0;
+
+    rfLogState.textContent = isClearing ? 'CLEAR' : (isActive ? 'LIVE' : (hasTraffic ? 'IDLE' : 'NO LOG'));
+    rfLogState.className = `rf-log-state${isActive ? ' active' : ''}${isClearing ? ' clearing' : ''}`;
+
+    const displayRows = [];
+    if (isActive && liveRow.frequency > 0) {
+        displayRows.push({ ...liveRow, live: true });
+    }
+    rows.forEach(row => displayRows.push({ ...row, live: false }));
+
+    if (displayRows.length === 0) {
+        rfLogRows.innerHTML = '<tr class="rf-log-empty"><td colspan="6">--</td></tr>';
+        return;
+    }
+
+    rfLogRows.innerHTML = displayRows.map(row => renderRfLogRow(row)).join('');
+}
+
+function resetRfLogPanel() {
+    // Hide until the next connection proves RF log support again
+    if (rfLogPanel) rfLogPanel.hidden = true;
+    if (rfLogState) {
+        rfLogState.textContent = '--';
+        rfLogState.className = 'rf-log-state';
+    }
+    if (rfLogRows) {
+        rfLogRows.innerHTML = '<tr class="rf-log-empty"><td colspan="6">--</td></tr>';
+    }
+}
+
+// The channel name comes straight from the radio: escape it before it
+// lands in innerHTML, printable ASCII still includes '<', '>' and '&'.
+function escapeRfHtml(text) {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderRfLogRow(row) {
+    const direction = (row.flags & RF_LOG_FLAG_TX) ? 'TX' : 'RX';
+    const rowClass = row.live ? ' class="rf-log-live"' : '';
+
+    return `<tr${rowClass}>
+        <td>${direction}</td>
+        <td>${formatRfFrequency(row.frequency)}</td>
+        <td>${escapeRfHtml(formatRfChannel(row))}</td>
+        <td>${formatRfDuration(row.durationSeconds)}</td>
+        <td>${formatRfMeter(row.flags, row.meter)}</td>
+        <td>${formatRfVoltage(row.battVolt)}</td>
+    </tr>`;
+}
+
+function formatRfFrequency(frequency) {
+    if (!frequency) return '-';
+
+    const mhz = Math.floor(frequency / 100000);
+    const frac = String(frequency % 100000).padStart(5, '0');
+    return `${mhz}.${frac}`;
+}
+
+function formatRfChannel(row) {
+    if (row.channelName) return row.channelName;
+    if (row.channel === RXTX_LOG_CHANNEL_NONE) return '-';
+    return `M${String(row.channel + 1).padStart(3, '0')}`;
+}
+
+function formatRfDuration(seconds) {
+    if (!seconds) return '00:00';
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hours > 0) {
+        return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+function formatRfMeter(flags, meter) {
+    if (meter === 0xFF) return '-';
+
+    if (flags & RF_LOG_FLAG_TX) {
+        return RF_LOG_POWER_LABELS[meter] || `P${meter}`;
+    }
+
+    if (meter > 9) {
+        return `S9+${meter - 9}`;
+    }
+
+    return `S${meter}`;
+}
+
+function formatRfVoltage(battVolt) {
+    if (battVolt === RF_LOG_BATT_UNKNOWN) return '-';
+
+    const centivolts = RF_LOG_BATT_OFFSET + battVolt;
+    return `${Math.floor(centivolts / 100)}.${String(centivolts % 100).padStart(2, '0')}`;
 }
 
 async function readFrames() {
@@ -421,6 +598,8 @@ async function readFrames() {
                             applyFrameFlags(frameFlags);
                             startLcdAnimation();
                             updateFPS();
+                        } else if (type === TYPE_RF_LOG && size === RF_LOG_PACKET_SIZE) {
+                            parseRfLogPacket(payload);
                         }
 
                         detectFKey();
@@ -1140,6 +1319,7 @@ navigator.serial.addEventListener('disconnect', (event) => {
 
     updateConnectionButtonState('disabled');
     updateKeyboardState();
+    resetRfLogPanel();
 
     autoReconnecting = true;
     updateStatus(t('reconnecting'));
@@ -1180,6 +1360,7 @@ navigator.serial.addEventListener('connect', async (event) => {
         lastPort = port;
         updateConnectionButtonState('connected');
         updateKeyboardState();
+        resetRfLogPanel();
 
         firstFrameAfterReconnect = true;
         updateStatus(radioDeepSleep ? t('connected_deep_sleep') : t('reconnecting'));

@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0"/>
     <title>K5Viewer by F4HWN</title>
 <link rel="icon" type="image/svg+xml" href="img/k5viewer-favicon-color-v2.svg">
-<link href="css/k5viewer.css" rel="stylesheet">
+<link href="css/k5viewer.css?v=2.3" rel="stylesheet">
 </head>
 <body data-theme="light">
     <div class="app">
@@ -164,6 +164,32 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Hidden until the firmware proves RF log support by
+                         sending a first valid packet (see parseRfLogPacket) -->
+                    <div class="rf-log-panel" id="rfLogPanel" aria-live="polite" hidden>
+                        <div class="rf-log-header">
+                            <span class="rf-log-title">RF Log</span>
+                            <span class="rf-log-state" id="rfLogState">--</span>
+                        </div>
+                        <div class="rf-log-scroll">
+                            <table class="rf-log-table">
+                                <thead>
+                                    <tr>
+                                        <th>Dir</th>
+                                        <th>Freq</th>
+                                        <th>CH</th>
+                                        <th>Time</th>
+                                        <th>S/PWR</th>
+                                        <th>V</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rfLogRows">
+                                    <tr class="rf-log-empty"><td colspan="6">--</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -295,8 +321,8 @@
         </div>
     </div>
 
-    <script src="js/translation.js"></script>
-    <script src="js/k5viewer.js"></script>
+    <script src="js/translation.js?v=2.3"></script>
+    <script src="js/k5viewer.js?v=2.3"></script>
 
 </body>
 </html>
