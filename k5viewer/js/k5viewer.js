@@ -1,5 +1,5 @@
 // Constants
-const VERSION = '2.3';
+const VERSION = '2.4';
 const BAUDRATE = 38400;
 const WIDTH = 128;
 const HEIGHT = 64;
@@ -10,12 +10,17 @@ const HEADER = new Uint8Array([0xAA, 0x55]);
 const TYPE_SCREENSHOT = 0x01;
 const TYPE_DIFF = 0x02;
 const TYPE_RF_LOG = 0x05;
+const TYPE_RF_LOG_HISTORY = 0x06;
 const VIEWER_FEATURE_RF_LOG = 0x01;
+const VIEWER_FEATURE_RF_LOG_HISTORY = 0x02;
+const VIEWER_FEATURE_RF_LOG_RESTART = 0x80;
 const RF_LOG_PACKET_VERSION = 2;
 const RF_LOG_CHANNEL_NAME_LENGTH = 10;
 const RF_LOG_ROW_SIZE = 15 + RF_LOG_CHANNEL_NAME_LENGTH;
 const RF_LOG_ROW_COUNT = 64;
+const RF_LOG_VISIBLE_COUNT = 512;
 const RF_LOG_PACKET_SIZE = 4 + (RF_LOG_ROW_SIZE * (RF_LOG_ROW_COUNT + 1));
+const RF_LOG_HISTORY_PACKET_SIZE = RF_LOG_ROW_SIZE * RF_LOG_ROW_COUNT;
 const RF_LOG_STATUS_ACTIVE = 1 << 0;
 const RF_LOG_STATUS_HAS_TRAFFIC = 1 << 1;
 const RF_LOG_STATUS_CLEARING = 1 << 2;
@@ -109,6 +114,11 @@ const radioLedGreen = document.getElementById('radioLedGreen');
 const rfLogPanel = document.getElementById('rfLogPanel');
 const rfLogState = document.getElementById('rfLogState');
 const rfLogRows = document.getElementById('rfLogRows');
+let rfLogCache = new Map();
+let rfLogLiveRow = null;
+let rfLogStatusFlags = 0;
+let rfLogRestartPending = true;
+let serialSession = 0;
 
 function updateVersionLabels() {
     const versionedName = `K5Viewer v${VERSION}`;
@@ -311,7 +321,7 @@ async function connectSerial() {
         keepaliveInterval = setInterval(sendKeepalive, KEEPALIVE_INTERVAL_MS);
         
         // Start reading frames
-        readFrames();
+        readFrames(++serialSession);
         
     } catch (error) {
         showNotification('connection_error', { error: error.message }, 'error');
@@ -322,11 +332,13 @@ async function connectSerial() {
 async function disconnectSerial() {
     try {
         isConnected = false;
+        serialSession++;
         radioDeepSleep = false;
         updateRadioLeds(false, false);
         userDisconnected = true;
         autoReconnecting = false;
         clearTimeout(reconnectTimer);
+        reconnectTimer = null;
         
         if (keepaliveInterval) {
             clearInterval(keepaliveInterval);
@@ -371,11 +383,15 @@ async function sendKeepalive() {
     
     try {
         const keepalive = new Uint8Array([0x55, 0xAA, 0x00, 0x00]);
-        const featureKeepalive = new Uint8Array([0x55, 0xAA, 0x05, VIEWER_FEATURE_RF_LOG]);
+        let features = VIEWER_FEATURE_RF_LOG | VIEWER_FEATURE_RF_LOG_HISTORY;
+        if (rfLogRestartPending) features |= VIEWER_FEATURE_RF_LOG_RESTART;
+        const featureKeepalive = new Uint8Array([0x55, 0xAA, 0x05, features]);
         await writer.write(keepalive);
         await writer.write(featureKeepalive);
+        rfLogRestartPending = false;
     } catch (error) {
         console.error('Keepalive error:', error);
+        handleHardwareDisconnect();
     }
 }
 
@@ -401,7 +417,64 @@ function parseRfLogPacket(payload) {
     // reveal the panel, hidden by default for older firmwares.
     if (rfLogPanel) rfLogPanel.hidden = false;
 
-    updateRfLogPanel(statusFlags, liveRow, rows);
+    rfLogStatusFlags = statusFlags;
+    rfLogLiveRow = liveRow.frequency > 0 ? liveRow : null;
+
+    if ((statusFlags & RF_LOG_STATUS_CLEARING) !== 0 ||
+        (statusFlags & RF_LOG_STATUS_HAS_TRAFFIC) === 0) {
+        rfLogCache.clear();
+    } else if (isDifferentRfLog(rows)) {
+        rfLogCache = new Map();
+        rfLogRestartPending = true;
+    }
+    mergeRfLogRows(rows);
+    updateRfLogPanel();
+}
+
+function isDifferentRfLog(rows) {
+    if (rfLogCache.size === 0 || rows.length === 0) return false;
+    if (rows.length < 3 && rfLogCache.size > rows.length) return true;
+
+    let matches = 0;
+    for (const row of rows) {
+        const cached = rfLogCache.get(row.trafficSeq);
+        if (cached &&
+            cached.frequency === row.frequency &&
+            cached.durationSeconds === row.durationSeconds &&
+            cached.channel === row.channel &&
+            cached.flags === row.flags &&
+            cached.meter === row.meter &&
+            cached.battVolt === row.battVolt &&
+            ++matches >= Math.min(3, rows.length, rfLogCache.size)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function parseRfLogHistoryPacket(payload) {
+    if (payload.length !== RF_LOG_HISTORY_PACKET_SIZE) return;
+
+    const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+    const rows = [];
+    let offset = 0;
+    for (let i = 0; i < RF_LOG_ROW_COUNT; i++, offset += RF_LOG_ROW_SIZE) {
+        const row = parseRfLogRow(view, offset);
+        if (row.frequency > 0) rows.push(row);
+    }
+
+    mergeRfLogRows(rows);
+    updateRfLogPanel();
+}
+
+function mergeRfLogRows(rows) {
+    rows.forEach(row => rfLogCache.set(row.trafficSeq, row));
+
+    const newest = Array.from(rfLogCache.values())
+        .sort((a, b) => b.trafficSeq - a.trafficSeq)
+        .slice(0, RF_LOG_VISIBLE_COUNT);
+    rfLogCache = new Map(newest.map(row => [row.trafficSeq, row]));
 }
 
 function parseRfLogRow(view, offset) {
@@ -429,9 +502,10 @@ function parseRfLogChannelName(view, offset) {
     return name.trim();
 }
 
-function updateRfLogPanel(statusFlags, liveRow, rows) {
+function updateRfLogPanel() {
     if (!rfLogRows || !rfLogState) return;
 
+    const statusFlags = rfLogStatusFlags;
     const isClearing = (statusFlags & RF_LOG_STATUS_CLEARING) !== 0;
     const isActive = (statusFlags & RF_LOG_STATUS_ACTIVE) !== 0;
     const hasTraffic = (statusFlags & RF_LOG_STATUS_HAS_TRAFFIC) !== 0;
@@ -440,10 +514,12 @@ function updateRfLogPanel(statusFlags, liveRow, rows) {
     rfLogState.className = `rf-log-state${isActive ? ' active' : ''}${isClearing ? ' clearing' : ''}`;
 
     const displayRows = [];
-    if (isActive && liveRow.frequency > 0) {
-        displayRows.push({ ...liveRow, live: true });
+    if (isActive && rfLogLiveRow) {
+        displayRows.push({ ...rfLogLiveRow, live: true });
     }
-    rows.forEach(row => displayRows.push({ ...row, live: false }));
+    Array.from(rfLogCache.values())
+        .sort((a, b) => b.trafficSeq - a.trafficSeq)
+        .forEach(row => displayRows.push({ ...row, live: false }));
 
     if (displayRows.length === 0) {
         rfLogRows.innerHTML = '<tr class="rf-log-empty"><td colspan="6">--</td></tr>';
@@ -463,6 +539,10 @@ function resetRfLogPanel() {
     if (rfLogRows) {
         rfLogRows.innerHTML = '<tr class="rf-log-empty"><td colspan="6">--</td></tr>';
     }
+    rfLogCache = new Map();
+    rfLogLiveRow = null;
+    rfLogStatusFlags = 0;
+    rfLogRestartPending = true;
 }
 
 // The channel name comes straight from the radio: escape it before it
@@ -534,14 +614,21 @@ function formatRfVoltage(battVolt) {
     return `${Math.floor(centivolts / 100)}.${String(centivolts % 100).padStart(2, '0')}`;
 }
 
-async function readFrames() {
-    const buffer = new Uint8Array(4096);
+async function readFrames(session) {
+    // Hold a display frame, the live RF snapshot and one history page even
+    // when Web Serial coalesces them into the same read burst.
+    const buffer = new Uint8Array(8192);
+    const activeReader = reader;
     let bufferPos = 0;
 
-    while (isConnected && reader) {
+    while (isConnected && session === serialSession && activeReader) {
         try {
-            const { value, done } = await reader.read();
-            if (done) break;
+            const { value, done } = await activeReader.read();
+            if (session !== serialSession || !isConnected) break;
+            if (done) {
+                handleHardwareDisconnect();
+                break;
+            }
             
             // Add new data to buffer
             if (bufferPos + value.length > buffer.length) {
@@ -584,6 +671,11 @@ async function readFrames() {
                     const totalSize = markerSize + 5 + size + 1;
 
                     if (processed + totalSize <= bufferPos) {
+                        if (buffer[processed + totalSize - 1] !== 0x0A) {
+                            processed++;
+                            continue;
+                        }
+
                         const payloadStart = headerStart + 5;
                         const payload = buffer.slice(payloadStart, payloadStart + size);
 
@@ -600,6 +692,8 @@ async function readFrames() {
                             updateFPS();
                         } else if (type === TYPE_RF_LOG && size === RF_LOG_PACKET_SIZE) {
                             parseRfLogPacket(payload);
+                        } else if (type === TYPE_RF_LOG_HISTORY && size === RF_LOG_HISTORY_PACKET_SIZE) {
+                            parseRfLogHistoryPacket(payload);
                         }
 
                         detectFKey();
@@ -621,13 +715,9 @@ async function readFrames() {
             }
 
         } catch (error) {
-            if (isConnected) {
+            if (session === serialSession && isConnected) {
                 console.error('Read error:', error);
-                if (userDisconnected) {
-                    showNotification('serial_read_error', {}, 'error');
-                    await disconnectSerial();
-                }
-                // Hardware disconnect: the 'disconnect' event will handle cleanup + auto-reconnect
+                handleHardwareDisconnect();
             }
             break;
         }
@@ -1300,13 +1390,15 @@ let lastPortInfo        = null;   // { usbVendorId, usbProductId }
 let userDisconnected    = false;
 let firstFrameAfterReconnect = false;
 let reconnectWasDeepSleep = false;
+let reconnectInProgress = false;
 
-navigator.serial.addEventListener('disconnect', (event) => {
+function handleHardwareDisconnect() {
     if (userDisconnected) return;
-    if (event.target !== lastPort) return;
+    if (!isConnected) return;
 
     reconnectWasDeepSleep = radioDeepSleep;
     isConnected = false;
+    serialSession++;
     if (reconnectWasDeepSleep) {
         tempColorKey = 'x';
         tempInvertLcd = 0;
@@ -1324,22 +1416,50 @@ navigator.serial.addEventListener('disconnect', (event) => {
     autoReconnecting = true;
     updateStatus(t('reconnecting'));
     showNotification('serial_disconnected_auto', {}, 'warning');
+    scheduleReconnectProbe();
+}
+
+navigator.serial.addEventListener('disconnect', () => {
+    handleHardwareDisconnect();
 });
 
-navigator.serial.addEventListener('connect', async (event) => {
+function scheduleReconnectProbe() {
+    if (reconnectTimer || !autoReconnecting) return;
+    reconnectTimer = setTimeout(async () => {
+        reconnectTimer = null;
+        if (!autoReconnecting || !lastPortInfo) return;
+
+        const ports = await navigator.serial.getPorts();
+        const candidates = ports.filter(candidatePort => {
+            const info = candidatePort.getInfo();
+            return info.usbVendorId === lastPortInfo.usbVendorId &&
+                   info.usbProductId === lastPortInfo.usbProductId;
+        });
+
+        for (const candidate of candidates) {
+            await reconnectPort(candidate);
+            if (!autoReconnecting) break;
+        }
+        if (autoReconnecting) scheduleReconnectProbe();
+    }, 500);
+}
+
+async function reconnectPort(candidate) {
     if (!autoReconnecting) return;
     if (!lastPortInfo) return;
+    if (reconnectInProgress) return;
 
     // Check if the reconnected port matches the one we lost
-    const info = event.target.getInfo();
+    const info = candidate.getInfo();
     if (info.usbVendorId  !== lastPortInfo.usbVendorId ||
         info.usbProductId !== lastPortInfo.usbProductId) return;
+    reconnectInProgress = true;
 
     // It's our port — wait a bit for the OS to finish enumeration
     await new Promise(r => setTimeout(r, 500));
 
     try {
-        port = event.target;
+        port = candidate;
         await port.open({ baudRate: BAUDRATE });
 
         reader = port.readable.getReader();
@@ -1366,11 +1486,24 @@ navigator.serial.addEventListener('connect', async (event) => {
         updateStatus(radioDeepSleep ? t('connected_deep_sleep') : t('reconnecting'));
 
         keepaliveInterval = setInterval(sendKeepalive, KEEPALIVE_INTERVAL_MS);
-        readFrames();
+        readFrames(++serialSession);
 
     } catch (error) {
         console.error('Auto-reconnect failed:', error);
+    } finally {
+        reconnectInProgress = false;
     }
+}
+
+navigator.serial.addEventListener('connect', async (event) => {
+    if (isConnected && lastPortInfo) {
+        const info = event.target.getInfo();
+        if (info.usbVendorId === lastPortInfo.usbVendorId &&
+            info.usbProductId === lastPortInfo.usbProductId) {
+            handleHardwareDisconnect();
+        }
+    }
+    await reconnectPort(event.target);
 });
 
 // ─────────────────────────────────────────────────────────────
