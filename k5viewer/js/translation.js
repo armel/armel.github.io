@@ -647,3 +647,156 @@ const TRANSLATIONS = {
         ghosting_changed: "Ghosting-effect: {status}"
     }
 };
+
+// RF Log dashboard translations are grouped here to keep the feature's
+// vocabulary aligned across every supported language.
+const RF_LOG_TRANSLATIONS = {
+    en: {
+        rf_log: "RF Log", rf_log_short: "LOG", rf_analytics: "ANALYTICS",
+        rf_direction_short: "Dir", rf_frequency_short: "Freq", rf_time: "Time", rf_all: "ALL",
+        rf_activity: "ACTIVITY", rf_airtime: "AIRTIME", rf_frequencies_short: "FREQS",
+        rf_recent_activity: "RECENT ACTIVITY", rf_battery: "BATTERY", rf_top_frequencies: "TOP FREQUENCIES",
+        rf_last_activities: "LAST {count} ACTIVITIES", rf_filtered_activities: "{count} OF {total} ACTIVITIES",
+        rf_average: "AVG {duration}", rf_channel_count: "{count} CHANNEL", rf_channels_count: "{count} CHANNELS",
+        rf_no_activity: "NO ACTIVITY", rf_no_data: "NO DATA", rf_power_on: "POWER ON",
+        rf_rx_signal: "RX SIGNAL", rf_tx_power: "TX POWER", rf_clear: "CLEAR", rf_live: "LIVE",
+        rf_idle: "IDLE", rf_no_log: "NO LOG", rf_battery_chart_aria: "Battery voltage per power-on session",
+        rf_activity_tooltip: "{count} activity, RX {rx} · TX {tx}",
+        rf_activities_tooltip: "{count} activities, RX {rx} · TX {tx}"
+    },
+    fr: {
+        rf_log: "Journal RF", rf_log_short: "LOG", rf_analytics: "ANALYSE",
+        rf_direction_short: "Dir", rf_frequency_short: "Fréq", rf_time: "Durée", rf_all: "TOUT",
+        rf_activity: "ACTIVITÉ", rf_airtime: "TRAFIC", rf_frequencies_short: "FRÉQS",
+        rf_recent_activity: "ACTIVITÉ RÉCENTE", rf_battery: "BATTERIE", rf_top_frequencies: "FRÉQUENCES PRINCIPALES",
+        rf_last_activities: "{count} DERNIÈRES ACTIVITÉS", rf_filtered_activities: "{count} ACTIVITÉS SUR {total}",
+        rf_average: "MOY {duration}", rf_channel_count: "{count} CANAL", rf_channels_count: "{count} CANAUX",
+        rf_no_activity: "AUCUNE ACTIVITÉ", rf_no_data: "AUCUNE DONNÉE", rf_power_on: "MISE SOUS TENSION",
+        rf_rx_signal: "SIGNAL RX", rf_tx_power: "PUISSANCE TX", rf_clear: "EFFAC.", rf_live: "DIRECT",
+        rf_idle: "VEILLE", rf_no_log: "AUCUN LOG", rf_battery_chart_aria: "Tension de batterie par session d’utilisation",
+        rf_activity_tooltip: "{count} activité, RX {rx} · TX {tx}",
+        rf_activities_tooltip: "{count} activités, RX {rx} · TX {tx}"
+    },
+    it: {
+        rf_log: "Registro RF", rf_log_short: "LOG", rf_analytics: "ANALISI",
+        rf_direction_short: "Dir", rf_frequency_short: "Freq", rf_time: "Durata", rf_all: "TUTTO",
+        rf_activity: "ATTIVITÀ", rf_airtime: "TEMPO RADIO", rf_frequencies_short: "FREQ",
+        rf_recent_activity: "ATTIVITÀ RECENTE", rf_battery: "BATTERIA", rf_top_frequencies: "FREQUENZE PRINCIPALI",
+        rf_last_activities: "ULTIME {count} ATTIVITÀ", rf_filtered_activities: "{count} DI {total} ATTIVITÀ",
+        rf_average: "MEDIA {duration}", rf_channel_count: "{count} CANALE", rf_channels_count: "{count} CANALI",
+        rf_no_activity: "NESSUNA ATTIVITÀ", rf_no_data: "NESSUN DATO", rf_power_on: "ACCENSIONE",
+        rf_rx_signal: "SEGNALE RX", rf_tx_power: "POTENZA TX", rf_clear: "CANCELLA", rf_live: "IN CORSO",
+        rf_idle: "INATTIVO", rf_no_log: "NESSUN LOG", rf_battery_chart_aria: "Tensione batteria per sessione di accensione",
+        rf_activity_tooltip: "{count} attività, RX {rx} · TX {tx}", rf_activities_tooltip: "{count} attività, RX {rx} · TX {tx}"
+    },
+    es: {
+        rf_log: "Registro RF", rf_log_short: "LOG", rf_analytics: "ANÁLISIS",
+        rf_direction_short: "Dir", rf_frequency_short: "Frec", rf_time: "Duración", rf_all: "TODO",
+        rf_activity: "ACTIVIDAD", rf_airtime: "TIEMPO EN AIRE", rf_frequencies_short: "FRECS",
+        rf_recent_activity: "ACTIVIDAD RECIENTE", rf_battery: "BATERÍA", rf_top_frequencies: "FRECUENCIAS PRINCIPALES",
+        rf_last_activities: "ÚLTIMAS {count} ACTIVIDADES", rf_filtered_activities: "{count} DE {total} ACTIVIDADES",
+        rf_average: "MEDIA {duration}", rf_channel_count: "{count} CANAL", rf_channels_count: "{count} CANALES",
+        rf_no_activity: "SIN ACTIVIDAD", rf_no_data: "SIN DATOS", rf_power_on: "ENCENDIDO",
+        rf_rx_signal: "SEÑAL RX", rf_tx_power: "POTENCIA TX", rf_clear: "BORRANDO", rf_live: "EN VIVO",
+        rf_idle: "INACTIVO", rf_no_log: "SIN LOG", rf_battery_chart_aria: "Tensión de batería por sesión de encendido",
+        rf_activity_tooltip: "{count} actividad, RX {rx} · TX {tx}", rf_activities_tooltip: "{count} actividades, RX {rx} · TX {tx}"
+    },
+    de: {
+        rf_log: "RF-Protokoll", rf_log_short: "LOG", rf_analytics: "ANALYSE",
+        rf_direction_short: "Rtg", rf_frequency_short: "Freq", rf_time: "Dauer", rf_all: "ALLE",
+        rf_activity: "AKTIVITÄT", rf_airtime: "SENDEZEIT", rf_frequencies_short: "FREQS",
+        rf_recent_activity: "LETZTE AKTIVITÄT", rf_battery: "BATTERIE", rf_top_frequencies: "TOP-FREQUENZEN",
+        rf_last_activities: "LETZTE {count} AKTIVITÄTEN", rf_filtered_activities: "{count} VON {total} AKTIVITÄTEN",
+        rf_average: "Ø {duration}", rf_channel_count: "{count} KANAL", rf_channels_count: "{count} KANÄLE",
+        rf_no_activity: "KEINE AKTIVITÄT", rf_no_data: "KEINE DATEN", rf_power_on: "EINSCHALTEN",
+        rf_rx_signal: "RX-SIGNAL", rf_tx_power: "TX-LEISTUNG", rf_clear: "LÖSCHEN", rf_live: "LIVE",
+        rf_idle: "BEREIT", rf_no_log: "KEIN LOG", rf_battery_chart_aria: "Batteriespannung je Einschaltsitzung",
+        rf_activity_tooltip: "{count} Aktivität, RX {rx} · TX {tx}", rf_activities_tooltip: "{count} Aktivitäten, RX {rx} · TX {tx}"
+    },
+    pt: {
+        rf_log: "Registo RF", rf_log_short: "LOG", rf_analytics: "ANÁLISE",
+        rf_direction_short: "Dir", rf_frequency_short: "Freq", rf_time: "Duração", rf_all: "TODOS",
+        rf_activity: "ATIVIDADE", rf_airtime: "TEMPO NO AR", rf_frequencies_short: "FREQS",
+        rf_recent_activity: "ATIVIDADE RECENTE", rf_battery: "BATERIA", rf_top_frequencies: "FREQUÊNCIAS PRINCIPAIS",
+        rf_last_activities: "ÚLTIMAS {count} ATIVIDADES", rf_filtered_activities: "{count} DE {total} ATIVIDADES",
+        rf_average: "MÉDIA {duration}", rf_channel_count: "{count} CANAL", rf_channels_count: "{count} CANAIS",
+        rf_no_activity: "SEM ATIVIDADE", rf_no_data: "SEM DADOS", rf_power_on: "LIGADO",
+        rf_rx_signal: "SINAL RX", rf_tx_power: "POTÊNCIA TX", rf_clear: "LIMPAR", rf_live: "AO VIVO",
+        rf_idle: "INATIVO", rf_no_log: "SEM LOG", rf_battery_chart_aria: "Tensão da bateria por sessão ligada",
+        rf_activity_tooltip: "{count} atividade, RX {rx} · TX {tx}", rf_activities_tooltip: "{count} atividades, RX {rx} · TX {tx}"
+    },
+    ru: {
+        rf_log: "Журнал RF", rf_log_short: "ЛОГ", rf_analytics: "АНАЛИЗ",
+        rf_direction_short: "Напр", rf_frequency_short: "Част", rf_time: "Время", rf_all: "ВСЕ",
+        rf_activity: "АКТИВНОСТЬ", rf_airtime: "ЭФИР", rf_frequencies_short: "ЧАСТОТЫ",
+        rf_recent_activity: "ПОСЛЕДНЯЯ АКТИВНОСТЬ", rf_battery: "БАТАРЕЯ", rf_top_frequencies: "ОСНОВНЫЕ ЧАСТОТЫ",
+        rf_last_activities: "ПОСЛЕДНИЕ: {count}", rf_filtered_activities: "{count} ИЗ {total}",
+        rf_average: "СРЕД. {duration}", rf_channel_count: "{count} КАНАЛ", rf_channels_count: "{count} КАНАЛОВ",
+        rf_no_activity: "НЕТ АКТИВНОСТИ", rf_no_data: "НЕТ ДАННЫХ", rf_power_on: "ВКЛЮЧЕНИЕ",
+        rf_rx_signal: "СИГНАЛ RX", rf_tx_power: "МОЩНОСТЬ TX", rf_clear: "ОЧИСТКА", rf_live: "ЭФИР",
+        rf_idle: "ОЖИДАНИЕ", rf_no_log: "НЕТ ЛОГА", rf_battery_chart_aria: "Напряжение батареи по сеансам включения",
+        rf_activity_tooltip: "{count} активность, RX {rx} · TX {tx}", rf_activities_tooltip: "{count} активностей, RX {rx} · TX {tx}"
+    },
+    pl: {
+        rf_log: "Dziennik RF", rf_log_short: "LOG", rf_analytics: "ANALIZA",
+        rf_direction_short: "Kier", rf_frequency_short: "Częst", rf_time: "Czas", rf_all: "WSZYSTKO",
+        rf_activity: "AKTYWNOŚĆ", rf_airtime: "CZAS EMISJI", rf_frequencies_short: "CZĘST",
+        rf_recent_activity: "OSTATNIA AKTYWNOŚĆ", rf_battery: "BATERIA", rf_top_frequencies: "GŁÓWNE CZĘSTOTLIWOŚCI",
+        rf_last_activities: "OSTATNIE AKTYWNOŚCI: {count}", rf_filtered_activities: "{count} Z {total} AKTYWNOŚCI",
+        rf_average: "ŚR. {duration}", rf_channel_count: "{count} KANAŁ", rf_channels_count: "{count} KANAŁÓW",
+        rf_no_activity: "BRAK AKTYWNOŚCI", rf_no_data: "BRAK DANYCH", rf_power_on: "WŁĄCZENIE",
+        rf_rx_signal: "SYGNAŁ RX", rf_tx_power: "MOC TX", rf_clear: "CZYSZCZENIE", rf_live: "NA ŻYWO",
+        rf_idle: "BEZCZYNNE", rf_no_log: "BRAK LOGU", rf_battery_chart_aria: "Napięcie baterii według sesji włączenia",
+        rf_activity_tooltip: "{count} aktywność, RX {rx} · TX {tx}", rf_activities_tooltip: "{count} aktywności, RX {rx} · TX {tx}"
+    },
+    zh: {
+        rf_log: "RF 日志", rf_log_short: "日志", rf_analytics: "分析",
+        rf_direction_short: "方向", rf_frequency_short: "频率", rf_time: "时长", rf_all: "全部",
+        rf_activity: "活动", rf_airtime: "占用时长", rf_frequencies_short: "频率",
+        rf_recent_activity: "最近活动", rf_battery: "电池", rf_top_frequencies: "主要频率",
+        rf_last_activities: "最近 {count} 次活动", rf_filtered_activities: "{total} 次中的 {count} 次活动",
+        rf_average: "平均 {duration}", rf_channel_count: "{count} 个信道", rf_channels_count: "{count} 个信道",
+        rf_no_activity: "无活动", rf_no_data: "无数据", rf_power_on: "开机",
+        rf_rx_signal: "RX 信号", rf_tx_power: "TX 功率", rf_clear: "清除中", rf_live: "实时",
+        rf_idle: "空闲", rf_no_log: "无日志", rf_battery_chart_aria: "每次开机期间的电池电压",
+        rf_activity_tooltip: "{count} 次活动，RX {rx} · TX {tx}", rf_activities_tooltip: "{count} 次活动，RX {rx} · TX {tx}"
+    },
+    nl: {
+        rf_log: "RF-logboek", rf_log_short: "LOG", rf_analytics: "ANALYSE",
+        rf_direction_short: "Rtg", rf_frequency_short: "Freq", rf_time: "Duur", rf_all: "ALLES",
+        rf_activity: "ACTIVITEIT", rf_airtime: "ZENDTIJD", rf_frequencies_short: "FREQS",
+        rf_recent_activity: "RECENTE ACTIVITEIT", rf_battery: "BATTERIJ", rf_top_frequencies: "TOPFREQUENTIES",
+        rf_last_activities: "LAATSTE {count} ACTIVITEITEN", rf_filtered_activities: "{count} VAN {total} ACTIVITEITEN",
+        rf_average: "GEM. {duration}", rf_channel_count: "{count} KANAAL", rf_channels_count: "{count} KANALEN",
+        rf_no_activity: "GEEN ACTIVITEIT", rf_no_data: "GEEN GEGEVENS", rf_power_on: "INSCHAKELEN",
+        rf_rx_signal: "RX-SIGNAAL", rf_tx_power: "TX-VERMOGEN", rf_clear: "WISSEN", rf_live: "LIVE",
+        rf_idle: "INACTIEF", rf_no_log: "GEEN LOG", rf_battery_chart_aria: "Batterijspanning per inschakelsessie",
+        rf_activity_tooltip: "{count} activiteit, RX {rx} · TX {tx}", rf_activities_tooltip: "{count} activiteiten, RX {rx} · TX {tx}"
+    }
+};
+
+Object.keys(RF_LOG_TRANSLATIONS).forEach(language => {
+    Object.assign(TRANSLATIONS[language], RF_LOG_TRANSLATIONS[language]);
+});
+
+const RF_LOG_ACCESSIBILITY_TRANSLATIONS = {
+    en: ["RF Log view", "Direction filter", "Recent RX and TX activity sequence, oldest to newest"],
+    fr: ["Vue du journal RF", "Filtre de direction", "Séquence récente des activités RX et TX, de la plus ancienne à la plus récente"],
+    it: ["Vista del registro RF", "Filtro direzione", "Sequenza recente delle attività RX e TX, dalla meno recente alla più recente"],
+    es: ["Vista del registro RF", "Filtro de dirección", "Secuencia reciente de actividad RX y TX, de la más antigua a la más reciente"],
+    de: ["RF-Protokollansicht", "Richtungsfilter", "Letzte RX- und TX-Aktivitäten, von alt nach neu"],
+    pt: ["Vista do registo RF", "Filtro de direção", "Sequência recente de atividades RX e TX, da mais antiga para a mais recente"],
+    ru: ["Просмотр журнала RF", "Фильтр направления", "Последовательность активности RX и TX, от старой к новой"],
+    pl: ["Widok dziennika RF", "Filtr kierunku", "Ostatnia sekwencja aktywności RX i TX, od najstarszej do najnowszej"],
+    zh: ["RF 日志视图", "方向筛选器", "最近的 RX 和 TX 活动序列，从旧到新"],
+    nl: ["RF-logboekweergave", "Richtingsfilter", "Recente RX- en TX-activiteiten, van oud naar nieuw"]
+};
+
+Object.keys(RF_LOG_ACCESSIBILITY_TRANSLATIONS).forEach(language => {
+    const [view, filter, activity] = RF_LOG_ACCESSIBILITY_TRANSLATIONS[language];
+    Object.assign(TRANSLATIONS[language], {
+        rf_log_view: view,
+        rf_direction_filter: filter,
+        rf_recent_activity_aria: activity
+    });
+});

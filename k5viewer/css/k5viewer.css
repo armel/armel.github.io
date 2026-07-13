@@ -646,6 +646,77 @@ select:focus {
     gap: 8px;
 }
 
+.rf-log-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Analytics tokens — RX/TX pair is CVD-checked against each theme surface */
+.rf-log-panel {
+    --rf-rx: #2563eb;
+    --rf-tx: #ea580c;
+    --rf-batt: #7c3aed;
+    --rf-ink: #334155;
+    --rf-ink-2: #64748b;
+    --rf-track: rgba(100,116,139,.16);
+    --rf-hairline: rgba(100,116,139,.24);
+    --rf-card: rgba(255,255,255,.42);
+    --rf-chip: rgba(148,163,184,.16);
+    --rf-chip-active: #334155;
+    --rf-chip-active-ink: #f8fafc;
+}
+
+[data-theme="dark"] .rf-log-panel {
+    border-top-color: rgba(255,255,255,0.08);
+    --rf-rx: #3b82f6;
+    --rf-tx: #ea580c;
+    --rf-batt: #8b5cf6;
+    --rf-ink: #e2e8f0;
+    --rf-ink-2: #94a3b8;
+    --rf-track: rgba(148,163,184,.15);
+    --rf-hairline: rgba(148,163,184,.2);
+    --rf-card: rgba(15,23,42,.3);
+    --rf-chip: rgba(15,23,42,.4);
+    --rf-chip-active: #475569;
+}
+
+.rf-log-view-switch,
+.rf-analytics-filter {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px;
+    border: 1px solid var(--rf-hairline);
+    border-radius: 7px;
+    background: var(--rf-chip);
+}
+
+.rf-log-view-btn,
+.rf-filter-btn {
+    appearance: none;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--rf-ink-2);
+    font: 700 9px/1 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    letter-spacing: .5px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+}
+
+.rf-log-view-btn:hover,
+.rf-filter-btn:hover { color: var(--rf-ink); }
+
+.rf-log-view-btn.active,
+.rf-filter-btn.active {
+    color: var(--rf-chip-active-ink);
+    background: var(--rf-chip-active);
+}
+
+.rf-log-view { display: none; }
+.rf-log-view.active { display: block; }
+
 .rf-log-title {
     font-size: 11px;
     font-weight: 800;
@@ -765,8 +836,268 @@ select:focus {
     color: #6b7280;
 }
 
-[data-theme="dark"] .rf-log-panel {
-    border-top-color: rgba(255,255,255,0.08);
+.rf-log-session td {
+    padding: 2px;
+    text-align: center;
+    color: var(--rf-ink-2);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    opacity: .75;
+}
+
+.rf-analytics-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.rf-analytics-caption,
+.rf-analytics-head {
+    color: var(--rf-ink-2);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .5px;
+}
+
+.rf-analytics-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 11px 0 5px;
+}
+
+.rf-analytics-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 6px;
+}
+
+.rf-stat-card {
+    min-width: 0;
+    padding: 7px 9px 6px;
+    border: 1px solid var(--rf-hairline);
+    border-radius: 8px;
+    background: var(--rf-card);
+}
+
+.rf-stat-label,
+.rf-stat-detail {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--rf-ink-2);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .4px;
+}
+
+.rf-stat-value {
+    display: block;
+    margin: 2px 0 1px;
+    color: var(--rf-ink);
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.rf-activity-legend { display: inline-flex; align-items: center; gap: 3px; }
+
+.rf-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-left: 4px;
+    border-radius: 50%;
+}
+.rf-dot.rx { background: var(--rf-rx); }
+.rf-dot.tx { background: var(--rf-tx); }
+
+/* Bars grow from a shared hairline baseline, newest entry on the right */
+.rf-activity-strip {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 2px;
+    height: 36px;
+    border-bottom: 1px solid var(--rf-hairline);
+}
+
+.rf-activity-pulse {
+    flex: 1 1 0;
+    min-width: 2px;
+    max-width: 7px;
+    border-radius: 2px 2px 0 0;
+    background: var(--rf-rx);
+}
+.rf-activity-pulse.tx { background: var(--rf-tx); }
+
+/* Radio power-on: a full-height hairline between two sessions */
+.rf-activity-gap {
+    flex: 0 0 1px;
+    align-self: stretch;
+    background: var(--rf-hairline);
+}
+
+.rf-battery-chart { height: 44px; }
+.rf-battery-chart svg { display: block; width: 100%; height: 100%; }
+
+.rf-top-list { display: grid; gap: 8px; }
+
+.rf-top-row { min-width: 0; }
+
+.rf-top-line {
+    display: grid;
+    grid-template-columns: minmax(0, 10ch) 58px 52px 34px minmax(44px, 1fr);
+    align-items: baseline;
+    column-gap: 5px;
+    min-width: 0;
+    color: var(--rf-ink);
+    font-size: 10px;
+    line-height: 1.3;
+}
+
+.rf-top-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 800;
+}
+
+.rf-top-freq,
+.rf-top-count,
+.rf-top-signal {
+    flex: 0 0 auto;
+    color: var(--rf-ink-2);
+    font-size: 9px;
+    font-variant-numeric: tabular-nums;
+}
+
+.rf-top-count,
+.rf-top-signal { text-align: right; }
+
+.rf-top-time {
+    justify-self: end;
+    text-align: right;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+/* RX/TX airtime segments over a shared track, 2px surface gap between fills */
+.rf-top-track {
+    display: flex;
+    gap: 2px;
+    height: 5px;
+    margin-top: 3px;
+    border-radius: 99px;
+    background: var(--rf-track);
+}
+
+.rf-top-track i {
+    height: 100%;
+    min-width: 2px;
+    border-radius: 99px;
+}
+.rf-top-track .rx { background: var(--rf-rx); }
+.rf-top-track .tx { background: var(--rf-tx); }
+
+.rf-dist-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+}
+
+.rf-dist-rows { display: grid; gap: 4px; }
+
+.rf-dist-row {
+    display: grid;
+    grid-template-columns: 32px minmax(0,1fr) 22px;
+    align-items: center;
+    gap: 6px;
+    color: var(--rf-ink-2);
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.rf-dist-track {
+    height: 6px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: var(--rf-track);
+}
+
+.rf-dist-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--rf-rx);
+    transition: width .25s ease;
+}
+.rf-dist-fill.tx { background: var(--rf-tx); }
+
+.rf-signal-bars {
+    display: grid;
+    grid-template-columns: repeat(13, minmax(0, 1fr));
+    align-items: end;
+    gap: 2px;
+    height: 64px;
+    border-bottom: 1px solid var(--rf-hairline);
+}
+
+.rf-signal-bars i {
+    min-height: 0;
+    border-radius: 2px 2px 0 0;
+    background: var(--rf-rx);
+}
+
+.rf-signal-axis {
+    display: grid;
+    grid-template-columns: repeat(13, minmax(0, 1fr));
+    gap: 2px;
+    height: 23px;
+    color: var(--rf-ink-2);
+    font-size: 7.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.rf-signal-axis span {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    padding-top: 3px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.rf-signal-axis small {
+    font-size: 6.5px;
+    line-height: 1.15;
+}
+
+.rf-dist-value {
+    text-align: right;
+    color: var(--rf-ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.rf-analytics-empty {
+    padding: 14px 8px;
+    color: var(--rf-ink-2);
+    text-align: center;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .4px;
+}
+
+@media (max-width: 620px) {
+    .rf-log-header { align-items: flex-start; }
+    .rf-log-header-actions { align-items: flex-end; flex-direction: column-reverse; gap: 5px; }
 }
 
 [data-theme="dark"] .rf-log-title,
