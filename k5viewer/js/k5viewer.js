@@ -1,5 +1,5 @@
 // Constants
-const VERSION = '2.6';
+const VERSION = '2.7';
 const BAUDRATE = 38400;
 const WIDTH = 128;
 const HEIGHT = 64;
