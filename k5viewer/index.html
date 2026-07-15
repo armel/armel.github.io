@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0"/>
     <title>K5Viewer by F4HWN</title>
 <link rel="icon" type="image/svg+xml" href="img/k5viewer-favicon-color-v2.svg">
-<link href="css/k5viewer.css?v=2.3" rel="stylesheet">
+<link href="css/k5viewer.css?v=2.6" rel="stylesheet">
 </head>
 <body data-theme="light">
     <div class="app">
@@ -169,17 +169,24 @@
                          sending a first valid packet (see parseRfLogPacket) -->
                     <div class="rf-log-panel" id="rfLogPanel" aria-live="polite" hidden>
                         <div class="rf-log-header">
-                            <span class="rf-log-title">RF Log</span>
-                            <span class="rf-log-state" id="rfLogState">--</span>
+                            <span class="rf-log-title" data-i18n="rf_log">RF Log</span>
+                            <div class="rf-log-header-actions">
+                                <div class="rf-log-view-switch" role="group" aria-label="RF Log view" data-i18n-aria-label="rf_log_view">
+                                    <button type="button" class="rf-log-view-btn active" data-rf-view="log" aria-pressed="true" data-i18n="rf_log_short">LOG</button>
+                                    <button type="button" class="rf-log-view-btn" data-rf-view="analytics" aria-pressed="false" data-i18n="rf_analytics">ANALYTICS</button>
+                                </div>
+                                <span class="rf-log-state" id="rfLogState">--</span>
+                            </div>
                         </div>
-                        <div class="rf-log-scroll">
+                        <div class="rf-log-view active" id="rfLogTableView">
+                          <div class="rf-log-scroll">
                             <table class="rf-log-table">
                                 <thead>
                                     <tr>
-                                        <th>Dir</th>
-                                        <th>Freq</th>
+                                        <th data-i18n="rf_direction_short">Dir</th>
+                                        <th data-i18n="rf_frequency_short">Freq</th>
                                         <th>CH</th>
-                                        <th>Time</th>
+                                        <th data-i18n="rf_time">Time</th>
                                         <th>S/PWR</th>
                                         <th>V</th>
                                     </tr>
@@ -188,6 +195,44 @@
                                     <tr class="rf-log-empty"><td colspan="6">--</td></tr>
                                 </tbody>
                             </table>
+                          </div>
+                        </div>
+                        <div class="rf-log-view" id="rfAnalyticsView">
+                            <div class="rf-analytics-toolbar">
+                                <div class="rf-analytics-filter" role="group" aria-label="Direction filter" data-i18n-aria-label="rf_direction_filter">
+                                    <button type="button" class="rf-filter-btn active" data-rf-filter="all" aria-pressed="true" data-i18n="rf_all">ALL</button>
+                                    <button type="button" class="rf-filter-btn" data-rf-filter="rx" aria-pressed="false">RX</button>
+                                    <button type="button" class="rf-filter-btn" data-rf-filter="tx" aria-pressed="false">TX</button>
+                                </div>
+                                <span class="rf-analytics-caption" id="rfAnalyticsCaption">--</span>
+                            </div>
+                            <div class="rf-analytics-stats">
+                                <div class="rf-stat-card">
+                                    <span class="rf-stat-label" data-i18n="rf_activity">ACTIVITY</span>
+                                    <strong class="rf-stat-value" id="rfStatCount">0</strong>
+                                    <span class="rf-stat-detail" id="rfStatSplit">--</span>
+                                </div>
+                                <div class="rf-stat-card">
+                                    <span class="rf-stat-label" data-i18n="rf_airtime">AIRTIME</span>
+                                    <strong class="rf-stat-value" id="rfStatDuration">00:00</strong>
+                                    <span class="rf-stat-detail" id="rfStatAverage">--</span>
+                                </div>
+                                <div class="rf-stat-card">
+                                    <span class="rf-stat-label" data-i18n="rf_frequencies_short">FREQS</span>
+                                    <strong class="rf-stat-value" id="rfStatFrequencies">0</strong>
+                                    <span class="rf-stat-detail" id="rfStatChannels">--</span>
+                                </div>
+                            </div>
+                            <div class="rf-analytics-head">
+                                <span data-i18n="rf_recent_activity">RECENT ACTIVITY</span>
+                                <span class="rf-activity-legend"><i class="rf-dot rx"></i>RX<i class="rf-dot tx"></i>TX</span>
+                            </div>
+                            <div class="rf-activity-strip" id="rfActivityStrip" aria-label="Recent RX and TX activity sequence, oldest to newest" data-i18n-aria-label="rf_recent_activity_aria"></div>
+                            <div class="rf-analytics-head"><span data-i18n="rf_battery">BATTERY</span><span id="rfBatteryMeta">--</span></div>
+                            <div class="rf-battery-chart" id="rfBatteryChart"></div>
+                            <div class="rf-analytics-head"><span data-i18n="rf_top_frequencies">TOP FREQUENCIES</span><span data-i18n="rf_airtime">AIRTIME</span></div>
+                            <div class="rf-top-list" id="rfTopFrequencies"></div>
+                            <div class="rf-dist-grid" id="rfDistributions"></div>
                         </div>
                     </div>
                 </div>
@@ -321,8 +366,8 @@
         </div>
     </div>
 
-    <script src="js/translation.js?v=2.3"></script>
-    <script src="js/k5viewer.js?v=2.4"></script>
+    <script src="js/translation.js?v=2.6"></script>
+    <script src="js/k5viewer.js?v=2.6"></script>
 
 </body>
 </html>

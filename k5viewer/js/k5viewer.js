@@ -1,5 +1,5 @@
 // Constants
-const VERSION = '2.4';
+const VERSION = '2.6';
 const BAUDRATE = 38400;
 const WIDTH = 128;
 const HEIGHT = 64;
@@ -25,6 +25,7 @@ const RF_LOG_STATUS_ACTIVE = 1 << 0;
 const RF_LOG_STATUS_HAS_TRAFFIC = 1 << 1;
 const RF_LOG_STATUS_CLEARING = 1 << 2;
 const RF_LOG_FLAG_TX = 1 << 0;
+const RF_LOG_FLAG_SESSION = 1 << 3;
 const RXTX_LOG_CHANNEL_NONE = 0xFFFF;
 const RF_LOG_BATT_UNKNOWN = 0xFF;
 const RF_LOG_BATT_OFFSET = 600;
@@ -114,10 +115,25 @@ const radioLedGreen = document.getElementById('radioLedGreen');
 const rfLogPanel = document.getElementById('rfLogPanel');
 const rfLogState = document.getElementById('rfLogState');
 const rfLogRows = document.getElementById('rfLogRows');
+const rfLogTableView = document.getElementById('rfLogTableView');
+const rfAnalyticsView = document.getElementById('rfAnalyticsView');
+const rfAnalyticsCaption = document.getElementById('rfAnalyticsCaption');
+const rfStatCount = document.getElementById('rfStatCount');
+const rfStatSplit = document.getElementById('rfStatSplit');
+const rfStatDuration = document.getElementById('rfStatDuration');
+const rfStatAverage = document.getElementById('rfStatAverage');
+const rfStatFrequencies = document.getElementById('rfStatFrequencies');
+const rfStatChannels = document.getElementById('rfStatChannels');
+const rfActivityStrip = document.getElementById('rfActivityStrip');
+const rfBatteryMeta = document.getElementById('rfBatteryMeta');
+const rfBatteryChart = document.getElementById('rfBatteryChart');
+const rfTopFrequencies = document.getElementById('rfTopFrequencies');
+const rfDistributions = document.getElementById('rfDistributions');
 let rfLogCache = new Map();
 let rfLogLiveRow = null;
 let rfLogStatusFlags = 0;
 let rfLogRestartPending = true;
+let rfAnalyticsFilter = 'all';
 let serialSession = 0;
 
 function updateVersionLabels() {
@@ -127,6 +143,22 @@ function updateVersionLabels() {
 }
 
 updateVersionLabels();
+
+document.querySelectorAll('[data-rf-view]').forEach(button => {
+    button.addEventListener('click', () => setRfLogView(button.dataset.rfView));
+});
+
+document.querySelectorAll('[data-rf-filter]').forEach(button => {
+    button.addEventListener('click', () => {
+        rfAnalyticsFilter = button.dataset.rfFilter;
+        document.querySelectorAll('[data-rf-filter]').forEach(item => {
+            const active = item === button;
+            item.classList.toggle('active', active);
+            item.setAttribute('aria-pressed', String(active));
+        });
+        updateRfAnalytics();
+    });
+});
 
 // Load local storage
 const pixelSizeLocal = parseInt(localStorage.getItem('pixelSize'), 10);
@@ -217,10 +249,17 @@ function updateUI() {
         if (key) element.setAttribute('title', t(key));
     });
 
+    document.querySelectorAll('[data-i18n-aria-label]').forEach(element => {
+        const key = element.getAttribute('data-i18n-aria-label');
+        if (key) element.setAttribute('aria-label', t(key));
+    });
+
     // Update status
     if (!isConnected) {
         updateStatus(t('ready_to_connect'));
     }
+
+    updateRfLogPanel();
 }
 
 function changeLanguage(lang) {
@@ -410,7 +449,9 @@ function parseRfLogPacket(payload) {
 
     for (let i = 0; i < rowCount; i++, offset += RF_LOG_ROW_SIZE) {
         const row = parseRfLogRow(view, offset);
-        if (row.frequency > 0) rows.push(row);
+        // Session markers (radio power-on) have frequency 0 but carry the
+        // SESSION flag; all-zero rows are packet padding.
+        if (row.frequency > 0 || (row.flags & RF_LOG_FLAG_SESSION) !== 0) rows.push(row);
     }
 
     // A valid packet proves the firmware supports the RF log stream:
@@ -461,7 +502,7 @@ function parseRfLogHistoryPacket(payload) {
     let offset = 0;
     for (let i = 0; i < RF_LOG_ROW_COUNT; i++, offset += RF_LOG_ROW_SIZE) {
         const row = parseRfLogRow(view, offset);
-        if (row.frequency > 0) rows.push(row);
+        if (row.frequency > 0 || (row.flags & RF_LOG_FLAG_SESSION) !== 0) rows.push(row);
     }
 
     mergeRfLogRows(rows);
@@ -502,6 +543,292 @@ function parseRfLogChannelName(view, offset) {
     return name.trim();
 }
 
+function setRfLogView(view) {
+    const analytics = view === 'analytics';
+    if (rfLogTableView) rfLogTableView.classList.toggle('active', !analytics);
+    if (rfAnalyticsView) rfAnalyticsView.classList.toggle('active', analytics);
+    document.querySelectorAll('[data-rf-view]').forEach(button => {
+        const active = button.dataset.rfView === view;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
+    if (analytics) updateRfAnalytics();
+}
+
+function updateRfAnalytics() {
+    // The analytics view re-renders on every serial packet: skip the whole
+    // pass while the log table is the visible view, the switch recomputes.
+    if (!rfAnalyticsView || !rfAnalyticsView.classList.contains('active')) return;
+
+    const allRows = Array.from(rfLogCache.values()).sort((a, b) => b.trafficSeq - a.trafficSeq);
+    const markers = allRows.filter(row => (row.flags & RF_LOG_FLAG_SESSION) !== 0);
+    const traffic = allRows.filter(row => (row.flags & RF_LOG_FLAG_SESSION) === 0);
+    const rows = traffic.filter(row => rfAnalyticsFilter === 'all' ||
+        (rfAnalyticsFilter === 'tx') === ((row.flags & RF_LOG_FLAG_TX) !== 0));
+    const rxCount = rows.filter(row => (row.flags & RF_LOG_FLAG_TX) === 0).length;
+    const txCount = rows.length - rxCount;
+    const totalDuration = rows.reduce((sum, row) => sum + row.durationSeconds, 0);
+    const averageDuration = rows.length ? Math.round(totalDuration / rows.length) : 0;
+    const frequencyCount = new Set(rows.map(row => row.frequency)).size;
+    const channelCount = new Set(rows
+        .filter(row => row.channel !== RXTX_LOG_CHANNEL_NONE)
+        .map(row => row.channel)).size;
+
+    if (rfAnalyticsCaption) {
+        rfAnalyticsCaption.textContent = rfAnalyticsFilter === 'all'
+            ? t('rf_last_activities', { count: traffic.length })
+            : t('rf_filtered_activities', { count: rows.length, total: traffic.length });
+    }
+    if (rfStatCount) rfStatCount.textContent = rows.length;
+    if (rfStatSplit) rfStatSplit.textContent = `${rxCount}RX · ${txCount}TX`;
+    if (rfStatDuration) rfStatDuration.textContent = formatRfDuration(totalDuration);
+    if (rfStatAverage) rfStatAverage.textContent = t('rf_average', { duration: formatRfDuration(averageDuration) });
+    if (rfStatFrequencies) rfStatFrequencies.textContent = frequencyCount;
+    if (rfStatChannels) rfStatChannels.textContent = t(channelCount === 1 ? 'rf_channel_count' : 'rf_channels_count', { count: channelCount });
+
+    renderRfActivityStrip(rows, markers);
+    renderRfBattery(allRows);
+    renderRfTopFrequencies(rows);
+    renderRfDistributions(rows);
+}
+
+function renderRfActivityStrip(rows, markers) {
+    if (!rfActivityStrip) return;
+    const recent = rows.slice(0, 48);
+    if (recent.length === 0) {
+        rfActivityStrip.innerHTML = `<span class="rf-analytics-empty">${t('rf_no_activity')}</span>`;
+        return;
+    }
+
+    // Interleave the session markers that fall inside the shown window,
+    // oldest entry on the left, newest on the right.
+    const floorSeq = recent[recent.length - 1].trafficSeq;
+    const items = recent
+        .concat(markers.filter(marker => marker.trafficSeq > floorSeq))
+        .sort((a, b) => a.trafficSeq - b.trafficSeq);
+    const maxDuration = Math.max(1, ...recent.map(row => row.durationSeconds));
+    rfActivityStrip.innerHTML = items.map(row => {
+        if ((row.flags & RF_LOG_FLAG_SESSION) !== 0) {
+            return `<span class="rf-activity-gap" title="${t('rf_power_on')}"></span>`;
+        }
+        const tx = (row.flags & RF_LOG_FLAG_TX) !== 0;
+        // Square-root scale keeps short bursts visible next to long activities
+        const height = 12 + Math.round(Math.sqrt(row.durationSeconds / maxDuration) * 88);
+        const label = `${tx ? 'TX' : 'RX'} ${formatRfFrequency(row.frequency)} — ${formatRfDuration(row.durationSeconds)}`;
+        return `<span class="rf-activity-pulse${tx ? ' tx' : ''}" style="height:${height}%" title="${label}"></span>`;
+    }).join('');
+}
+
+// Battery voltage over the whole cached log. Power-on boundaries remain
+// visible, but the curve stays continuous because a reboot is not missing
+// measurement data. The direction filter does not apply to battery data.
+function renderRfBattery(allRows) {
+    if (!rfBatteryChart || !rfBatteryMeta) return;
+
+    const points = [];
+    const boundaries = [];
+    for (let i = allRows.length - 1; i >= 0; i--) {
+        const row = allRows[i];
+        if ((row.flags & RF_LOG_FLAG_SESSION) !== 0) {
+            if (points.length && boundaries[boundaries.length - 1] !== points.length)
+                boundaries.push(points.length);
+            continue;
+        }
+        if (row.battVolt === RF_LOG_BATT_UNKNOWN) continue;
+        points.push((RF_LOG_BATT_OFFSET + row.battVolt) / 100);
+    }
+    while (boundaries.length && boundaries[boundaries.length - 1] >= points.length)
+        boundaries.pop();
+
+    if (points.length === 0) {
+        rfBatteryMeta.textContent = '--';
+        rfBatteryChart.innerHTML = `<div class="rf-analytics-empty">${t('rf_no_data')}</div>`;
+        return;
+    }
+
+    const minVolt = Math.min(...points);
+    const maxVolt = Math.max(...points);
+    rfBatteryMeta.textContent = `${minVolt.toFixed(2)}–${maxVolt.toFixed(2)} V`;
+
+    const width = Math.max(rfBatteryChart.clientWidth, 120);
+    const height = 44;
+    const padY = 4;
+    const span = Math.max(maxVolt - minVolt, 0.05);
+    const x = i => points.length === 1 ? width / 2 : 1 + (i / (points.length - 1)) * (width - 2);
+    const y = v => height - padY - ((v - minVolt) / span) * (height - 2 * padY);
+
+    let svg = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-label="${t('rf_battery_chart_aria')}">`;
+    svg += `<line x1="0" y1="${height - 0.5}" x2="${width}" y2="${height - 0.5}" stroke="var(--rf-hairline)" stroke-width="1"/>`;
+    const coords = points.map((point, i) => `${x(i).toFixed(1)},${y(point).toFixed(1)}`);
+    if (points.length > 1) {
+        svg += `<polygon points="${x(0).toFixed(1)},${height - 1} ${coords.join(' ')} ${x(points.length - 1).toFixed(1)},${height - 1}" fill="var(--rf-batt)" opacity="0.1"/>`;
+        svg += `<polyline points="${coords.join(' ')}" fill="none" stroke="var(--rf-batt)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }
+    boundaries.forEach(boundary => {
+        const bx = ((x(boundary - 1) + x(boundary)) / 2).toFixed(1);
+        svg += `<line x1="${bx}" y1="0" x2="${bx}" y2="${height}" stroke="var(--rf-hairline)" stroke-width="1"><title>${t('rf_power_on')}</title></line>`;
+    });
+    const last = points.length - 1;
+    svg += `<circle cx="${x(last).toFixed(1)}" cy="${y(points[last]).toFixed(1)}" r="2.5" fill="var(--rf-batt)"><title>${points[last].toFixed(2)} V</title></circle>`;
+    svg += '</svg>';
+    rfBatteryChart.innerHTML = svg;
+}
+
+function renderRfTopFrequencies(rows) {
+    if (!rfTopFrequencies) return;
+    const groups = new Map();
+
+    rows.forEach(row => {
+        const key = `${row.frequency}:${row.channel}`;
+        let group = groups.get(key);
+        if (!group) {
+            group = { row, count: 0, rxCount: 0, txCount: 0, duration: 0, rxDuration: 0, txDuration: 0, rxMeterTotal: 0, rxMeterCount: 0 };
+            groups.set(key, group);
+        }
+        const tx = (row.flags & RF_LOG_FLAG_TX) !== 0;
+        group.count++;
+        group.duration += row.durationSeconds;
+        if (tx) {
+            group.txCount++;
+            group.txDuration += row.durationSeconds;
+        } else {
+            group.rxCount++;
+            group.rxDuration += row.durationSeconds;
+            if (row.meter !== 0xFF) {
+                group.rxMeterTotal += row.meter;
+                group.rxMeterCount++;
+            }
+        }
+    });
+
+    const top = Array.from(groups.values()).sort((a, b) => b.duration - a.duration).slice(0, 10);
+    if (top.length === 0) {
+        rfTopFrequencies.innerHTML = `<div class="rf-analytics-empty">${t('rf_no_activity')}</div>`;
+        return;
+    }
+
+    const maxDuration = Math.max(1, ...top.map(group => group.duration));
+    rfTopFrequencies.innerHTML = top.map(group => {
+        const channel = formatRfChannel(group.row);
+        const frequency = formatRfFrequency(group.row.frequency);
+        const name = channel === '-' ? '—' : channel;
+        let signal = '';
+        if (group.rxMeterCount) {
+            const avg = Math.round(group.rxMeterTotal / group.rxMeterCount);
+            signal = formatRfMeter(0, avg);
+        }
+        const rxWidth = (group.rxDuration / maxDuration) * 100;
+        const txWidth = (group.txDuration / maxDuration) * 100;
+        const activityCounts = [
+            group.rxCount ? `${group.rxCount}R` : '',
+            group.txCount ? `${group.txCount}T` : ''
+        ].filter(Boolean).join(' · ');
+        const tip = `${channel === '-' ? '' : `${channel} · `}${frequency} MHz — ` +
+            t(group.count === 1 ? 'rf_activity_tooltip' : 'rf_activities_tooltip', {
+                count: group.count,
+                rx: formatRfDuration(group.rxDuration),
+                tx: formatRfDuration(group.txDuration)
+            });
+        return `<div class="rf-top-row" title="${escapeRfHtml(tip)}">
+            <div class="rf-top-line">
+                <span class="rf-top-name">${escapeRfHtml(name)}</span>
+                <span class="rf-top-freq">${frequency}</span>
+                <span class="rf-top-count">${activityCounts}</span>
+                <span class="rf-top-signal">${signal}</span>
+                <span class="rf-top-time">${formatRfDuration(group.duration)}</span>
+            </div>
+            <div class="rf-top-track">
+                ${rxWidth > 0 ? `<i class="rx" style="width:${rxWidth.toFixed(1)}%"></i>` : ''}
+                ${txWidth > 0 ? `<i class="tx" style="width:${txWidth.toFixed(1)}%"></i>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function renderRfDistributions(rows) {
+    if (!rfDistributions) return;
+    const sections = [];
+    if (rfAnalyticsFilter !== 'tx') {
+        sections.push(renderRfDistSection(t('rf_rx_signal'),
+            rows.filter(row => (row.flags & RF_LOG_FLAG_TX) === 0), false));
+    }
+    if (rfAnalyticsFilter !== 'rx') {
+        sections.push(renderRfDistSection(t('rf_tx_power'),
+            rows.filter(row => (row.flags & RF_LOG_FLAG_TX) !== 0), true));
+    }
+    rfDistributions.innerHTML = sections.join('');
+}
+
+function renderRfDistSection(title, source, txMode) {
+    if (!txMode) {
+        return renderRfSignalDistribution(title, source);
+    }
+
+    let buckets;
+    buckets = RF_LOG_POWER_LABELS.map((label, meter) => ({
+        label,
+        value: source.filter(row => row.meter === meter).length
+    })).filter(bucket => bucket.value > 0);
+
+    let body;
+    if (source.length === 0 || buckets.length === 0) {
+        body = `<div class="rf-analytics-empty">${t('rf_no_data')}</div>`;
+    } else {
+        const max = Math.max(1, ...buckets.map(bucket => bucket.value));
+        body = `<div class="rf-dist-rows">${buckets.map(bucket => `<div class="rf-dist-row">
+            <span>${bucket.label}</span>
+            <span class="rf-dist-track"><i class="rf-dist-fill${txMode ? ' tx' : ''}" style="width:${Math.round((bucket.value / max) * 100)}%"></i></span>
+            <span class="rf-dist-value">${bucket.value}</span>
+        </div>`).join('')}</div>`;
+    }
+
+    return `<section>
+        <div class="rf-analytics-head"><span>${title}</span></div>
+        ${body}
+    </section>`;
+}
+
+function renderRfSignalDistribution(title, source) {
+    const labels = [
+        'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9',
+        'S9+01–10', 'S9+11–20', 'S9+21–30', 'S9+31–40'
+    ];
+    const axisLabels = [
+        'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9',
+        'S9<small>+10</small>', 'S9<small>+20</small>',
+        'S9<small>+30</small>', 'S9<small>+40</small>'
+    ];
+    const counts = new Array(labels.length).fill(0);
+    source.forEach(row => {
+        if (row.meter === 0xFF) return;
+        // Keep S1..S9 exact, then group the 40 dB above S9 by 10 dB.
+        const meter = Math.min(49, Math.max(1, row.meter));
+        const bucket = meter <= 9 ? meter - 1 : 9 + Math.min(3, Math.floor((meter - 10) / 10));
+        counts[bucket]++;
+    });
+
+    const total = counts.reduce((sum, count) => sum + count, 0);
+    let body;
+    if (total === 0) {
+        body = `<div class="rf-analytics-empty">${t('rf_no_data')}</div>`;
+    } else {
+        const max = Math.max(...counts);
+        const bars = counts.map((count, index) => {
+            const height = count ? Math.max(4, Math.round((count / max) * 100)) : 0;
+            return `<i style="height:${height}%" title="${labels[index]} · ${count}"></i>`;
+        }).join('');
+        body = `<div class="rf-signal-histogram">
+            <div class="rf-signal-bars">${bars}</div>
+            <div class="rf-signal-axis">${axisLabels.map(label => `<span>${label}</span>`).join('')}</div>
+        </div>`;
+    }
+
+    return `<section class="rf-signal-section">
+        <div class="rf-analytics-head"><span>${title}</span><span>${total}</span></div>
+        ${body}
+    </section>`;
+}
+
 function updateRfLogPanel() {
     if (!rfLogRows || !rfLogState) return;
 
@@ -510,7 +837,7 @@ function updateRfLogPanel() {
     const isActive = (statusFlags & RF_LOG_STATUS_ACTIVE) !== 0;
     const hasTraffic = (statusFlags & RF_LOG_STATUS_HAS_TRAFFIC) !== 0;
 
-    rfLogState.textContent = isClearing ? 'CLEAR' : (isActive ? 'LIVE' : (hasTraffic ? 'IDLE' : 'NO LOG'));
+    rfLogState.textContent = isClearing ? t('rf_clear') : (isActive ? t('rf_live') : (hasTraffic ? t('rf_idle') : t('rf_no_log')));
     rfLogState.className = `rf-log-state${isActive ? ' active' : ''}${isClearing ? ' clearing' : ''}`;
 
     const displayRows = [];
@@ -520,6 +847,8 @@ function updateRfLogPanel() {
     Array.from(rfLogCache.values())
         .sort((a, b) => b.trafficSeq - a.trafficSeq)
         .forEach(row => displayRows.push({ ...row, live: false }));
+
+    updateRfAnalytics();
 
     if (displayRows.length === 0) {
         rfLogRows.innerHTML = '<tr class="rf-log-empty"><td colspan="6">--</td></tr>';
@@ -543,15 +872,24 @@ function resetRfLogPanel() {
     rfLogLiveRow = null;
     rfLogStatusFlags = 0;
     rfLogRestartPending = true;
+    updateRfAnalytics();
 }
 
 // The channel name comes straight from the radio: escape it before it
-// lands in innerHTML, printable ASCII still includes '<', '>' and '&'.
+// lands in innerHTML or a title attribute, printable ASCII still
+// includes '<', '>', '&' and '"'.
 function escapeRfHtml(text) {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function renderRfLogRow(row) {
+    // Session markers render as the radio does: a separator line between
+    // two power-on sessions instead of a traffic row.
+    if ((row.flags & RF_LOG_FLAG_SESSION) !== 0) {
+        return `<tr class="rf-log-session"><td colspan="6">${t('rf_power_on')}</td></tr>`;
+    }
+
     const direction = (row.flags & RF_LOG_FLAG_TX) ? 'TX' : 'RX';
     const rowClass = row.live ? ' class="rf-log-live"' : '';
 
@@ -600,11 +938,12 @@ function formatRfMeter(flags, meter) {
         return RF_LOG_POWER_LABELS[meter] || `P${meter}`;
     }
 
-    if (meter > 9) {
-        return `S9+${meter - 9}`;
+    const normalizedMeter = Math.max(1, meter);
+    if (normalizedMeter > 9) {
+        return `S9+${String(normalizedMeter - 9).padStart(2, '0')}`;
     }
 
-    return `S${meter}`;
+    return `S${normalizedMeter}`;
 }
 
 function formatRfVoltage(battVolt) {
