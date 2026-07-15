@@ -512,9 +512,21 @@ function parseRfLogHistoryPacket(payload) {
 function mergeRfLogRows(rows) {
     rows.forEach(row => rfLogCache.set(row.trafficSeq, row));
 
-    const newest = Array.from(rfLogCache.values())
-        .sort((a, b) => b.trafficSeq - a.trafficSeq)
+    const sorted = Array.from(rfLogCache.values())
+        .sort((a, b) => b.trafficSeq - a.trafficSeq);
+    const traffic = sorted
+        .filter(row => (row.flags & RF_LOG_FLAG_SESSION) === 0)
         .slice(0, RF_LOG_VISIBLE_COUNT);
+    const oldestTrafficSeq = traffic.length >= RF_LOG_VISIBLE_COUNT
+        ? traffic[traffic.length - 1].trafficSeq
+        : -1;
+    // Keep 512 traffic rows plus the power-on boundaries inside that
+    // traffic window. Markers retain their unique trafficSeq for ordering
+    // and pagination, but never consume one of the 512 activity slots.
+    const newest = sorted.filter(row =>
+        (row.flags & RF_LOG_FLAG_SESSION) === 0
+            ? row.trafficSeq >= oldestTrafficSeq
+            : row.trafficSeq > oldestTrafficSeq);
     rfLogCache = new Map(newest.map(row => [row.trafficSeq, row]));
 }
 
