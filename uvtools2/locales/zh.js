@@ -1,3 +1,5 @@
+window.UVTOOLS_LOCALES = window.UVTOOLS_LOCALES || {};
+window.UVTOOLS_LOCALES.zh =
 {
   "title": "UV-K5 V3 & UV-K1 Web 工具",
   "subtitle": "通过 Web Serial API 进行固件写入和校准管理",
@@ -107,3 +109,4 @@
   "logoMagicOk": "Magic 头校验通过 (F4HWNLGO)",
   "logoMagicMissing": "Magic 头缺失 — 该区域可能从未被 UVTools2 写入过"
 }
+;

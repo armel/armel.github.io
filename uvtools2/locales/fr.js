@@ -1,3 +1,5 @@
+window.UVTOOLS_LOCALES = window.UVTOOLS_LOCALES || {};
+window.UVTOOLS_LOCALES.fr =
 {
   "title": "UV-K5 V3 & UV-K1 Outil Web",
   "subtitle": "Flasher de firmware et gestionnaire de calibration via Web Serial API",
@@ -107,3 +109,4 @@
   "logoMagicOk": "Magic header valide (F4HWNLGO)",
   "logoMagicMissing": "Magic header absent — la zone n'a peut-être jamais été écrite par UVTools2"
 }
+;
