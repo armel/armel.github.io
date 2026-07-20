@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0"/>
     <title>K5Viewer by F4HWN</title>
 <link rel="icon" type="image/svg+xml" href="img/k5viewer-favicon-color-v2.svg">
-<link href="css/k5viewer.css?v=2.7" rel="stylesheet">
+<link href="css/k5viewer.css?v=2.8" rel="stylesheet">
 </head>
 <body data-theme="light">
     <div class="app">
@@ -165,8 +165,8 @@
                         </div>
                     </div>
 
-                    <!-- Hidden until the firmware proves RF log support by
-                         sending a first valid packet (see parseRfLogPacket) -->
+                    <!-- Hidden until the firmware reports that RF Log is
+                         both supported and enabled (see parseRfLogPacket) -->
                     <div class="rf-log-panel" id="rfLogPanel" aria-live="polite" hidden>
                         <div class="rf-log-header">
                             <span class="rf-log-title" data-i18n="rf_log">RF Log</span>
@@ -366,8 +366,8 @@
         </div>
     </div>
 
-    <script src="js/translation.js?v=2.7"></script>
-    <script src="js/k5viewer.js?v=2.7"></script>
+    <script src="js/translation.js?v=2.8"></script>
+    <script src="js/k5viewer.js?v=2.8"></script>
 
 </body>
 </html>

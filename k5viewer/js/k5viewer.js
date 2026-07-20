@@ -1,5 +1,5 @@
 // Constants
-const VERSION = '2.7';
+const VERSION = '2.8';
 const BAUDRATE = 38400;
 const WIDTH = 128;
 const HEIGHT = 64;
@@ -19,11 +19,13 @@ const RF_LOG_CHANNEL_NAME_LENGTH = 10;
 const RF_LOG_ROW_SIZE = 15 + RF_LOG_CHANNEL_NAME_LENGTH;
 const RF_LOG_ROW_COUNT = 64;
 const RF_LOG_VISIBLE_COUNT = 512;
-const RF_LOG_PACKET_SIZE = 4 + (RF_LOG_ROW_SIZE * (RF_LOG_ROW_COUNT + 1));
+const RF_LOG_STATUS_PACKET_SIZE = 4;
+const RF_LOG_PACKET_SIZE = RF_LOG_STATUS_PACKET_SIZE + (RF_LOG_ROW_SIZE * (RF_LOG_ROW_COUNT + 1));
 const RF_LOG_HISTORY_PACKET_SIZE = RF_LOG_ROW_SIZE * RF_LOG_ROW_COUNT;
 const RF_LOG_STATUS_ACTIVE = 1 << 0;
 const RF_LOG_STATUS_HAS_TRAFFIC = 1 << 1;
 const RF_LOG_STATUS_CLEARING = 1 << 2;
+const RF_LOG_STATUS_DISABLED = 1 << 3;
 const RF_LOG_FLAG_TX = 1 << 0;
 const RF_LOG_FLAG_SESSION = 1 << 3;
 const RXTX_LOG_CHANNEL_NONE = 0xFFFF;
@@ -435,13 +437,20 @@ async function sendKeepalive() {
 }
 
 function parseRfLogPacket(payload) {
-    if (payload.length !== RF_LOG_PACKET_SIZE) return;
+    if (payload.length !== RF_LOG_PACKET_SIZE &&
+        payload.length !== RF_LOG_STATUS_PACKET_SIZE) return;
 
     const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
     const version = view.getUint8(0);
     if (version !== RF_LOG_PACKET_VERSION) return;
 
     const statusFlags = view.getUint8(1);
+    if ((statusFlags & RF_LOG_STATUS_DISABLED) !== 0) {
+        resetRfLogPanel(false);
+        return;
+    }
+    if (payload.length !== RF_LOG_PACKET_SIZE) return;
+
     const rowCount = Math.min(view.getUint8(2), RF_LOG_ROW_COUNT);
     const liveRow = parseRfLogRow(view, 4);
     const rows = [];
@@ -454,8 +463,7 @@ function parseRfLogPacket(payload) {
         if (row.frequency > 0 || (row.flags & RF_LOG_FLAG_SESSION) !== 0) rows.push(row);
     }
 
-    // A valid packet proves the firmware supports the RF log stream:
-    // reveal the panel, hidden by default for older firmwares.
+    // A valid enabled packet proves the firmware exposes the RF log stream.
     if (rfLogPanel) rfLogPanel.hidden = false;
 
     rfLogStatusFlags = statusFlags;
@@ -870,8 +878,8 @@ function updateRfLogPanel() {
     rfLogRows.innerHTML = displayRows.map(row => renderRfLogRow(row)).join('');
 }
 
-function resetRfLogPanel() {
-    // Hide until the next connection proves RF log support again
+function resetRfLogPanel(requestRestart = true) {
+    // Hide until the firmware reports an enabled RF log again.
     if (rfLogPanel) rfLogPanel.hidden = true;
     if (rfLogState) {
         rfLogState.textContent = '--';
@@ -883,7 +891,7 @@ function resetRfLogPanel() {
     rfLogCache = new Map();
     rfLogLiveRow = null;
     rfLogStatusFlags = 0;
-    rfLogRestartPending = true;
+    rfLogRestartPending = requestRestart;
     updateRfAnalytics();
 }
 
@@ -1041,7 +1049,8 @@ async function readFrames(session) {
                             applyFrameFlags(frameFlags);
                             startLcdAnimation();
                             updateFPS();
-                        } else if (type === TYPE_RF_LOG && size === RF_LOG_PACKET_SIZE) {
+                        } else if (type === TYPE_RF_LOG &&
+                                   (size === RF_LOG_PACKET_SIZE || size === RF_LOG_STATUS_PACKET_SIZE)) {
                             parseRfLogPacket(payload);
                         } else if (type === TYPE_RF_LOG_HISTORY && size === RF_LOG_HISTORY_PACKET_SIZE) {
                             parseRfLogHistoryPacket(payload);
