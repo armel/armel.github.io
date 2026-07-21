@@ -21,12 +21,14 @@
     });
   });
 
-  var NS=8, PER=128, TOT=NS*PER, RO=148, RI=92, MID=120, CX=170, CY=170, MAXMK=4;
+  var NS=8, PER=128, TOT=NS*PER, MAXMK=4;
+  var CX=200, CY=200, RO=154, RI=86, PILL=120, HEAD=166, NUM=186;
   var TXP=['USER','LOW 1','LOW 2','LOW 3','LOW 4','LOW 5','MID','HIGH'];
   var IVS=[60,30,10,5,2,1], ENDURANCE=100000*1024, REF_DAYS=3652.5;
-  var entries=0, erases=0, lap=0, markerCount=0, markersThisLap=0, lastMarker=false, markers=[], fill=new Array(NS).fill(0);
+  var entries=0, erases=0, lap=0, markerCount=0, markersThisLap=0, lastMarker=false;
+  var markers=[], fill=new Array(NS).fill(0), cycles=new Array(NS).fill(0);
   var playing=true, speed=3, timer=null;
-  var bg=document.getElementById('rf-bg'), fg=document.getElementById('rf-fg'), sep=document.getElementById('rf-sep'), mk=document.getElementById('rf-mk'), head=document.getElementById('rf-head'), cap=document.getElementById('rf-cap');
+  var bg=document.getElementById('rf-bg'), fg=document.getElementById('rf-fg'), sep=document.getElementById('rf-sep'), mk=document.getElementById('rf-mk'), cyc=document.getElementById('rf-cyc'), head=document.getElementById('rf-head'), cap=document.getElementById('rf-cap');
   var btnPlay=document.getElementById('rf-play'), btnWrap=document.getElementById('rf-wrap'), btnReset=document.getElementById('rf-reset');
 
   btnPlay.innerHTML=ICON.pause+'<span>Pause</span>';
@@ -41,10 +43,10 @@
   bg.innerHTML=b;
   var s='';
   for(var j=0;j<NS;j++){
-    var l0=polar(RI,j*45), l1=polar(RO,j*45);
-    s+='<line x1="'+l0.split(' ')[0]+'" y1="'+l0.split(' ')[1]+'" x2="'+l1.split(' ')[0]+'" y2="'+l1.split(' ')[1]+'" stroke="var(--surface-0)" stroke-width="1.5"></line>';
-    var np=polar(RO+16,j*45+22.5).split(' ');
-    s+='<text x="'+np[0]+'" y="'+(parseFloat(np[1])+4)+'" text-anchor="middle" font-size="12" font-family="var(--font-sans)" fill="var(--text-secondary)">'+(j+1)+'</text>';
+    var l0=polar(RI,j*45).split(' '), l1=polar(RO,j*45).split(' ');
+    s+='<line x1="'+l0[0]+'" y1="'+l0[1]+'" x2="'+l1[0]+'" y2="'+l1[1]+'" stroke="var(--surface-0)" stroke-width="1.5"></line>';
+    var np=polar(NUM,j*45+22.5).split(' ');
+    s+='<text x="'+np[0]+'" y="'+(parseFloat(np[1])+4)+'" text-anchor="middle" font-size="13" font-family="var(--font-sans)" fill="var(--text-secondary)">'+(j+1)+'</text>';
   }
   sep.innerHTML=s;
 
@@ -56,8 +58,15 @@
     for(var k=0;k<markers.length;k++){ var p0=polar(RI,markers[k].deg).split(' '), p1=polar(RO,markers[k].deg).split(' ');
       m+='<line x1="'+p0[0]+'" y1="'+p0[1]+'" x2="'+p1[0]+'" y2="'+p1[1]+'" stroke="#7C6FF0" stroke-width="2.5"></line>'; }
     mk.innerHTML=m;
+    var c='';
+    for(var n=0;n<NS;n++){
+      var pp=polar(PILL,n*45+22.5).split(' '), px=parseFloat(pp[0]), py=parseFloat(pp[1]);
+      c+='<rect x="'+(px-23)+'" y="'+(py-8)+'" width="46" height="16" rx="8" fill="var(--surface-0)" opacity="0.92" stroke="var(--border)" stroke-width="0.5"></rect>';
+      c+='<text x="'+px+'" y="'+(py+4)+'" font-size="11" fill="'+(cycles[n]>0?'var(--text-primary)':'var(--text-muted)')+'">'+cycles[n]+'/100k</text>';
+    }
+    cyc.innerHTML=c;
     var slot=entries===0?0:(entries-1)%TOT, sect=Math.floor(slot/PER);
-    var hp=polar(MID,sect*45+(fill[sect]/PER)*45).split(' ');
+    var hp=polar(HEAD,sect*45+(fill[sect]/PER)*45).split(' ');
     var hc=head.querySelectorAll('circle');
     hc[0].setAttribute('cx',hp[0]); hc[0].setAttribute('cy',hp[1]);
     hc[1].setAttribute('cx',hp[0]); hc[1].setAttribute('cy',hp[1]);
@@ -111,9 +120,9 @@
   function step(){
     if(entries%TOT===0) markersThisLap=0;
     var slot=entries%TOT, sect=Math.floor(slot/PER), boundaryMsg=null;
-    if(slot%PER===0 && entries>=TOT){ fill[sect]=0; erases++; flashErase(sect);
+    if(slot%PER===0 && entries>=TOT){ fill[sect]=0; erases++; cycles[sect]++; flashErase(sect);
       markers=markers.filter(function(x){return x.sect!==sect;});
-      boundaryMsg=dot('#EF4444')+'Back to sector '+(sect+1)+', already used on the previous lap → <strong>1 erase</strong> (4 KiB reset to 0xFF). That is one erase every 128 entries.';
+      boundaryMsg=dot('#EF4444')+'Back to sector '+(sect+1)+', already used on the previous lap → <strong>1 erase</strong> (4 KiB reset to 0xFF). Sector '+(sect+1)+' now sits at <strong>'+cycles[sect]+'/100k</strong> cycles — its own budget, untouched by the others.';
     } else if(slot%PER===0 && entries>0){
       boundaryMsg=dot('#12B5A5')+'Sector '+(((sect+NS-1)%NS)+1)+' full → move to sector '+(sect+1)+', <strong>no erase</strong>: its slots are still blank.';
     }
@@ -143,15 +152,18 @@
     if(playing)loop(); else clearTimeout(timer);
   });
   btnReset.addEventListener('click',function(){
-    clearTimeout(timer); entries=0;erases=0;lap=0;markerCount=0;markersThisLap=0;lastMarker=false;markers=[];fill=new Array(NS).fill(0);
+    clearTimeout(timer);
+    entries=0;erases=0;lap=0;markerCount=0;markersThisLap=0;lastMarker=false;
+    markers=[];fill=new Array(NS).fill(0);cycles=new Array(NS).fill(0);
     for(var i=0;i<NS;i++){document.getElementById('bg'+i).setAttribute('fill','var(--surface-1)');}
-    newEvent();render();counters();cap.innerHTML='Initial state: blank ring. At startup, a power-on marker takes the first slot.';
+    newEvent();render();counters();cap.innerHTML='Initial state: blank ring, every sector at 0/100k cycles. At startup, a power-on marker takes the first slot.';
     if(playing)loop();
   });
   btnWrap.addEventListener('click',function(){
     clearTimeout(timer); entries=TOT-8; lap=0; markers=[]; lastMarker=false; markersThisLap=MAXMK;
+    cycles=new Array(NS).fill(0);
     for(var i=0;i<NS;i++){fill[i]=i<7?PER:(entries-7*PER); document.getElementById('bg'+i).setAttribute('fill','var(--surface-1)');}
-    render();counters();cap.innerHTML='First lap almost complete: all 8 sectors are full. The next entries will trigger the first erases.';
+    render();counters();cap.innerHTML='First lap almost complete: all 8 sectors are full, yet every one is still at 0/100k cycles. The next entries will trigger the first erases.';
     if(playing)loop();
   });
   document.getElementById('rf-speed').addEventListener('input',function(){speed=parseInt(this.value,10);gauge();});
