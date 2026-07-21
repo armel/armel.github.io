@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RF Log — Flash wear optimization by F4HWN</title>
+<link rel="icon" type="image/svg+xml" href="img/rf_log-favicon-color.svg">
+<link rel="stylesheet" href="css/rf_log.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>RF Log — Flash wear optimization</h1>
+    <p>Interactive explainer of how RF Log journals RX/TX events without wearing out the SPI NOR flash.</p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="demo" role="tab">Animation</button>
+    <button class="tab" data-tab="fr" role="tab">Pitch — FR</button>
+    <button class="tab" data-tab="en" role="tab">Pitch — EN</button>
+  </div>
+
+  <section class="panel active" id="panel-demo" role="tabpanel">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px">
+      <button class="rf-btn pri" id="rf-play"></button>
+      <button class="rf-btn" id="rf-wrap"></button>
+      <button class="rf-btn" id="rf-reset"></button>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);margin-left:auto">
+        Speed
+        <input id="rf-speed" type="range" min="1" max="6" step="1" value="3" style="width:110px;accent-color:#12B5A5">
+      </label>
+    </div>
+
+    <div id="rf-cap" style="min-height:40px;font-size:14px;line-height:1.5;color:var(--text-primary);background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:14px"></div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:center">
+      <div style="flex:1 1 230px;max-width:290px">
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">Current event (in RAM)</div>
+        <div style="border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--surface-1);border-top:3px solid #12B5A5">
+          <div class="rf-row"><span class="k">Type</span><span class="v" id="ram-type">RX</span></div>
+          <div class="rf-row"><span class="k">Duration</span><span class="v" id="ram-dur">00:12</span></div>
+          <div class="rf-row"><span class="k" id="ram-metric-k">S-meter</span><span class="v" id="ram-sm">S7</span></div>
+          <div class="rf-row"><span class="k">Battery</span><span class="v" id="ram-bat">7.98 V</span></div>
+          <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px;color:var(--text-secondary)">Flash writes during the event</span>
+            <span id="ram-zero" style="font-size:18px;font-weight:500;color:#12B5A5">0</span>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:8px;font-size:12px;color:var(--text-muted)">On end → 1 entry (32 B) appended to the ring</div>
+      </div>
+
+      <svg id="rf-ring" viewBox="0 0 340 340" width="300" role="img" style="max-width:300px;flex:0 0 auto">
+        <title>Flash ring of 8 sectors</title>
+        <desc>Eight sectors in a ring numbered 1 to 8; each sector is 4 KiB and holds 128 events; the write head advances, power-on markers are rare purple ticks, and a sector is erased only when the head returns after a full lap.</desc>
+        <defs>
+          <linearGradient id="grad-fill" gradientUnits="userSpaceOnUse" x1="40" y1="40" x2="300" y2="300">
+            <stop offset="0" stop-color="#0FBBA6"></stop>
+            <stop offset="0.55" stop-color="#20B583"></stop>
+            <stop offset="1" stop-color="#4CB050"></stop>
+          </linearGradient>
+          <radialGradient id="grad-center" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#12B5A5" stop-opacity="0.16"></stop>
+            <stop offset="1" stop-color="#12B5A5" stop-opacity="0"></stop>
+          </radialGradient>
+        </defs>
+        <circle cx="170" cy="170" r="86" fill="url(#grad-center)"></circle>
+        <g id="rf-center" text-anchor="middle" font-family="var(--font-sans)">
+          <text x="170" y="154" font-size="13" fill="var(--text-muted)">1 sector</text>
+          <text x="170" y="178" font-size="19" font-weight="500" fill="var(--text-primary)">4 KiB</text>
+          <text x="170" y="197" font-size="13" fill="var(--text-secondary)">128 events</text>
+        </g>
+        <g id="rf-bg"></g>
+        <g id="rf-fg"></g>
+        <g id="rf-sep"></g>
+        <g id="rf-mk"></g>
+        <g id="rf-head">
+          <circle class="halo" cx="170" cy="22" r="11" fill="none" stroke="#F59F00" stroke-width="2.5"></circle>
+          <circle class="core" cx="170" cy="22" r="7" fill="#F59F00"></circle>
+        </g>
+      </svg>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px">
+      <div class="rf-tile"><div class="n" id="c-entries" style="color:#12B5A5">0</div><div class="l">Slots written</div></div>
+      <div class="rf-tile"><div class="n" id="c-prog" style="color:#3B82F6">0</div><div class="l">Program commands</div></div>
+      <div class="rf-tile"><div class="n" id="c-erase" style="color:#EF4444">0</div><div class="l">Sector erases</div></div>
+      <div class="rf-tile"><div class="n" id="c-mark" style="color:#7C6FF0">0</div><div class="l">Power-on markers</div></div>
+      <div class="rf-tile"><div class="n" id="c-lap" style="color:#F59F00">1 · 1</div><div class="l">Lap · sector</div></div>
+    </div>
+
+    <div style="margin-top:14px;border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--surface-1)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <span style="font-size:13px;color:var(--text-secondary)">Flash wear at simulated rate — <span id="g-rate" style="color:var(--text-primary);font-weight:500">1 event / 10 s</span></span>
+        <span id="g-life" style="font-size:16px;font-weight:500;color:#12B5A5">≈ 32.5 years</span>
+      </div>
+      <div style="position:relative;margin:2px 0 4px">
+        <div style="position:relative;height:16px;border-radius:8px;background:linear-gradient(90deg,#22C55E 0%,#F59F00 58%,#EF4444 100%);overflow:hidden">
+          <div id="g-mask" style="position:absolute;top:0;right:0;height:100%;width:95%;background:var(--surface-0);opacity:.8"></div>
+        </div>
+        <div id="g-knob" style="position:absolute;top:-3px;left:5%;width:3px;height:22px;background:var(--text-primary);border-radius:2px;transform:translateX(-1.5px);box-shadow:0 0 3px rgba(0,0,0,.35)"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:12px;color:var(--text-secondary)">
+        <span id="g-wear">Wear after 10 years: 5%</span>
+        <span id="g-days">11,852 days to 100k erase cycles</span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;font-size:12px;color:var(--text-secondary)">
+      <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:var(--surface-1);border:1px solid var(--border);display:inline-block"></span>Blank slot (0xFF)</span>
+      <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:linear-gradient(90deg,#0FBBA6,#4CB050);display:inline-block"></span>Traffic entry (RX/TX)</span>
+      <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:4px;height:14px;border-radius:1px;background:#7C6FF0;display:inline-block;box-shadow:0 0 3px rgba(124,111,240,.7)"></span>Power-on marker</span>
+      <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:50%;background:#F59F00;display:inline-block;box-shadow:0 0 4px rgba(245,159,0,.8)"></span>Write head</span>
+      <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#EF4444;display:inline-block"></span>Erase</span>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-fr" role="tabpanel">
+    <div class="pitch">
+      <h2>RF Log — journaliser sans user la Flash</h2>
+      <p class="lead"><strong>Le point de départ.</strong> RF Log tient un journal des événements RX et TX de la radio : fréquence, durée, S-mètre (ou puissance en TX), tension batterie. Sur un appareil embarqué, ce genre de fonctionnalité pose tout de suite une question légitime : <em>à force d'écrire, est-ce qu'on ne va pas user la mémoire Flash ?</em> La réponse courte est non — et c'est le fruit d'une conception pensée autour des contraintes physiques de la Flash, pas d'un simple « on écrit et on verra ».</p>
+
+      <h3>Comprendre la Flash, c'est comprendre deux opérations différentes</h3>
+      <p>Le journal vit dans la Flash SPI externe (PY25Q16HB), une mémoire NOR. Une NOR sait faire deux choses qui n'ont rien à voir en termes d'usure :</p>
+      <ul>
+        <li><strong>Programmer</strong> : dans un emplacement vierge (tous les bits à <code>1</code>, soit <code>0xFF</code>), on peut faire passer des bits de <code>1</code> vers <code>0</code>. C'est rapide, et surtout <strong>cela ne consomme aucun cycle d'endurance supplémentaire</strong> (on verra plus bas pourquoi).</li>
+        <li><strong>Effacer</strong> : pour repasser des bits de <code>0</code> à <code>1</code>, il n'existe pas d'opération fine. Il faut effacer <strong>un secteur entier de 4 Kio d'un coup</strong>. C'est l'opération lente <em>et</em> usante : le fabricant garantit environ <strong>100 000 cycles d'effacement par secteur</strong>, pas plus.</li>
+      </ul>
+      <p>Autrement dit, ce qui abîme la Flash, ce ne sont pas les écritures — ce sont les <strong>effacements</strong>. Toute la stratégie de RF Log consiste donc à écrire beaucoup, mais à effacer le moins possible.</p>
+
+      <h3>Pourquoi la Flash s'use</h3>
+      <p>Une cellule Flash n'est pas un simple interrupteur : c'est un <strong>transistor à grille flottante</strong>, une grille conductrice entièrement isolée par une fine couche d'oxyde. L'information, ce sont des <strong>électrons piégés</strong> sur cette grille — et c'est précisément parce qu'ils y restent prisonniers que la mémoire conserve ses données hors tension.</p>
+      <p>Le problème vient du trajet de ces électrons. Pour programmer ou effacer une cellule, il faut les forcer à <strong>traverser la couche d'oxyde</strong> isolante, sous un champ électrique intense : c'est l'<strong>effet tunnel</strong>.</p>
+      <p>L'effet tunnel est un phénomène quantique : il permet à une particule de franchir une barrière théoriquement <strong>infranchissable en physique classique</strong> — ici, précisément, un isolant qu'aucun électron ne devrait pouvoir traverser. Mais ce passage a un prix : à chaque traversée, l'isolant encaisse, le matériau accumule des défauts, et quelques électrons restent définitivement coincés à l'intérieur.</p>
+      <p>Cette dégradation est <strong>cumulative et irréversible</strong>. La charge parasite décale les tensions de seuil, l'écart entre un <code>0</code> et un <code>1</code> se resserre, la cellule devient plus difficile à effacer, et l'oxyde finit par fuir — elle ne retient plus sa charge. C'est cette limite physique que le fabricant borne en annonçant environ <strong>100 000 cycles de programmation/effacement</strong>.</p>
+      <p>Et c'est bien un <em>cycle complet</em> qui se compte : une cellule ne peut être reprogrammée qu'après l'effacement de son secteur. Le nombre d'effacements d'un secteur est donc exactement son nombre de cycles d'usure. Écrire dans un emplacement vierge ne consomme pas de cycle supplémentaire : cela ne fait que compléter la moitié « programmation » d'un cycle déjà ouvert par l'effacement précédent. D'où la stratégie : <strong>repousser l'effacement le plus loin possible</strong>.</p>
+
+      <h3>Trois principes de conception</h3>
+      <ol>
+        <li><strong>Rien ne s'écrit pendant l'événement.</strong> Tant qu'une réception ou une émission est en cours, tout est tenu en RAM : la durée s'incrémente, le S-mètre et la tension sont suivis en direct. Une <strong>seule</strong> entrée est écrite en Flash, à la fin de l'événement. Pas d'écriture périodique, pas d'enregistrement à chaque mesure du signal.</li>
+        <li><strong>On n'écrit que dans du vierge : append-only.</strong> Chaque entrée fait exactement 32 octets et va se poser dans le prochain emplacement encore vierge. Comme on ne fait que descendre des bits de <code>1</code> vers <code>0</code> dans une case propre, <strong>aucun effacement n'est nécessaire</strong> pour ajouter une entrée. Une entrée = deux commandes de programmation (les 32 octets, puis un octet de validation), <strong>zéro effacement</strong>.</li>
+        <li><strong>Un anneau circulaire de 8 secteurs.</strong> La zone occupe 32 Kio, soit 8 secteurs de 4 Kio = <strong>1 024 emplacements</strong> (128 par secteur). On remplit le secteur 1, puis le 2, et ainsi de suite, sans jamais rien effacer sur le premier tour. Ce n'est qu'en <strong>revenant</strong> sur un secteur déjà utilisé, après un tour complet, qu'on l'efface — une seule fois — avant d'y réécrire.</li>
+      </ol>
+
+      <h3>Le résultat, en chiffres</h3>
+      <p>Sur un tour complet de l'anneau : 1 024 nouvelles entrées, 2 048 commandes de programmation… mais <strong>seulement 8 effacements</strong> (un par secteur). Chaque secteur n'est donc effacé qu'<strong>une fois toutes les 1 024 entrées</strong>. En repartant des 100 000 cycles garantis :</p>
+      <blockquote><strong>100 000 × 1 024 ≈ 102 400 000 entrées</strong> avant d'atteindre l'endurance nominale d'un secteur.</blockquote>
+      <p>Pour rendre ça concret :</p>
+      <ul>
+        <li>un événement enregistré <strong>par minute</strong>, en continu → <strong>≈ 195 ans</strong> ;</li>
+        <li>un événement <strong>toutes les 10 secondes</strong> → <strong>≈ 32 ans</strong> ;</li>
+        <li>un événement <strong>chaque seconde</strong>, 24 h/24 → <strong>≈ 3,2 ans</strong> (une radio dont le squelch s'ouvre et se referme sans interruption).</li>
+      </ul>
+      <p>Même un effacement manuel complet du journal ne coûte qu'un cycle par secteur : en vidant RF Log <strong>une fois par jour</strong>, il faudrait environ <strong>274 ans</strong> pour épuiser un secteur.</p>
+
+      <h3>Un détail qui compte : les marqueurs POWER ON</h3>
+      <p>À chaque démarrage, un marqueur est déposé pour séparer les événements — il occupe bien un emplacement physique, mais il <strong>ne compte pas comme du trafic</strong> (l'utilisateur voit jusqu'à 512 événements RX/TX). Et si le journal se termine déjà par un marqueur, on n'en rajoute pas : pas de séparateurs vides empilés au fil des redémarrages.</p>
+
+      <h3>En une phrase</h3>
+      <p>RF Log écrit une entrée par événement dans un anneau circulaire, en n'utilisant que des emplacements vierges, ce qui réduit les effacements — la seule opération qui use vraiment la Flash — à un strict minimum. La durée de vie qui en résulte dépasse très largement celle de la radio elle-même.</p>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-en" role="tabpanel">
+    <div class="pitch">
+      <h2>RF Log — journaling without wearing out the flash</h2>
+      <p class="lead"><strong>The starting point.</strong> RF Log keeps a log of the radio's RX and TX events: frequency, duration, S-meter (or power on TX), battery voltage. On an embedded device, this kind of feature immediately raises a fair question: <em>with all that writing, won't it wear out the flash?</em> The short answer is no — and that comes from a design built around the physical constraints of flash, not a "write it and see" approach.</p>
+
+      <h3>Understanding flash means understanding two different operations</h3>
+      <p>The log lives in the external SPI flash (PY25Q16HB), a NOR memory. A NOR chip does two things that are worlds apart in terms of wear:</p>
+      <ul>
+        <li><strong>Program</strong>: in a blank slot (all bits at <code>1</code>, i.e. <code>0xFF</code>), you can flip bits from <code>1</code> to <code>0</code>. This is fast and, crucially, <strong>consumes no additional endurance cycle</strong> (more on why below).</li>
+        <li><strong>Erase</strong>: to bring bits back from <code>0</code> to <code>1</code>, there is no fine-grained operation. You must erase <strong>a whole 4 KiB sector at once</strong>. This is the slow <em>and</em> wearing operation: the datasheet guarantees roughly <strong>100,000 erase cycles per sector</strong>, no more.</li>
+      </ul>
+      <p>In other words, what damages the flash is not the writes — it is the <strong>erases</strong>. So RF Log's whole strategy is to write a lot, but erase as little as possible.</p>
+
+      <h3>Why flash wears out</h3>
+      <p>A flash cell is not a simple switch: it is a <strong>floating-gate transistor</strong>, a conductive gate entirely isolated by a thin oxide layer. The stored information is <strong>electrons trapped</strong> on that gate — and it is precisely because they stay imprisoned there that the memory keeps its data with the power off.</p>
+      <p>The trouble is the path those electrons take. To program or erase a cell, they must be forced <strong>through the insulating oxide layer</strong> under an intense electric field: this is <strong>quantum tunnelling</strong>.</p>
+      <p>Tunnelling is a quantum phenomenon: it lets a particle cross a barrier that classical physics deems <strong>strictly impassable</strong> — here, precisely, an insulator no electron should be able to get through. But that crossing comes at a price: every time, the insulator takes the hit, the material accumulates defects, and a few electrons end up permanently stuck inside it.</p>
+      <p>This degradation is <strong>cumulative and irreversible</strong>. The stray charge shifts the threshold voltages, the margin between a <code>0</code> and a <code>1</code> narrows, the cell becomes harder to erase, and the oxide eventually leaks — it no longer holds its charge. That physical limit is what the manufacturer bounds by rating the part at roughly <strong>100,000 program/erase cycles</strong>.</p>
+      <p>And it is a <em>full cycle</em> that counts: a cell can only be reprogrammed after its sector has been erased. The number of erases of a sector is therefore exactly its number of wear cycles. Writing into a blank slot consumes no extra cycle: it merely completes the "program" half of a cycle already opened by the previous erase. Hence the strategy: <strong>push the erase as far away as possible</strong>.</p>
+
+      <h3>Three design principles</h3>
+      <ol>
+        <li><strong>Nothing is written during the event.</strong> While a reception or transmission is ongoing, everything is held in RAM: the duration ticks up, the S-meter and voltage are tracked live. A <strong>single</strong> entry is written to flash, when the event ends. No periodic writes, no record on every signal measurement.</li>
+        <li><strong>We only write into blank space: append-only.</strong> Each entry is exactly 32 bytes and lands in the next still-blank slot. Since we only pull bits from <code>1</code> to <code>0</code> in a clean slot, <strong>no erase is needed</strong> to add an entry. One entry = two program commands (the 32 bytes, then a one-byte commit), <strong>zero erases</strong>.</li>
+        <li><strong>A circular ring of 8 sectors.</strong> The area spans 32 KiB, i.e. 8 sectors of 4 KiB = <strong>1,024 slots</strong> (128 per sector). We fill sector 1, then 2, and so on, without ever erasing anything on the first lap. Only when the head <strong>returns</strong> to an already-used sector, after a full lap, is that sector erased — once — before being rewritten.</li>
+      </ol>
+
+      <h3>The payoff, in numbers</h3>
+      <p>Over one full lap of the ring: 1,024 new entries, 2,048 program commands… but <strong>only 8 erases</strong> (one per sector). Each sector is therefore erased just <strong>once every 1,024 entries</strong>. Starting from the 100,000 guaranteed cycles:</p>
+      <blockquote><strong>100,000 × 1,024 ≈ 102,400,000 entries</strong> before reaching a sector's rated endurance.</blockquote>
+      <p>To make it concrete:</p>
+      <ul>
+        <li>one event logged <strong>every minute</strong>, continuously → <strong>≈ 195 years</strong>;</li>
+        <li>one event <strong>every 10 seconds</strong> → <strong>≈ 32 years</strong>;</li>
+        <li>one event <strong>every second</strong>, 24/7 → <strong>≈ 3.2 years</strong> (a radio whose squelch opens and closes without pause).</li>
+      </ul>
+      <p>Even a full manual wipe of the log costs only one cycle per sector: clearing RF Log <strong>once a day</strong> would take about <strong>274 years</strong> to exhaust a sector.</p>
+
+      <h3>One detail that matters: the POWER ON markers</h3>
+      <p>At each boot, a marker is written to separate events — it does consume a physical slot, but it is <strong>not counted as traffic</strong> (the user sees up to 512 RX/TX events). And if the log already ends with a marker, no new one is added: no empty separators piling up across reboots.</p>
+
+      <h3>In one sentence</h3>
+      <p>RF Log writes one entry per event into a circular ring, using only blank slots, which keeps erases — the only operation that truly wears the flash — to a strict minimum. The resulting lifetime far exceeds that of the radio itself.</p>
+    </div>
+  </section>
+
+  <footer>
+    Standalone documentation tool for the F4HWN Edition Fusion 🔥 firmware. The figures and behavior mirror the firmware source in <code>App/app/rxtx_log.c</code>. Self-contained: no network access required.
+  </footer>
+</div>
+<script src="js/rf_log.js"></script>
+</body>
+</html>
