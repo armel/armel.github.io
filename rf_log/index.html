@@ -49,11 +49,11 @@
         <div style="text-align:center;margin-top:8px;font-size:12px;color:var(--text-muted)">On end → 1 entry (32 B) appended to the ring</div>
       </div>
 
-      <svg id="rf-ring" viewBox="0 0 340 340" width="300" role="img" style="max-width:300px;flex:0 0 auto">
+      <svg id="rf-ring" viewBox="0 0 400 400" width="400" role="img" style="width:400px;max-width:100%;flex:0 1 auto">
         <title>Flash ring of 8 sectors</title>
-        <desc>Eight sectors in a ring numbered 1 to 8; each sector is 4 KiB and holds 128 events; the write head advances, power-on markers are rare purple ticks, and a sector is erased only when the head returns after a full lap.</desc>
+        <desc>Eight sectors in a ring numbered 1 to 8; each sector is 4 KiB, holds 128 events and carries its own erase-cycle budget shown as a count out of 100k; the write head rides the rim, power-on markers are rare purple ticks, and a sector is erased only when the head returns after a full lap.</desc>
         <defs>
-          <linearGradient id="grad-fill" gradientUnits="userSpaceOnUse" x1="40" y1="40" x2="300" y2="300">
+          <linearGradient id="grad-fill" gradientUnits="userSpaceOnUse" x1="60" y1="60" x2="350" y2="350">
             <stop offset="0" stop-color="#0FBBA6"></stop>
             <stop offset="0.55" stop-color="#20B583"></stop>
             <stop offset="1" stop-color="#4CB050"></stop>
@@ -63,19 +63,20 @@
             <stop offset="1" stop-color="#12B5A5" stop-opacity="0"></stop>
           </radialGradient>
         </defs>
-        <circle cx="170" cy="170" r="86" fill="url(#grad-center)"></circle>
+        <circle cx="200" cy="200" r="80" fill="url(#grad-center)"></circle>
         <g id="rf-center" text-anchor="middle" font-family="var(--font-sans)">
-          <text x="170" y="154" font-size="13" fill="var(--text-muted)">1 sector</text>
-          <text x="170" y="178" font-size="19" font-weight="500" fill="var(--text-primary)">4 KiB</text>
-          <text x="170" y="197" font-size="13" fill="var(--text-secondary)">128 events</text>
+          <text x="200" y="184" font-size="13" fill="var(--text-muted)">1 sector</text>
+          <text x="200" y="208" font-size="19" font-weight="500" fill="var(--text-primary)">4 KiB</text>
+          <text x="200" y="227" font-size="13" fill="var(--text-secondary)">128 events</text>
         </g>
         <g id="rf-bg"></g>
         <g id="rf-fg"></g>
         <g id="rf-sep"></g>
         <g id="rf-mk"></g>
+        <g id="rf-cyc" text-anchor="middle" font-family="var(--font-sans)"></g>
         <g id="rf-head">
-          <circle class="halo" cx="170" cy="22" r="11" fill="none" stroke="#F59F00" stroke-width="2.5"></circle>
-          <circle class="core" cx="170" cy="22" r="7" fill="#F59F00"></circle>
+          <circle class="halo" cx="200" cy="34" r="10" fill="none" stroke="#F59F00" stroke-width="2.5"></circle>
+          <circle class="core" cx="200" cy="34" r="6" fill="#F59F00"></circle>
         </g>
       </svg>
     </div>
@@ -144,6 +145,9 @@
       <h3>Le résultat, en chiffres</h3>
       <p>Sur un tour complet de l'anneau : 1 024 nouvelles entrées, 2 048 commandes de programmation… mais <strong>seulement 8 effacements</strong> (un par secteur). Chaque secteur n'est donc effacé qu'<strong>une fois toutes les 1 024 entrées</strong>. En repartant des 100 000 cycles garantis :</p>
       <blockquote><strong>100 000 × 1 024 ≈ 102 400 000 entrées</strong> avant d'atteindre l'endurance nominale d'un secteur.</blockquote>
+      <p>Ce chiffre mérite qu'on s'y arrête, car il repose sur un point essentiel : <strong>l'endurance se compte par secteur, pas pour la puce entière</strong>. Chaque secteur dispose de son propre budget de 100 000 cycles, indépendamment de ses voisins — le secteur 1 peut être à 90 000 cycles pendant que le secteur 2 est encore neuf. L'usure est une dégradation matérielle des cellules de <em>ce</em> secteur précis ; rien n'est mutualisé.</p>
+      <p>Et c'est précisément ce qui rend l'anneau payant. En n'utilisant qu'un seul secteur, il faudrait l'effacer toutes les 128 entrées : il serait épuisé après 100 000 × 128 = <strong>12,8 millions d'entrées</strong>. En tournant sur huit secteurs, chacun n'est effacé qu'une fois par tour de 1 024 entrées, et l'on atteint 102,4 millions — soit <strong>exactement huit fois plus</strong>. La rotation ne diminue pas le nombre total d'effacements : elle les <strong>répartit sur huit budgets indépendants</strong> au lieu d'en épuiser un seul. C'est du <em>wear leveling</em>, et il est ici parfaitement uniforme : les huit secteurs vieillissent au même rythme et arriveront en fin de vie ensemble.</p>
+      <p>Le corollaire vaut d'être noté : si les 100 000 cycles étaient un budget global de la puce, faire tourner l'écriture sur huit secteurs n'apporterait strictement <strong>rien</strong>.</p>
       <p>Pour rendre ça concret :</p>
       <ul>
         <li>un événement enregistré <strong>par minute</strong>, en continu → <strong>≈ 195 ans</strong> ;</li>
@@ -190,6 +194,9 @@
       <h3>The payoff, in numbers</h3>
       <p>Over one full lap of the ring: 1,024 new entries, 2,048 program commands… but <strong>only 8 erases</strong> (one per sector). Each sector is therefore erased just <strong>once every 1,024 entries</strong>. Starting from the 100,000 guaranteed cycles:</p>
       <blockquote><strong>100,000 × 1,024 ≈ 102,400,000 entries</strong> before reaching a sector's rated endurance.</blockquote>
+      <p>That figure is worth pausing on, because it rests on a key point: <strong>endurance is rated per sector, not for the chip as a whole</strong>. Each sector has its own budget of 100,000 cycles, independent of its neighbours — sector 1 can sit at 90,000 cycles while sector 2 is still pristine. The wear is physical damage to the cells of <em>that</em> particular sector; nothing is shared.</p>
+      <p>And that is exactly what makes the ring pay off. Using a single sector, it would have to be erased every 128 entries: it would be exhausted after 100,000 × 128 = <strong>12.8 million entries</strong>. Rotating over eight sectors, each one is erased only once per lap of 1,024 entries, and we reach 102.4 million — <strong>exactly eight times more</strong>. The rotation does not reduce the total number of erases: it <strong>spreads them over eight independent budgets</strong> instead of draining a single one. That is wear levelling, and here it is perfectly uniform: all eight sectors age at the same rate and reach end of life together.</p>
+      <p>The corollary is worth stating: if those 100,000 cycles were a global budget for the chip, rotating writes over eight sectors would gain <strong>nothing at all</strong>.</p>
       <p>To make it concrete:</p>
       <ul>
         <li>one event logged <strong>every minute</strong>, continuously → <strong>≈ 195 years</strong>;</li>
