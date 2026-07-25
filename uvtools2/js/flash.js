@@ -7,6 +7,7 @@
 // - Shows progress bar during flashing, hides it after successful completion.
 // - Percentage text is centered via #progressLabel overlay.
 // - Dump and restore
+// - RF Log CSV export
 
 'use strict';
 
@@ -51,6 +52,13 @@ const LOGO_MAGIC = new Uint8Array([0x46, 0x34, 0x48, 0x57, 0x4E, 0x4C, 0x47, 0x4
 const LOGO_WIDTH = 128;
 const LOGO_HEIGHT = 64;
 
+// RF Log export timings. History pages are emitted by the firmware at most
+// once per display/update cycle, normally every 500 ms.
+const RF_LOG_KEEPALIVE_INTERVAL_MS = 200;
+const RF_LOG_INITIAL_TIMEOUT_MS = 5000;
+const RF_LOG_HISTORY_IDLE_MS = 1500;
+const RF_LOG_EXPORT_TIMEOUT_MS = 20000;
+
 // ========== STATE ==========
 let port = null;
 let reader = null;
@@ -62,8 +70,10 @@ let isDumping = false;
 let isRestoring = false;
 let isLogoUploading = false;
 let isLogoDumping = false;
+let isRfLogExporting = false;
 let readBuffer = [];
 let isReading = false;
+let rfLogDownloadUrl = null;
 
 // Logo state
 let logoSourceImage = null;       // HTMLImageElement of the user-picked file
@@ -115,6 +125,9 @@ const logoDumpBtn = document.getElementById('logoDumpBtn');
 const logoDumpResult = document.getElementById('logoDumpResult');
 const logoDumpedCanvas = document.getElementById('logoDumpedCanvas');
 const logoDumpLink = document.getElementById('logoDumpLink');
+const rfLogExportBtn = document.getElementById('rfLogExportBtn');
+const rfLogDownload = document.getElementById('rfLogDownload');
+const rfLogLink = document.getElementById('rfLogLink');
 
 // ========== VERSION COMPARISON ==========
 function isBootloaderCompatible(version, minVersion) {
@@ -164,11 +177,13 @@ window.updateUI = function updateUI() {
   const tabFlash = document.getElementById('tabFlash');
   const tabDump = document.getElementById('tabDump');
   const tabRestore = document.getElementById('tabRestore');
+  const tabRfLog = document.getElementById('tabRfLog');
   const tabLogoUpload = document.getElementById('tabLogoUpload');
   const tabLogoDump = document.getElementById('tabLogoDump');
   if (tabFlash) tabFlash.textContent = t('tabFlash');
   if (tabDump) tabDump.textContent = t('tabDump');
   if (tabRestore) tabRestore.textContent = t('tabRestore');
+  if (tabRfLog) tabRfLog.textContent = t('tabRfLog');
   if (tabLogoUpload) tabLogoUpload.textContent = t('tabLogoUpload');
   if (tabLogoDump) tabLogoDump.textContent = t('tabLogoDump');
 
@@ -177,6 +192,13 @@ window.updateUI = function updateUI() {
   const downloadText = document.getElementById('downloadText');
   if (dumpDesc) dumpDesc.textContent = t('dumpDescription');
   if (downloadText) downloadText.textContent = t('downloadText');
+
+  // RF Log labels
+  const rfLogDescription = document.getElementById('rfLogDescription');
+  const rfLogDownloadText = document.getElementById('rfLogDownloadText');
+  if (rfLogDescription) rfLogDescription.textContent = t('rfLogDescription');
+  if (rfLogDownloadText) rfLogDownloadText.textContent = t('rfLogDownloadText');
+  if (rfLogExportBtn) rfLogExportBtn.textContent = t('rfLogExportBtn');
 
   // Logo labels
   const labelLogoFile = document.getElementById('labelLogoFile');
@@ -238,6 +260,8 @@ function updateInfoBox() {
 
   if (tabName === 'flash') {
     infoBoxEl.innerHTML = t('infoBox');
+  } else if (tabName === 'rf-log') {
+    infoBoxEl.innerHTML = t('infoBoxRfLog');
   } else if (tabName === 'logo-upload' || tabName === 'logo-dump') {
     infoBoxEl.innerHTML = t('infoBoxLogo');
   } else {
@@ -1307,6 +1331,136 @@ if (logoDumpBtn) {
   });
 }
 
+// ========== EXPORT RF LOG ==========
+async function collectRfLogRows() {
+  const rf = window.UVTOOLS_RF_LOG;
+  if (!rf) throw new Error(t('rfLogProtocolUnavailable'));
+
+  const rows = new Map();
+  let firstMainAt = 0;
+  let lastHistoryAt = 0;
+  let gotHistory = false;
+  let lastKeepaliveAt = 0;
+  const startedAt = Date.now();
+  const deadline = Date.now() + RF_LOG_EXPORT_TIMEOUT_MS;
+
+  await writer.write(rf.featureKeepalive(true));
+  lastKeepaliveAt = Date.now();
+
+  while (Date.now() < deadline) {
+    const now = Date.now();
+    if (now - lastKeepaliveAt >= RF_LOG_KEEPALIVE_INTERVAL_MS) {
+      await writer.write(rf.featureKeepalive(!firstMainAt));
+      lastKeepaliveAt = Date.now();
+    }
+
+    let frame = rf.takeViewerFrame(readBuffer);
+    while (frame) {
+      if (frame.type === rf.TYPE_RF_LOG) {
+        let packet;
+        try {
+          packet = rf.parseMainPacket(frame.payload);
+        } catch (error) {
+          if (error.code === 'RF_LOG_VERSION') throw new Error(t('rfLogVersionUnsupported'));
+          throw error;
+        }
+
+        if (packet.disabled) throw new Error(t('rfLogDisabled'));
+        if (packet.full) {
+          if (!firstMainAt) firstMainAt = Date.now();
+          if (!packet.hasTraffic) return [];
+          rf.mergeRows(rows, packet.rows);
+          const trafficCount = Array.from(rows.values())
+            .filter(row => (row.flags & rf.FLAG_SESSION) === 0).length;
+          updateProgress(Math.min(99, (trafficCount / rf.VISIBLE_TRAFFIC_COUNT) * 100));
+          if (packet.rows.length < rf.ROW_COUNT) {
+            return rf.limitVisibleRows(rows.values());
+          }
+        }
+      } else if (frame.type === rf.TYPE_RF_LOG_HISTORY) {
+        const page = rf.parseHistoryPacket(frame.payload);
+        gotHistory = true;
+        lastHistoryAt = Date.now();
+        rf.mergeRows(rows, page);
+
+        const trafficCount = Array.from(rows.values())
+          .filter(row => (row.flags & rf.FLAG_SESSION) === 0).length;
+        updateProgress(Math.min(99, (trafficCount / rf.VISIBLE_TRAFFIC_COUNT) * 100));
+        log(t('rfLogProgress', trafficCount), 'info');
+
+        if (page.length < rf.ROW_COUNT || trafficCount >= rf.VISIBLE_TRAFFIC_COUNT) {
+          return rf.limitVisibleRows(rows.values());
+        }
+      }
+
+      frame = rf.takeViewerFrame(readBuffer);
+    }
+
+    const quietSince = gotHistory ? lastHistoryAt : firstMainAt;
+    if (quietSince && Date.now() - quietSince >= RF_LOG_HISTORY_IDLE_MS) {
+      return rf.limitVisibleRows(rows.values());
+    }
+    if (!firstMainAt && Date.now() - startedAt >= RF_LOG_INITIAL_TIMEOUT_MS) {
+      throw new Error(t('rfLogTimeout'));
+    }
+    await sleep(25);
+  }
+
+  throw new Error(t('rfLogTimeout'));
+}
+
+if (rfLogExportBtn) {
+  rfLogExportBtn.addEventListener('click', async () => {
+    if (isRfLogExporting) return;
+    isRfLogExporting = true;
+    rfLogExportBtn.disabled = true;
+    if (progressContainer) progressContainer.style.display = 'block';
+    updateProgress(0);
+    if (rfLogDownload) rfLogDownload.style.display = 'none';
+    let completed = false;
+
+    try {
+      if (!port) await connect();
+      readBuffer = [];
+      log(t('rfLogReading'), 'info');
+
+      const rows = await collectRfLogRows();
+      const trafficCount = rows.filter(row =>
+        (row.flags & window.UVTOOLS_RF_LOG.FLAG_SESSION) === 0).length;
+      if (trafficCount === 0) throw new Error(t('rfLogEmpty'));
+
+      const csv = window.UVTOOLS_RF_LOG.rowsToCsv(rows);
+      if (rfLogDownloadUrl) URL.revokeObjectURL(rfLogDownloadUrl);
+      rfLogDownloadUrl = URL.createObjectURL(
+        new Blob([csv], { type: 'text/csv;charset=utf-8' })
+      );
+      if (rfLogLink) {
+        rfLogLink.href = rfLogDownloadUrl;
+        rfLogLink.download = 'rf-log.csv';
+      }
+      if (rfLogDownload) rfLogDownload.style.display = 'block';
+
+      updateProgress(100);
+      log(t('rfLogComplete', trafficCount), 'success');
+      completed = true;
+      setTimeout(() => {
+        if (progressContainer) progressContainer.style.display = 'none';
+        updateProgress(0);
+      }, 800);
+    } catch (e) {
+      log(t('error', e?.message ?? String(e)), 'error');
+    } finally {
+      isRfLogExporting = false;
+      rfLogExportBtn.disabled = false;
+      if (!completed) {
+        if (progressContainer) progressContainer.style.display = 'none';
+        updateProgress(0);
+      }
+      if (port) await disconnect();
+    }
+  });
+}
+
 // ========== UI HELPERS ==========
 function log(message, type = '') {
   const entry = document.createElement('div');
@@ -1340,9 +1494,10 @@ if (!('serial' in navigator)) {
   if (restoreBtn) restoreBtn.disabled = true;
   if (logoUploadBtn) logoUploadBtn.disabled = true;
   if (logoDumpBtn) logoDumpBtn.disabled = true;
+  if (rfLogExportBtn) rfLogExportBtn.disabled = true;
 }
 
-// ========== AUTO TAB SELECT VIA ?mode=flash|dump|restore ==========
+// ========== AUTO TAB SELECT VIA ?mode=... ==========
 
 (function () {
   const params = new URLSearchParams(window.location.search);
@@ -1352,6 +1507,7 @@ if (!('serial' in navigator)) {
     flash: "tabFlash",
     dump: "tabDump",
     restore: "tabRestore",
+    "rf-log": "tabRfLog",
     "logo-upload": "tabLogoUpload",
     "logo-dump": "tabLogoDump"
   };

@@ -80,14 +80,18 @@ h1 {
 /* ---------- Tabs ---------- */
 .tabs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-wrap: nowrap;
+  gap: 4px;
   margin-bottom: 30px;
   border-bottom: 2px solid var(--border);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
 }
 
 .tab {
-  padding: 12px 24px;
+  flex: 1 0 auto;
+  padding: 12px;
   background: transparent;
   border: none;
   border-bottom: 3px solid transparent;
@@ -99,6 +103,7 @@ h1 {
   box-shadow: none;
   margin-top: 0;
   width: auto;
+  white-space: nowrap;
 }
 
 .tab:hover {

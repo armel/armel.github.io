@@ -33,6 +33,7 @@
       <button class="tab" role="tab" aria-selected="false" data-tab="restore" id="tabRestore">Restore Calib</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="logo-upload" id="tabLogoUpload">Upload Logo</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="logo-dump" id="tabLogoDump">Download Logo</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="rf-log" id="tabRfLog">Export RF Log</button>
     </div>
 
     <!-- FLASH FIRMWARE TAB -->
@@ -80,6 +81,20 @@
       </section>
 
       <button id="restoreBtn" disabled aria-live="polite">Restore Calibration Data</button>
+    </div>
+
+    <!-- EXPORT RF LOG TAB -->
+    <div class="tab-content" id="rf-log-content" role="tabpanel">
+      <section class="section">
+        <p class="tab-description" id="rfLogDescription">
+          Read the RF activity history from your radio and export it as CSV.
+        </p>
+        <button id="rfLogExportBtn">Export RF Log</button>
+      </section>
+
+      <div class="download-link" id="rfLogDownload">
+        <a href="#" id="rfLogLink" download="rf-log.csv">💾 <span id="rfLogDownloadText">Download rf-log.csv</span></a>
+      </div>
     </div>
 
     <!-- UPLOAD LOGO TAB -->
@@ -174,6 +189,7 @@
   <script src="locales/fr.js"></script>
   <script src="locales/zh.js"></script>
   <script src="js/i18n.js"></script>
+  <script src="js/rf-log.js"></script>
   <script src="js/flash.js"></script>
 </body>
 </html>
