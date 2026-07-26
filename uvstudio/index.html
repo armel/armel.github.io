@@ -9,7 +9,7 @@
 <link href="css/core.css?v=3" rel="stylesheet">
 <link href="css/viewer.css?v=1" rel="stylesheet">
 <link href="css/tools.css?v=3" rel="stylesheet">
-<link href="css/studio.css?v=10" rel="stylesheet">
+<link href="css/studio.css?v=11" rel="stylesheet">
 </head>
 <body data-theme="light">
 
@@ -41,6 +41,11 @@
         <span class="section-name" id="sectionName" data-i18n="studio_nav_live">Live Viewer</span>
     </div>
     <div class="topbar-actions">
+        <div class="flash-counter" id="flashCounter" role="status" aria-live="polite" hidden>
+            <span class="flash-counter-icon" aria-hidden="true">🔥</span>
+            <span class="flash-counter-value" id="flashCounterValue">—</span>
+            <span class="flash-counter-unit" data-i18n="studio_flash_counter_unit">flashed</span>
+        </div>
         <div class="studio-serial-status" id="studioSerialStatus"
              data-state="disconnected" role="status" aria-live="polite"
              aria-label="Disconnected" title="Disconnected">
@@ -490,7 +495,8 @@
 <script src="js/studio-serial.js?v=2"></script>
 <script src="js/rf-log.js?v=2"></script>
 <script src="js/k5viewer.js?v=8"></script>
-<script src="js/flash.js?v=4"></script>
+<script src="js/flash.js?v=5"></script>
 <script src="js/studio.js?v=9"></script>
+<script src="js/studio-flash-counter.js?v=1"></script>
 </body>
 </html>
