@@ -246,6 +246,8 @@ window.UVSTUDIO_LOCALES.zh = {
   "studio_about_description": "UV Studio 通过 Web Serial API 与兼容的无线电设备直接通信。无需安装、服务器或账户。UV Studio 是依据 Apache 2.0 许可证发布的开源软件。",
   "studio_about_documents": "项目文档",
   "studio_language": "语言",
+  "studio_flash_counter_unit": "次刷写",
+  "studio_flash_counter_title": "迄今通过 UV Studio 刷写的固件次数",
   "radio_screen": "电台屏幕",
   "radio_model": "电台型号",
   "radio_led_state": "电台 LED 状态",

@@ -246,7 +246,7 @@ window.UVSTUDIO_LOCALES.en = {
   "studio_about_description": "UV Studio communicates directly with compatible radios through the Web Serial API. No installation, server or account is required. UV Studio is open-source software licensed under the Apache License 2.0.",
   "studio_about_documents": "Project documents",
   "studio_language": "Language",
-  "studio_flash_counter_unit": "flashed",
+  "studio_flash_counter_unit": "firmwares flashed",
   "studio_flash_counter_title": "Firmwares flashed with UV Studio to date",
   "radio_screen": "Radio screen",
   "radio_model": "Radio model",

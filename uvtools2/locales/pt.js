@@ -2,6 +2,8 @@ window.UVTOOLS_LOCALES = window.UVTOOLS_LOCALES || {};
 window.UVTOOLS_LOCALES.pt =
 {
   "title": "UVTools2",
+  "flash_counter_unit": "firmwares gravados",
+  "flash_counter_title": "Firmwares gravados até hoje",
   "subtitle": "UV-K5 V3 & UV-K1 · Firmware, calibração, logótipo e RF Log — tudo no navegador via Web Serial API",
   "tabFlash": "Gravar Firmware",
   "tabDump": "Extrair Calib",

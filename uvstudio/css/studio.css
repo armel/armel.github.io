@@ -415,7 +415,7 @@ body {
 @media (max-width: 860px) {
     body { overflow: auto; height: auto; }
     .topbar { flex-wrap: wrap; height: auto; padding: 10px 14px; }
-    .section-name, .topbar-divider, .flash-counter-unit { display: none; }
+    .section-name, .topbar-divider { display: none; }
     .shell { flex-direction: column; }
     .sidebar {
         flex: 0 0 auto; flex-direction: row; flex-wrap: wrap; gap: 6px;

@@ -246,6 +246,8 @@ window.UVSTUDIO_LOCALES.pl = {
   "studio_about_description": "UV Studio komunikuje się bezpośrednio ze zgodnymi radiotelefonami za pośrednictwem Web Serial API. Nie wymaga instalacji, serwera ani konta. UV Studio jest oprogramowaniem open source udostępnianym na licencji Apache 2.0.",
   "studio_about_documents": "Dokumenty projektu",
   "studio_language": "Język",
+  "studio_flash_counter_unit": "wgrań",
+  "studio_flash_counter_title": "Firmware'ów wgranych przez UV Studio do dziś",
   "radio_screen": "Ekran radia",
   "radio_model": "Model radia",
   "radio_led_state": "Stan diod LED radia",

@@ -2,6 +2,8 @@ window.UVTOOLS_LOCALES = window.UVTOOLS_LOCALES || {};
 window.UVTOOLS_LOCALES.es =
 {
   "title": "UVTools2",
+  "flash_counter_unit": "firmwares flasheados",
+  "flash_counter_title": "Firmwares flasheados hasta la fecha",
   "subtitle": "UV-K5 V3 & UV-K1 · Firmware, calibración, logo y RF Log — todo en el navegador mediante Web Serial API",
   "tabFlash": "Flashear Firmware",
   "tabDump": "Volcar Calib",

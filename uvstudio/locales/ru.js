@@ -246,6 +246,8 @@ window.UVSTUDIO_LOCALES.ru = {
   "studio_about_description": "UV Studio напрямую взаимодействует с совместимыми радиостанциями через Web Serial API. Установка, сервер и учётная запись не требуются. UV Studio — программное обеспечение с открытым исходным кодом, распространяемое по лицензии Apache 2.0.",
   "studio_about_documents": "Документы проекта",
   "studio_language": "Язык",
+  "studio_flash_counter_unit": "прошивок",
+  "studio_flash_counter_title": "Прошивок записано через UV Studio на сегодня",
   "radio_screen": "Экран радиостанции",
   "radio_model": "Модель радиостанции",
   "radio_led_state": "Состояние светодиодов радиостанции",
