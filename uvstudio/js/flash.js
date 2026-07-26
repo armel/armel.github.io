@@ -669,6 +669,10 @@ async function flashFirmware() {
   updateProgress(100);
   log(t('programmingComplete'), 'success');
 
+  // Global community counter: a firmware was successfully flashed.
+  // Best-effort — never blocks or fails the flash.
+  try { window.UVStudioFlashCounter?.increment(); } catch (e) {}
+
   setTimeout(() => {
     if (progressContainer) progressContainer.style.display = 'none';
     updateProgress(0);
