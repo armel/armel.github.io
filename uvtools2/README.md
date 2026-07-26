@@ -12,6 +12,7 @@ the Web Serial API at 38,400 baud.
 - Back up and restore the 512-byte radio calibration data
 - Upload a custom 128 × 64 boot logo with threshold and inversion controls
 - Download the current boot logo as a PNG image
+- Export the latest 512 RF Log activities and their power-on markers as CSV
 - Display operation progress and a detailed console log
 - English, French, and Chinese interfaces
 
@@ -38,11 +39,12 @@ write operation is complete.
 4. Select **Flash firmware** and choose the serial port.
 5. Wait for the operation to complete before disconnecting the radio.
 
-### Calibration and boot logo
+### Calibration, RF Log, and boot logo
 
 Keep the radio in normal mode when backing up or restoring calibration data,
-or when uploading or downloading a boot logo. Use the corresponding tab and
-follow the on-screen instructions.
+exporting the RF Log, or when uploading or downloading a boot logo. RF Log
+export requires a compatible firmware build with RF Log enabled. Use the
+corresponding tab and follow the on-screen instructions.
 
 ## Run locally
 
@@ -52,13 +54,14 @@ Open index.html directly in a supported browser.
 ## URL parameters
 
 - firmwareURL or fw — load a firmware image automatically from a URL
-- mode — open flash, dump, restore, logo-upload, or logo-dump directly
+- mode — open flash, dump, restore, rf-log, logo-upload, or logo-dump directly
 
 ## Project structure
 
 - index.html — application markup
 - css/style.css — application layout and theme
 - js/flash.js — Web Serial protocol, firmware flashing, calibration, and logos
+- js/rf-log.js — RF Log packet parsing and CSV generation
 - js/i18n.js — translation loader
 - locales/ — local JavaScript translations and application version
 - img/ — icons and favicons

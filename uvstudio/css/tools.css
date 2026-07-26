@@ -1,19 +1,6 @@
-/* === UVTools2 — aligned with the shared F4HWN design system === */
-/* Tokens, reset, body base, .btn and select live in css/theme.css.
-   This file only holds uvtools2-specific layout & components, all built
-   on the shared tokens so light/dark themes stay consistent with k5viewer. */
+/* UVTools2 feature styles. Shared tokens and components live in core.css. */
 
-/* ---------- Layout ---------- */
-body {
-  display: flex;
-  justify-content: center;
-  /* Anchor to the top, not vertically centered: otherwise switching to a
-     taller/shorter panel re-centers the card and it appears to jump up/down. */
-  align-items: flex-start;
-  padding: 20px;
-}
-
-.container {
+#pane-tools .container {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -23,113 +10,15 @@ body {
   padding: 40px;
 }
 
-/* ---------- Header ---------- */
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 10px;
-}
-
-/* Brand block — same treatment as k5viewer (name + "by F4HWN" author) */
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.brand_h1 {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 6px;
-  color: var(--text);
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.brand-author {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-muted);
-  line-height: 1.2;
-}
-
-.header-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
-/* Icon-only theme toggle keeps the ◐/◑ glyph centered */
-#themeToggle {
-  padding: 8px 12px;
-}
-
-.subtitle {
-  color: var(--text-secondary);
-  margin-bottom: 30px;
-  font-size: 14px;
-}
-
-/* ---------- Tabs ---------- */
-/* Section navigation as a k5viewer-style button toolbar (each .tab also
-   carries the shared .btn class, so inactive tabs get the alu look; the
-   active one is filled primary blue like k5viewer's active model tab). */
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 28px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--border);
-}
-
-.tab {
-  white-space: nowrap;
-}
-
-.tab.active {
-  background: linear-gradient(160deg, #3b82f6 0%, #2563eb 100%);
-  border-color: #2563eb;
-  color: #fff;
-  box-shadow: 0 2px 6px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
-  transform: none;
-}
-
-.tab.active:hover:not(:disabled) {
-  background: linear-gradient(160deg, #60a5fa 0%, #3b82f6 100%);
-  border-color: #3b82f6;
-  color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(37,99,235,0.45), inset 0 1px 0 rgba(255,255,255,0.25);
-}
-
-[data-theme="dark"] .tab.active {
-  background: linear-gradient(135deg, #2563eb, #3b82f6);
-  border-color: #3b82f6;
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
-}
-
-[data-theme="dark"] .tab.active:hover:not(:disabled) {
-  background: linear-gradient(135deg, #3b82f6, #60a5fa);
-  box-shadow: 0 4px 12px rgba(59,130,246,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
-}
-
-.tab-content {
+#pane-tools .tool-view {
   display: none;
 }
 
-.tab-content.active {
+#pane-tools .tool-view.active {
   display: block;
 }
 
-.tab-description {
+#pane-tools .tab-description {
   color: var(--text-secondary);
   margin-bottom: 20px;
   font-size: 14px;
@@ -137,11 +26,11 @@ body {
 }
 
 /* ---------- Sections & form controls ---------- */
-.section {
+#pane-tools .section {
   margin-bottom: 25px;
 }
 
-label {
+#pane-tools label {
   display: block;
   margin-bottom: 8px;
   color: var(--text);
@@ -149,7 +38,7 @@ label {
   font-size: 14px;
 }
 
-input[type="text"] {
+#pane-tools input[type="text"] {
   width: 100%;
   padding: 12px;
   border: 1px solid var(--border);
@@ -160,18 +49,17 @@ input[type="text"] {
   transition: border-color 0.15s;
 }
 
-input[type="text"]:focus {
-  outline: none;
+#pane-tools input[type="text"]:focus {
   border-color: var(--accent);
 }
 
 /* ---------- Custom file input ---------- */
-.file-input-wrapper {
+#pane-tools .file-input-wrapper {
   position: relative;
   width: 100%;
 }
 
-input[type="file"] {
+#pane-tools input[type="file"] {
   position: absolute;
   opacity: 0;
   width: 100%;
@@ -179,7 +67,7 @@ input[type="file"] {
   cursor: pointer;
 }
 
-.file-input-label {
+#pane-tools .file-input-label {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -192,27 +80,32 @@ input[type="file"] {
   transition: all 0.15s;
 }
 
-.file-input-label:hover {
+#pane-tools .file-input-label:hover {
   border-color: var(--accent);
 }
 
-.file-input-label.has-file {
+#pane-tools input[type="file"]:focus-visible + .file-input-label {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+#pane-tools .file-input-label.has-file {
   border-color: var(--accent);
   background: color-mix(in oklab, var(--accent) 8%, var(--surface));
 }
 
-.file-name {
+#pane-tools .file-name {
   color: var(--text-secondary);
   font-size: 14px;
 }
 
-.file-name.has-file {
+#pane-tools .file-name.has-file {
   color: var(--text);
   font-weight: 500;
 }
 
 /* Small primary chip inside the file picker */
-.file-button {
+#pane-tools .file-button {
   background: linear-gradient(160deg, #3b82f6 0%, #2563eb 100%);
   color: #fff;
   padding: 8px 16px;
@@ -226,7 +119,7 @@ input[type="file"] {
 /* ---------- Primary action buttons (contained, centered CTA) ---------- */
 /* Scaled-up .btn.primary rather than a full-width slab, to match k5viewer's
    compact button vocabulary. */
-button:not(.tab):not(.log-toggle):not(.btn) {
+#pane-tools button:not(.log-toggle):not(.btn) {
   display: block;
   width: fit-content;
   min-width: 240px;
@@ -244,43 +137,43 @@ button:not(.tab):not(.log-toggle):not(.btn) {
   box-shadow: 0 2px 8px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
-button:not(.tab):not(.log-toggle):not(.btn):hover:not(:disabled) {
+#pane-tools button:not(.log-toggle):not(.btn):hover:not(:disabled) {
   background: linear-gradient(160deg, #60a5fa 0%, #3b82f6 100%);
   border-color: #3b82f6;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(37,99,235,0.45), inset 0 1px 0 rgba(255,255,255,0.25);
 }
 
-button:not(.tab):not(.log-toggle):not(.btn):active:not(:disabled) {
+#pane-tools button:not(.log-toggle):not(.btn):active:not(:disabled) {
   transform: translateY(1px);
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
 }
 
-button:disabled {
+#pane-tools button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   transform: none;
 }
 
-[data-theme="dark"] button:not(.tab):not(.log-toggle):not(.btn) {
+[data-theme="dark"] #pane-tools button:not(.log-toggle):not(.btn) {
   background: linear-gradient(135deg, #2563eb, #3b82f6);
   box-shadow: 0 2px 8px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
 }
-[data-theme="dark"] button:not(.tab):not(.log-toggle):not(.btn):hover:not(:disabled) {
+[data-theme="dark"] #pane-tools button:not(.log-toggle):not(.btn):hover:not(:disabled) {
   background: linear-gradient(135deg, #3b82f6, #60a5fa);
   box-shadow: 0 4px 12px rgba(59,130,246,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
-/* Focus: no halo — the select's border turns blue on focus (via theme.css),
+/* Focus: no halo — the select's border turns blue on focus (via core.css),
    matching k5viewer. Buttons fall back to the browser's default focus ring. */
 
 /* ---------- Progress bar ---------- */
-.progress-container {
+#pane-tools .progress-container {
   margin-top: 20px;
   display: none;
 }
 
-.progress-bar {
+#pane-tools .progress-bar {
   position: relative;
   width: 100%;
   height: 30px;
@@ -289,14 +182,14 @@ button:disabled {
   overflow: hidden;
 }
 
-.progress-fill {
+#pane-tools .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
   width: 0%;
   transition: width 0.3s;
 }
 
-.progress-label {
+#pane-tools .progress-label {
   position: absolute;
   inset: 0;
   display: flex;
@@ -311,7 +204,7 @@ button:disabled {
 
 /* ---------- Download link ---------- */
 /* Compact success chip, centered — not a full-width bar */
-.download-link {
+#pane-tools .download-link {
   display: none;
   width: fit-content;
   max-width: 100%;
@@ -323,7 +216,7 @@ button:disabled {
   text-align: center;
 }
 
-.download-link a {
+#pane-tools .download-link a {
   color: var(--accent-hover);
   text-decoration: none;
   font-weight: 600;
@@ -333,27 +226,27 @@ button:disabled {
   gap: 8px;
 }
 
-.download-link a:hover {
+#pane-tools .download-link a:hover {
   text-decoration: underline;
 }
 
-.download-link a .dl-icon {
+#pane-tools .download-link a .dl-icon {
   flex: 0 0 auto;
 }
 
 /* ---------- Log / console ---------- */
-.log-container {
+#pane-tools .log-container {
   margin-top: 25px;
 }
 
-.log-header {
+#pane-tools .log-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
 }
 
-.log-toggle {
+#pane-tools .log-toggle {
   background: var(--bg);
   border: 1px solid var(--border);
   padding: 6px 12px;
@@ -364,12 +257,12 @@ button:disabled {
   transition: all 0.15s;
 }
 
-.log-toggle:hover {
+#pane-tools .log-toggle:hover {
   border-color: var(--accent);
   color: var(--accent-hover);
 }
 
-.log {
+#pane-tools .log {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -383,31 +276,31 @@ button:disabled {
   display: none;
 }
 
-.log.visible {
+#pane-tools .log.visible {
   display: block;
 }
 
-.log-entry {
+#pane-tools .log-entry {
   margin-bottom: 4px;
   color: var(--text);
 }
 
-.log-entry.error {
+#pane-tools .log-entry.error {
   color: var(--error);
   font-weight: 600;
 }
 
-.log-entry.success {
+#pane-tools .log-entry.success {
   color: var(--success);
   font-weight: 600;
 }
 
-.log-entry.info {
+#pane-tools .log-entry.info {
   color: var(--accent);
 }
 
 /* ---------- Info block ---------- */
-.info-box {
+#pane-tools .info-box {
   background: var(--bg);
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
@@ -419,7 +312,7 @@ button:disabled {
 }
 
 /* ---------- Logo controls ---------- */
-.logo-controls {
+#pane-tools .logo-controls {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -429,13 +322,13 @@ button:disabled {
   border-radius: var(--radius);
 }
 
-.logo-controls input[type="range"] {
+#pane-tools .logo-controls input[type="range"] {
   width: 100%;
   accent-color: var(--accent);
   cursor: pointer;
 }
 
-.logo-checkbox-label {
+#pane-tools .logo-checkbox-label {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -444,14 +337,14 @@ button:disabled {
   margin-bottom: 0;
 }
 
-.logo-checkbox-label input[type="checkbox"] {
+#pane-tools .logo-checkbox-label input[type="checkbox"] {
   accent-color: var(--accent);
   cursor: pointer;
   width: 18px;
   height: 18px;
 }
 
-.logo-preview-wrapper {
+#pane-tools .logo-preview-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -459,13 +352,13 @@ button:disabled {
   margin-top: 6px;
 }
 
-.logo-preview-label {
+#pane-tools .logo-preview-label {
   color: var(--text-secondary);
   font-size: 13px;
   font-weight: 500;
 }
 
-.logo-canvas {
+#pane-tools .logo-canvas {
   width: 512px;
   max-width: 100%;
   height: auto;
@@ -482,7 +375,7 @@ button:disabled {
 }
 
 /* ---------- Accessibility helpers ---------- */
-.sr-only {
+#pane-tools .sr-only {
   position: absolute !important;
   width: 1px;
   height: 1px;

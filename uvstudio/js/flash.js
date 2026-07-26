@@ -1,9 +1,10 @@
+;(function(){
 // js/flash.js
 // UV-K5 Web Flasher core logic (Web Serial + protocol)
 // Adds: 
 // - Auto-load of firmware from URL param ?firmwareURL=... (or ?fw=...)
-// - Requires i18n.js to be loaded first (window.i18nReady).
-// - Defines window.updateUI() to (re)apply translations to the DOM.
+// - Uses the shared UV Studio i18n runtime (window.uvStudioI18n).
+// - Refreshes dynamic tool labels after the shared language changes.
 // - Shows progress bar during flashing, hides it after successful completion.
 // - Percentage text is centered via #progressLabel overlay.
 // - Dump and restore
@@ -65,15 +66,12 @@ let reader = null;
 let writer = null;
 let firmwareData = null;
 let calibData = null;
-let isFlashing = false;
-let isDumping = false;
-let isRestoring = false;
-let isLogoUploading = false;
-let isLogoDumping = false;
-let isRfLogExporting = false;
+let activeOperationToken = null;
+let activeToolsView = 'flash';
 let readBuffer = [];
 let isReading = false;
 let rfLogDownloadUrl = null;
+const serialSupported = 'serial' in navigator;
 
 // Logo state
 let logoSourceImage = null;       // HTMLImageElement of the user-picked file
@@ -83,12 +81,8 @@ let logoBitmap = null;            // Uint8Array(1024) ST7565-native, after thres
 const flashBtn = document.getElementById('flashBtn');
 const dumpBtn = document.getElementById('dumpBtn');
 const restoreBtn = document.getElementById('restoreBtn');
-const blVersionInput = document.getElementById('blVersion');
 const firmwareFileInput = document.getElementById('firmwareFile');
 const calibFileInput = document.getElementById('calibFile');
-const titleEl = document.getElementById('title');
-const subtitleEl = document.getElementById('subtitle');
-const labelBlVersionEl = document.getElementById('labelBlVersion');
 const labelFwFileEl = document.getElementById('labelFirmwareFile');
 const labelCalibFileEl = document.getElementById('labelCalibFile');
 const logDiv = document.getElementById('log');
@@ -151,19 +145,11 @@ function isBootloaderCompatible(version, minVersion) {
 
 // ========== i18n HELPER ==========
 function t(key, ...args) {
-  return window.i18n && window.i18n.t ? window.i18n.t(key, ...args) : key;
+  return window.uvStudioI18n ? window.uvStudioI18n.t(key, ...args) : key;
 }
 
 // ========== UI UPDATE ==========
-window.updateUI = function updateUI() {
-  // Brand name + version (e.g. "UVTools2 v2.4.0"), like k5viewer's title.
-  if (titleEl) {
-    titleEl.textContent = window.UVTOOLS_VERSION
-      ? `${t('title')} v${window.UVTOOLS_VERSION}`
-      : t('title');
-  }
-  if (subtitleEl) subtitleEl.textContent = t('subtitle');
-  if (labelBlVersionEl) labelBlVersionEl.textContent = t('labelBlVersion');
+function refreshLocalizedToolsState() {
   if (labelFwFileEl) labelFwFileEl.textContent = t('labelFirmwareFile');
   if (labelCalibFileEl) labelCalibFileEl.textContent = t('labelCalibFile');
 
@@ -175,20 +161,6 @@ window.updateUI = function updateUI() {
   if (restoreBtn) restoreBtn.textContent = t('restoreBtn');
   if (fileButton) fileButton.textContent = t('fileChoose');
   if (calibFileButton) calibFileButton.textContent = t('fileChoose');
-
-  // Tabs
-  const tabFlash = document.getElementById('tabFlash');
-  const tabDump = document.getElementById('tabDump');
-  const tabRestore = document.getElementById('tabRestore');
-  const tabRfLog = document.getElementById('tabRfLog');
-  const tabLogoUpload = document.getElementById('tabLogoUpload');
-  const tabLogoDump = document.getElementById('tabLogoDump');
-  if (tabFlash) tabFlash.textContent = t('tabFlash');
-  if (tabDump) tabDump.textContent = t('tabDump');
-  if (tabRestore) tabRestore.textContent = t('tabRestore');
-  if (tabRfLog) tabRfLog.textContent = t('tabRfLog');
-  if (tabLogoUpload) tabLogoUpload.textContent = t('tabLogoUpload');
-  if (tabLogoDump) tabLogoDump.textContent = t('tabLogoDump');
 
   // Description
   const dumpDesc = document.getElementById('dumpDescription');
@@ -249,17 +221,16 @@ window.updateUI = function updateUI() {
     if (calibFileLabel) calibFileLabel.classList.remove('has-file');
   }
 
-  if (languageSelect && window.i18n && window.i18n.lang) {
-    languageSelect.value = window.i18n.lang;
+  if (languageSelect && window.uvStudioI18n) {
+    languageSelect.value = window.uvStudioI18n.lang;
   }
-};
+}
 
 // Update info box based on active tab
 function updateInfoBox() {
   if (!infoBoxEl) return;
 
-  const activeTab = document.querySelector('.tab.active');
-  const tabName = activeTab ? activeTab.dataset.tab : 'flash';
+  const tabName = activeToolsView;
 
   if (tabName === 'flash') {
     infoBoxEl.innerHTML = t('infoBox');
@@ -272,35 +243,22 @@ function updateInfoBox() {
   }
 }
 
-// Re-apply UI when i18n signals readiness
-window.addEventListener('i18n:ready', () => {
-  if (window.updateUI) window.updateUI();
+// Refresh dynamic tool labels after the shared language changes.
+window.addEventListener('uvstudio:languagechange', () => {
+  refreshLocalizedToolsState();
+});
+
+window.addEventListener('uvstudio:toolviewchange', event => {
+  activeToolsView = event.detail?.view || 'flash';
+  updateInfoBox();
 });
 
 // Initial i18n sync
 (async () => {
-  if (window.i18nReady) await window.i18nReady;
-  if (window.updateUI) window.updateUI();
+  if (window.uvStudioI18nReady) await window.uvStudioI18nReady;
+  refreshLocalizedToolsState();
   await maybeLoadFirmwareFromQuery();
 })();
-
-// ========== TABS ==========
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => {
-      t.classList.remove('active');
-      t.setAttribute('aria-selected', 'false');
-    });
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    
-    tab.classList.add('active');
-    tab.setAttribute('aria-selected', 'true');
-    document.getElementById(tab.dataset.tab + '-content').classList.add('active');
-    
-    // Update info box when tab changes
-    updateInfoBox();
-  });
-});
 
 // ========== LOG VISIBILITY ==========
 if (logToggle) {
@@ -393,7 +351,7 @@ async function maybeLoadFirmwareFromQuery() {
 }
 
 function updateFlashButton() {
-  if (flashBtn) flashBtn.disabled = !firmwareData || isFlashing;
+  updateActionButtons();
 }
 
 // ========== CALIBRATION FILE INPUT ==========
@@ -422,16 +380,28 @@ if (calibFileInput) {
 }
 
 function updateRestoreButton() {
-  if (restoreBtn) restoreBtn.disabled = !calibData || isRestoring;
+  updateActionButtons();
 }
 
 // ========== SERIAL CONNECTION ==========
 async function connect() {
   try {
+    await toolsSerial.acquire({ source: 'tools' });
+    if (!toolsSerial.isOwner()) {
+      throw Object.assign(new Error(t('tools_disconnected')), { code: 'UVSTUDIO_SERIAL_RELEASED' });
+    }
     log(t('requestingPort'), 'info');
     port = await navigator.serial.requestPort();
+    if (!toolsSerial.isOwner()) {
+      throw Object.assign(new Error(t('tools_disconnected')), { code: 'UVSTUDIO_SERIAL_RELEASED' });
+    }
     log(t('openingPort'), 'info');
     await port.open({ baudRate: BAUDRATE });
+    if (!toolsSerial.isOwner()) {
+      try { await port.close(); } catch {}
+      port = null;
+      throw Object.assign(new Error(t('tools_disconnected')), { code: 'UVSTUDIO_SERIAL_RELEASED' });
+    }
 
     log(t('gettingReader'), 'info');
     reader = port.readable.getReader();
@@ -443,30 +413,83 @@ async function connect() {
 
     log(t('waiting500ms'), 'info');
     await sleep(500);
+    if (!toolsSerial.isOwner()) {
+      throw Object.assign(new Error(t('tools_disconnected')), { code: 'UVSTUDIO_SERIAL_RELEASED' });
+    }
 
     log(t('connected'), 'success');
+    toolsSerial.setState('connected', { reason: 'connection-established' });
   } catch (e) {
-    log(t('connectionError', e?.message ?? String(e)), 'error');
+    if (toolsSerial.isOwner()) {
+      await toolsSerial.release('connection-error');
+    } else {
+      await disconnectPort({ reason: 'connection-cancelled' });
+    }
+    if (e?.code !== 'UVSTUDIO_SERIAL_RELEASED') {
+      log(t('connectionError', e?.message ?? String(e)), 'error');
+    }
     throw e;
   }
 }
 
-async function disconnect() {
+async function disconnectPort(context = {}) {
   isReading = false;
-  if (reader) {
-    try { await reader.cancel(); } catch {}
-    try { reader.releaseLock(); } catch {}
-    reader = null;
+  const activeReader = reader;
+  const activeWriter = writer;
+  const activePort = port;
+  reader = null;
+  writer = null;
+  port = null;
+
+  await window.UVStudioSerial.closeResources({
+    reader: activeReader,
+    writer: activeWriter,
+    port: activePort
+  });
+  if (context.reason === 'operation-complete' || context.reason === 'user') {
+    log(t('tools_disconnected'), 'info');
   }
-  if (writer) {
-    try { await writer.close(); } catch {}
-    writer = null;
-  }
-  if (port) {
-    try { await port.close(); } catch {}
-    port = null;
-  }
-  log(t('disconnected'), 'info');
+}
+
+const toolsSerial = window.UVStudioSerial.register('tools', {
+  disconnect: disconnectPort
+});
+
+function updateActionButtons() {
+  const busy = Boolean(activeOperationToken);
+  if (flashBtn) flashBtn.disabled = !serialSupported || busy || !firmwareData;
+  if (dumpBtn) dumpBtn.disabled = !serialSupported || busy;
+  if (restoreBtn) restoreBtn.disabled = !serialSupported || busy || !calibData;
+  if (logoUploadBtn) logoUploadBtn.disabled = !serialSupported || busy || !logoBitmap;
+  if (logoDumpBtn) logoDumpBtn.disabled = !serialSupported || busy;
+  if (rfLogExportBtn) rfLogExportBtn.disabled = !serialSupported || busy;
+}
+
+function beginToolsOperation(name, critical) {
+  if (activeOperationToken) return null;
+  const token = toolsSerial.beginOperation(name, { critical });
+  if (!token) return null;
+  activeOperationToken = token;
+  updateActionButtons();
+  return token;
+}
+
+function endToolsOperation(token) {
+  if (!token || token !== activeOperationToken) return;
+  toolsSerial.endOperation(token);
+  activeOperationToken = null;
+  updateActionButtons();
+}
+
+window.addEventListener('beforeunload', event => {
+  const operation = toolsSerial.getSnapshot().operation;
+  if (!operation?.critical) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
+
+async function disconnect() {
+  return toolsSerial.release('operation-complete');
 }
 
 function startReading() {
@@ -591,23 +614,21 @@ function arrayToHex(arr) {
 
 // ========== FLASH FIRMWARE (from original flash.js) ==========
 flashBtn.addEventListener('click', async () => {
-  if (!firmwareData || isFlashing) return;
+  if (!firmwareData) return;
+  const operation = beginToolsOperation('flash-firmware', true);
+  if (!operation) return;
   try {
     if (!port) await connect();
     await flashFirmware();
   } catch (e) {
     log(t('flashError', e?.message ?? String(e)), 'error');
-    isFlashing = false;
-    updateFlashButton();
   } finally {
     if (port) await disconnect();
+    endToolsOperation(operation);
   }
 });
 
 async function flashFirmware() {
-  isFlashing = true;
-  updateFlashButton();
-
   if (progressContainer) progressContainer.style.display = 'block';
   updateProgress(0);
 
@@ -616,52 +637,42 @@ async function flashFirmware() {
   await sleep(1000);
   log(t('bufferContains', readBuffer.length), 'info');
 
-  try {
-    log(t('establishing'), 'info');
-    const devInfo = await waitForDeviceInfo();
-    log(t('uidLabel', arrayToHex(devInfo.uid)), 'info');
-    log(t('blVersionLabel', devInfo.blVersion), 'info');
+  log(t('establishing'), 'info');
+  const devInfo = await waitForDeviceInfo();
+  log(t('uidLabel', arrayToHex(devInfo.uid)), 'info');
+  log(t('blVersionLabel', devInfo.blVersion), 'info');
 
-    // Check bootloader version compatibility
-    const minVersion = '7.00.07';
-    if (!isBootloaderCompatible(devInfo.blVersion, minVersion)) {
-      log('==============================================', 'error');
-      log('❌ INCOMPATIBLE BOOTLOADER VERSION', 'error');
-      log(`   Detected: ${devInfo.blVersion}`, 'error');
-      log(`   Required: ${minVersion} or higher`, 'error');
-      log('', 'error');
-      log('This radio does not seem compatible with this firmware.', 'error');
-      log('Please open an issue on GitHub:', 'error');
-      log('https://github.com/armel/uv-k1-k5v3-firmware-custom', 'error');
-      log('Please, include your bootloader version in the issue:', 'error');
-      log(`   Bootloader: ${devInfo.blVersion}`, 'error');
-      log('==============================================', 'error');
-      throw new Error('Bootloader version too old');
-    }
-
-    const expectedBl = blVersionInput?.value?.trim?.() ?? '';
-    if (expectedBl !== '*' && expectedBl !== '?' && expectedBl !== '' && devInfo.blVersion !== expectedBl) {
-      log(t('blWarning', expectedBl, devInfo.blVersion), 'error');
-    }
-    log(t('deviceDetected'), 'success');
-
-    log(t('handshake'), 'info');
-    await performHandshake(devInfo.blVersion);
-    log(t('handshakeComplete'), 'success');
-
-    await programFirmware();
-
-    updateProgress(100);
-    log(t('programmingComplete'), 'success');
-
-    setTimeout(() => {
-      if (progressContainer) progressContainer.style.display = 'none';
-      updateProgress(0);
-    }, 800);
-  } finally {
-    isFlashing = false;
-    updateFlashButton();
+  // Check bootloader version compatibility
+  const minVersion = '7.00.07';
+  if (!isBootloaderCompatible(devInfo.blVersion, minVersion)) {
+    log('==============================================', 'error');
+    log('❌ INCOMPATIBLE BOOTLOADER VERSION', 'error');
+    log(`   Detected: ${devInfo.blVersion}`, 'error');
+    log(`   Required: ${minVersion} or higher`, 'error');
+    log('', 'error');
+    log('This radio does not seem compatible with this firmware.', 'error');
+    log('Please open an issue on GitHub:', 'error');
+    log('https://github.com/armel/uv-k1-k5v3-firmware-custom', 'error');
+    log('Please, include your bootloader version in the issue:', 'error');
+    log(`   Bootloader: ${devInfo.blVersion}`, 'error');
+    log('==============================================', 'error');
+    throw new Error('Bootloader version too old');
   }
+  log(t('deviceDetected'), 'success');
+
+  log(t('handshake'), 'info');
+  await performHandshake(devInfo.blVersion);
+  log(t('handshakeComplete'), 'success');
+
+  await programFirmware();
+
+  updateProgress(100);
+  log(t('programmingComplete'), 'success');
+
+  setTimeout(() => {
+    if (progressContainer) progressContainer.style.display = 'none';
+    updateProgress(0);
+  }, 800);
 }
 
 async function waitForDeviceInfo() {
@@ -803,9 +814,8 @@ async function programFirmware() {
 
 // ========== DUMP CALIBRATION ==========
 dumpBtn.addEventListener('click', async () => {
-  if (isDumping) return;
-  isDumping = true;
-  dumpBtn.disabled = true;
+  const operation = beginToolsOperation('dump-calibration', false);
+  if (!operation) return;
   progressContainer.style.display = 'block';
   updateProgress(0);
   dumpDownload.style.display = 'none';
@@ -875,17 +885,16 @@ dumpBtn.addEventListener('click', async () => {
   } catch (e) {
     log(t('error', e?.message ?? String(e)), 'error');
   } finally {
-    isDumping = false;
-    dumpBtn.disabled = false;
     if (port) await disconnect();
+    endToolsOperation(operation);
   }
 });
 
 // ========== RESTORE CALIBRATION ==========
 restoreBtn.addEventListener('click', async () => {
-  if (!calibData || isRestoring) return;
-  isRestoring = true;
-  restoreBtn.disabled = true;
+  if (!calibData) return;
+  const operation = beginToolsOperation('restore-calibration', true);
+  if (!operation) return;
   progressContainer.style.display = 'block';
   updateProgress(0);
 
@@ -954,9 +963,8 @@ restoreBtn.addEventListener('click', async () => {
   } catch (e) {
     log(t('error', e?.message ?? String(e)), 'error');
   } finally {
-    isRestoring = false;
-    updateRestoreButton();
     if (port) await disconnect();
+    endToolsOperation(operation);
   }
 });
 
@@ -1115,7 +1123,7 @@ function refreshLogoPreview() {
 }
 
 function updateLogoUploadButton() {
-  if (logoUploadBtn) logoUploadBtn.disabled = !logoBitmap || isLogoUploading;
+  updateActionButtons();
 }
 
 // ========== LOGO: FILE INPUT + LIVE PREVIEW ==========
@@ -1158,9 +1166,9 @@ if (logoInvertInput) {
 // ========== LOGO: UPLOAD ==========
 if (logoUploadBtn) {
   logoUploadBtn.addEventListener('click', async () => {
-    if (!logoBitmap || isLogoUploading) return;
-    isLogoUploading = true;
-    updateLogoUploadButton();
+    if (!logoBitmap) return;
+    const operation = beginToolsOperation('upload-logo', true);
+    if (!operation) return;
     if (progressContainer) progressContainer.style.display = 'block';
     updateProgress(0);
 
@@ -1232,9 +1240,8 @@ if (logoUploadBtn) {
     } catch (e) {
       log(t('error', e?.message ?? String(e)), 'error');
     } finally {
-      isLogoUploading = false;
-      updateLogoUploadButton();
       if (port) await disconnect();
+      endToolsOperation(operation);
     }
   });
 }
@@ -1242,9 +1249,8 @@ if (logoUploadBtn) {
 // ========== LOGO: DUMP ==========
 if (logoDumpBtn) {
   logoDumpBtn.addEventListener('click', async () => {
-    if (isLogoDumping) return;
-    isLogoDumping = true;
-    logoDumpBtn.disabled = true;
+    const operation = beginToolsOperation('dump-logo', false);
+    if (!operation) return;
     if (progressContainer) progressContainer.style.display = 'block';
     updateProgress(0);
     if (logoDumpResult) logoDumpResult.hidden = true;
@@ -1327,9 +1333,8 @@ if (logoDumpBtn) {
     } catch (e) {
       log(t('error', e?.message ?? String(e)), 'error');
     } finally {
-      isLogoDumping = false;
-      logoDumpBtn.disabled = false;
       if (port) await disconnect();
+      endToolsOperation(operation);
     }
   });
 }
@@ -1414,9 +1419,8 @@ async function collectRfLogRows() {
 
 if (rfLogExportBtn) {
   rfLogExportBtn.addEventListener('click', async () => {
-    if (isRfLogExporting) return;
-    isRfLogExporting = true;
-    rfLogExportBtn.disabled = true;
+    const operation = beginToolsOperation('export-rf-log', false);
+    if (!operation) return;
     if (progressContainer) progressContainer.style.display = 'block';
     updateProgress(0);
     if (rfLogDownload) rfLogDownload.style.display = 'none';
@@ -1453,13 +1457,12 @@ if (rfLogExportBtn) {
     } catch (e) {
       log(t('error', e?.message ?? String(e)), 'error');
     } finally {
-      isRfLogExporting = false;
-      rfLogExportBtn.disabled = false;
       if (!completed) {
         if (progressContainer) progressContainer.style.display = 'none';
         updateProgress(0);
       }
       if (port) await disconnect();
+      endToolsOperation(operation);
     }
   });
 }
@@ -1492,32 +1495,9 @@ function sleep(ms) {
 // ========== CAPABILITY CHECK ==========
 if (!('serial' in navigator)) {
   log(t('webSerialNotSupported'), 'error');
-  if (flashBtn) flashBtn.disabled = true;
-  if (dumpBtn) dumpBtn.disabled = true;
-  if (restoreBtn) restoreBtn.disabled = true;
-  if (logoUploadBtn) logoUploadBtn.disabled = true;
-  if (logoDumpBtn) logoDumpBtn.disabled = true;
-  if (rfLogExportBtn) rfLogExportBtn.disabled = true;
+  updateActionButtons();
 }
 
-// ========== AUTO TAB SELECT VIA ?mode=... ==========
+updateActionButtons();
 
-(function () {
-  const params = new URLSearchParams(window.location.search);
-  const mode = params.get("mode") || "flash";
-
-  const modeMap = {
-    flash: "tabFlash",
-    dump: "tabDump",
-    restore: "tabRestore",
-    "rf-log": "tabRfLog",
-    "logo-upload": "tabLogoUpload",
-    "logo-dump": "tabLogoDump"
-  };
-
-  const tabId = modeMap[mode];
-  if (tabId) {
-    const el = document.getElementById(tabId);
-    if (el) el.click();
-  }
 })();

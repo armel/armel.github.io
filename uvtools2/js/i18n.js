@@ -5,8 +5,12 @@
 // All comments in English.
 
 (function () {
-  const DEFAULT_LANG = localStorage.getItem('uv-k5-flasher-lang') || 'en';
-  const supported = ['en', 'fr', 'zh']; // add other codes (it, es, de) when files exist
+  const LANGUAGE_STORAGE_KEY = 'currentLanguage';
+  const LEGACY_LANGUAGE_STORAGE_KEY = 'uv-k5-flasher-lang';
+  const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  const legacyLanguage = localStorage.getItem(LEGACY_LANGUAGE_STORAGE_KEY);
+  const DEFAULT_LANG = storedLanguage || legacyLanguage || 'en';
+  const supported = ['en', 'fr', 'it', 'es', 'de', 'pt', 'ru', 'pl', 'zh', 'nl'];
 
   function loadLocale(lang) {
     const locale = window.UVTOOLS_LOCALES?.[lang];
@@ -20,6 +24,10 @@
     // Initialize i18n: load default language, set selector, bind change handler
     async init() {
       await this.setLanguage(this.lang);
+      // Migrate the former UVTools2 preference to the key shared with K5Viewer.
+      if (!storedLanguage && legacyLanguage) {
+        localStorage.setItem(LANGUAGE_STORAGE_KEY, this.lang);
+      }
       const sel = document.getElementById('languageSelect');
       if (sel) sel.value = this.lang;
       this.bindSelector();
@@ -33,7 +41,9 @@
         const lang = e.target.value;
         try {
           await this.setLanguage(lang);
-          localStorage.setItem('uv-k5-flasher-lang', this.lang);
+          localStorage.setItem(LANGUAGE_STORAGE_KEY, this.lang);
+          // Keep older UVTools2 releases in sync during the transition.
+          localStorage.setItem(LEGACY_LANGUAGE_STORAGE_KEY, this.lang);
           // Let the app refresh texts
           if (window.updateUI) window.updateUI();
         } catch (err) {
