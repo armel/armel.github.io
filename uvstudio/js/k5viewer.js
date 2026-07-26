@@ -1734,7 +1734,9 @@ applyKbdModel(kbdModel);
 // Sync keyboard enabled/disabled with connection state
 function updateKeyboardState() {
     k1Keyboard.classList.toggle('disabled', !isConnected);
-    document.querySelectorAll('.k1-btn[data-key]').forEach(button => {
+    // Scope to the keyboard node (not document) so this still works when the
+    // keypad is detached into a Picture-in-Picture window.
+    k1Keyboard.querySelectorAll('.k1-btn[data-key]').forEach(button => {
         button.disabled = !isConnected;
     });
 }
