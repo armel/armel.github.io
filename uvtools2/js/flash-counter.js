@@ -24,7 +24,12 @@
   }
 
   function render(count) {
-    if (typeof count === "number" && isFinite(count)) lastCount = count;
+    if (typeof count === "number" && isFinite(count)) {
+      // Ignore a polled value lower than what we already show (KV eventual
+      // consistency can briefly return a stale count right after a flash).
+      if (lastCount !== null && count < lastCount) return;
+      lastCount = count;
+    }
     if (lastCount === null) return;
     let formatted;
     try {
@@ -69,4 +74,12 @@
   } else {
     refresh();
   }
+
+  // Auto-refresh so flashes from other users worldwide appear without a
+  // reload. Poll only while the tab is visible, and refresh on focus.
+  const POLL_MS = 120000;
+  setInterval(() => { if (!document.hidden) refresh(); }, POLL_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refresh();
+  });
 })();
