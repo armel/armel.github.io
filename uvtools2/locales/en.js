@@ -1,8 +1,8 @@
 window.UVTOOLS_LOCALES = window.UVTOOLS_LOCALES || {};
 window.UVTOOLS_LOCALES.en =
 {
-  "title": "UV-K5 V3 & UV-K1 Web Tool",
-  "subtitle": "Firmware flasher and calibration manager via Web Serial API",
+  "title": "UVTools2",
+  "subtitle": "UV-K5 V3 & UV-K1 · Firmware, calibration, logo and RF Log — all in the browser via Web Serial API",
   "tabFlash": "Flash Firmware",
   "tabDump": "Dump Calib",
   "tabRestore": "Restore Calib",

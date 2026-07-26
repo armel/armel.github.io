@@ -1,8 +1,8 @@
 window.UVTOOLS_LOCALES = window.UVTOOLS_LOCALES || {};
 window.UVTOOLS_LOCALES.zh =
 {
-  "title": "UV-K5 V3 & UV-K1 Web 工具",
-  "subtitle": "通过 Web Serial API 进行固件写入和校准管理",
+  "title": "UVTools2",
+  "subtitle": "UV-K5 V3 & UV-K1 · 固件、校准、Logo 和 RF Log — 通过 Web Serial API 在浏览器中完成",
   "tabFlash": "写入固件",
   "tabDump": "导出校准数据",
   "tabRestore": "恢复校准数据",

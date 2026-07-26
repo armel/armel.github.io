@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>UV Studio by F4HWN</title>
+<script src="js/studio-version.js"></script>
+<link rel="icon" type="image/svg+xml" href="assets/uv-studio-radio.svg">
+<link href="css/core.css?v=3" rel="stylesheet">
+<link href="css/viewer.css?v=1" rel="stylesheet">
+<link href="css/tools.css?v=3" rel="stylesheet">
+<link href="css/studio.css?v=10" rel="stylesheet">
+</head>
+<body data-theme="light">
+
+<!-- ═══════════ Top bar ═══════════ -->
+<header class="topbar">
+    <div class="sb-brand">
+        <span class="logo-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor"
+                 stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 15V5"/>
+                <path d="M40 15v-4h7v5"/>
+                <rect x="15" y="14" width="34" height="44" rx="5"/>
+                <rect x="20" y="20" width="24" height="12" rx="2"/>
+                <g fill="currentColor" stroke="none">
+                    <circle cx="23" cy="39" r="1.7"/>
+                    <circle cx="32" cy="39" r="1.7"/>
+                    <circle cx="41" cy="39" r="1.7"/>
+                    <circle cx="23" cy="46" r="1.7"/>
+                    <circle cx="32" cy="46" r="1.7"/>
+                    <circle cx="41" cy="46" r="1.7"/>
+                    <circle cx="23" cy="53" r="1.7"/>
+                    <circle cx="32" cy="53" r="1.7"/>
+                    <circle cx="41" cy="53" r="1.7"/>
+                </g>
+            </svg>
+        </span>
+        <span class="sb-title"><span class="sb-name">UV <b>Studio</b></span><span class="sb-sub">by F4HWN</span></span>
+        <span class="topbar-divider"></span>
+        <span class="section-name" id="sectionName" data-i18n="studio_nav_live">Live Viewer</span>
+    </div>
+    <div class="topbar-actions">
+        <div class="studio-serial-status" id="studioSerialStatus"
+             data-state="disconnected" role="status" aria-live="polite"
+             aria-label="Disconnected" title="Disconnected">
+            <span class="studio-serial-dot" aria-hidden="true"></span>
+            <span class="studio-serial-text" id="studioSerialText">Disconnected</span>
+        </div>
+        <button class="btn icon theme-toggle" id="themeToggle" type="button"
+                data-i18n-title="toggle_theme" data-i18n-aria-label="toggle_theme"
+                title="Toggle theme" aria-label="Toggle theme">
+            <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="3.5"></circle>
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path>
+            </svg>
+            <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"></path>
+            </svg>
+        </button>
+        <select id="languageSelect" aria-label="Language" data-i18n-aria-label="studio_language">
+            <option value="en">🇬🇧 English</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="it">🇮🇹 Italiano</option>
+            <option value="es">🇪🇸 Español</option>
+            <option value="de">🇩🇪 Deutsch</option>
+            <option value="pt">🇵🇹 Português</option>
+            <option value="ru">🇷🇺 Русский</option>
+            <option value="pl">🇵🇱 Polski</option>
+            <option value="zh">🇨🇳 中文</option>
+            <option value="nl">🇳🇱 Nederlands</option>
+        </select>
+    </div>
+</header>
+
+<div class="shell">
+    <!-- ═══════════ Sidebar ═══════════ -->
+    <aside class="sidebar">
+        <div class="nav-group">
+            <div class="nav-label">K5Viewer</div>
+            <button class="nav-item active" aria-current="page" data-route="live" data-app="viewer" data-view="live" data-name="Live Viewer" data-section-i18n="studio_nav_live">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_live">Live Viewer</span>
+            </button>
+            <button class="nav-item" data-route="rf-log" data-app="viewer" data-view="rflog" data-name="RF Log" data-section-i18n="studio_nav_rf_log">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_rf_log">RF Log</span>
+            </button>
+        </div>
+        <div class="nav-group">
+            <div class="nav-label">UVTools</div>
+            <button class="nav-item" data-route="flash" data-app="tools" data-tool-view="flash" data-name="Flash Firmware" data-section-i18n="studio_nav_flash">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_flash">Flash Firmware</span>
+            </button>
+            <button class="nav-item" data-route="dump-calib" data-app="tools" data-tool-view="dump" data-name="Dump Calibration" data-section-i18n="studio_nav_dump_calib">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_dump_calib">Dump Calib</span>
+            </button>
+            <button class="nav-item" data-route="restore-calib" data-app="tools" data-tool-view="restore" data-name="Restore Calibration" data-section-i18n="studio_nav_restore_calib">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_restore_calib">Restore Calib</span>
+            </button>
+            <button class="nav-item" data-route="upload-logo" data-app="tools" data-tool-view="logo-upload" data-name="Upload Logo" data-section-i18n="studio_nav_upload_logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_upload_logo">Upload Logo</span>
+            </button>
+            <button class="nav-item" data-route="download-logo" data-app="tools" data-tool-view="logo-dump" data-name="Download Logo" data-section-i18n="studio_nav_download_logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_download_logo">Download Logo</span>
+            </button>
+            <button class="nav-item" data-route="export-rf-log" data-app="tools" data-tool-view="rf-log" data-name="Export RF Log" data-section-i18n="studio_nav_export_rf_log">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_export_rf_log">Export RF Log</span>
+            </button>
+        </div>
+        <div class="nav-group nav-group-studio">
+            <div class="nav-label">UV Studio</div>
+            <button class="nav-item" data-route="about" data-app="about"
+                    data-name="About" data-section-i18n="studio_nav_about">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M12 11v6"></path>
+                    <path d="M12 7h.01"></path>
+                </svg>
+                <span class="nav-item-label" data-i18n="studio_nav_about">About</span>
+            </button>
+        </div>
+        <div class="sidebar-foot">UV Studio · <span id="studioVersion">v—</span></div>
+    </aside>
+
+    <!-- ═══════════ Stage ═══════════ -->
+    <main class="stage">
+
+        <!-- ── Live Viewer (k5viewer) ── -->
+        <section class="pane active" id="pane-viewer">
+            <div class="viewer-bar">
+                <div class="status-pill" id="status" role="status" aria-live="polite"><span data-i18n="ready_to_connect">Ready to connect</span></div>
+                <div class="actions">
+                    <button class="btn primary" id="connectionBtn" data-i18n="connect">Connect</button>
+                    <button class="btn" id="keyboardToggleBtn" aria-controls="k1Keyboard" aria-expanded="true" data-i18n="toggle_keyboard_short" data-i18n-title="toggle_keyboard">Keypad</button>
+                    <button class="btn" id="helpBtn" data-i18n="help" data-i18n-title="help">Help</button>
+                </div>
+            </div>
+
+            <div class="viewer-sub active" id="view-live">
+              <main class="main">
+                <div class="viewer-layout">
+                    <div class="display-container">
+                        <canvas id="display" width="635" height="320" role="img" data-i18n-aria-label="radio_screen" aria-label="Radio screen"></canvas>
+                    </div>
+
+                    <div class="k1-keyboard" id="k1Keyboard">
+                        <div class="k1-keyboard-header">
+                            <div class="k1-model-tabs" role="group" data-i18n-aria-label="radio_model" aria-label="Radio model">
+                                <button class="k1-model-tab" id="tabK1" aria-pressed="false">UV-K1</button>
+                                <button class="k1-model-tab" id="tabK5" aria-pressed="false">UV-K5</button>
+                                <span class="radio-leds" aria-label="Radio LED state" data-i18n-aria-label="radio_led_state">
+                                    <span class="radio-led radio-led-red" id="radioLedRed" title="Red LED" data-i18n-title="radio_led_red"></span>
+                                    <span class="radio-led radio-led-green" id="radioLedGreen" title="Green LED" data-i18n-title="radio_led_green"></span>
+                                </span>
+                            </div>
+                            <div class="kb-indicator-wrap">
+                                <div class="lock-indicator" id="lockIndicator" data-i18n="radio_lock">🔒 LOCK</div>
+                                <div class="fkey-indicator" id="fKeyIndicator" data-i18n="radio_function_key"># FUNCTION KEY</div>
+                                <div class="long-press-indicator" id="longPressIndicator" data-i18n="radio_long_press">⇧ LONG PRESS</div>
+                            </div>
+                        </div>
+
+                        <div class="k1-body">
+                            <div class="k1-side-col">
+                                <button class="k1-btn k1-ptt" disabled title="PTT not available via serial" data-i18n-title="radio_ptt_unavailable"><span class="k1-btn-label">PTT</span><span class="k1-btn-sub">N/A</span></button>
+                                <button class="k1-btn k1-side" data-key="0x12"><span class="k1-btn-label">F1</span><span class="k1-btn-sub">SIDE1</span></button>
+                                <button class="k1-btn k1-side" data-key="0x11"><span class="k1-btn-label">F2</span><span class="k1-btn-sub">SIDE2</span></button>
+                            </div>
+                            <div class="k1-grid">
+                                <button class="k1-btn k1-menu" data-key="0x0A"><span class="k1-btn-label">MENU</span></button>
+                                <button class="k1-btn k1-nav" data-key="0x0B" id="btnUp"><span class="k1-btn-label">◀</span></button>
+                                <button class="k1-btn k1-nav" data-key="0x0C" id="btnDown"><span class="k1-btn-label">▶</span></button>
+                                <button class="k1-btn k1-exit" data-key="0x0D"><span class="k1-btn-label">EXIT</span></button>
+                                <button class="k1-btn k1-num" data-key="0x01"><span class="k1-btn-label">1</span><span class="k1-btn-sub">Band ,.?</span></button>
+                                <button class="k1-btn k1-num" data-key="0x02"><span class="k1-btn-label">2</span><span class="k1-btn-sub">A/B abc</span></button>
+                                <button class="k1-btn k1-num" data-key="0x03"><span class="k1-btn-label">3</span><span class="k1-btn-sub">V/M def</span></button>
+                                <button class="k1-btn k1-star" data-key="0x0E"><span class="k1-btn-label">✱</span><span class="k1-btn-sub">Scan</span></button>
+                                <button class="k1-btn k1-num" data-key="0x04"><span class="k1-btn-label">4</span><span class="k1-btn-sub">FC ghi</span></button>
+                                <button class="k1-btn k1-num" data-key="0x05"><span class="k1-btn-label">5</span><span class="k1-btn-sub">WX jkl</span></button>
+                                <button class="k1-btn k1-num" data-key="0x06"><span class="k1-btn-label">6</span><span class="k1-btn-sub">H/L mno</span></button>
+                                <button class="k1-btn k1-num" data-key="0x00"><span class="k1-btn-label">0</span><span class="k1-btn-sub">FM</span></button>
+                                <button class="k1-btn k1-num" data-key="0x07"><span class="k1-btn-label">7</span><span class="k1-btn-sub">VOX pqrs</span></button>
+                                <button class="k1-btn k1-num" data-key="0x08"><span class="k1-btn-label">8</span><span class="k1-btn-sub">R tuv</span></button>
+                                <button class="k1-btn k1-num" data-key="0x09"><span class="k1-btn-label">9</span><span class="k1-btn-sub">Call wxyz</span></button>
+                                <button class="k1-btn k1-hash" data-key="0x0F"><span class="k1-btn-label">#</span><span class="k1-btn-sub">🔑 F</span></button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+              </main>
+            </div>
+
+            <div class="viewer-sub" id="view-rflog">
+              <div class="rflog-wrap">
+                <div class="rflog-placeholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/></svg>
+                    <p><span data-i18n="studio_rf_empty_title">Connect the radio to see the RF Log here.</span><br><span data-i18n="studio_rf_empty_hint">RF Log must be supported and enabled in the firmware.</span></p>
+                </div>
+                <div class="rf-log-panel" id="rfLogPanel" aria-live="polite" hidden>
+                    <div class="rf-log-header">
+                        <span class="rf-log-title" data-i18n="rf_log">RF Log</span>
+                        <div class="rf-log-header-actions">
+                            <div class="rf-log-view-switch" role="group" aria-label="RF Log view" data-i18n-aria-label="rf_log_view">
+                                <button type="button" class="rf-log-view-btn active" data-rf-view="log" aria-pressed="true" data-i18n="rf_log_short">LOG</button>
+                                <button type="button" class="rf-log-view-btn" data-rf-view="analytics" aria-pressed="false" data-i18n="rf_analytics">ANALYTICS</button>
+                            </div>
+                            <span class="rf-log-state" id="rfLogState">--</span>
+                        </div>
+                    </div>
+                    <div class="rf-log-view active" id="rfLogTableView">
+                      <div class="rf-log-scroll">
+                        <table class="rf-log-table">
+                            <thead><tr>
+                                <th data-i18n="rf_direction">Direction</th>
+                                <th data-i18n="rf_frequency">Frequency</th>
+                                <th data-i18n="rf_channel">Channel</th>
+                                <th data-i18n="rf_duration">Duration</th>
+                                <th data-i18n="rf_signal_power">Signal / Power</th>
+                                <th data-i18n="rf_voltage">Voltage</th>
+                            </tr></thead>
+                            <tbody id="rfLogRows"><tr class="rf-log-empty"><td colspan="6">--</td></tr></tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div class="rf-log-view" id="rfAnalyticsView">
+                        <div class="rf-analytics-toolbar">
+                            <div class="rf-analytics-filter" role="group" aria-label="Direction filter" data-i18n-aria-label="rf_direction_filter">
+                                <button type="button" class="rf-filter-btn active" data-rf-filter="all" aria-pressed="true" data-i18n="rf_all">ALL</button>
+                                <button type="button" class="rf-filter-btn" data-rf-filter="rx" aria-pressed="false">RX</button>
+                                <button type="button" class="rf-filter-btn" data-rf-filter="tx" aria-pressed="false">TX</button>
+                            </div>
+                            <span class="rf-analytics-caption" id="rfAnalyticsCaption">--</span>
+                        </div>
+                        <div class="rf-analytics-stats">
+                            <div class="rf-stat-card"><span class="rf-stat-label" data-i18n="rf_activity">ACTIVITY</span><strong class="rf-stat-value" id="rfStatCount">0</strong><span class="rf-stat-detail" id="rfStatSplit">--</span></div>
+                            <div class="rf-stat-card"><span class="rf-stat-label" data-i18n="rf_airtime">AIRTIME</span><strong class="rf-stat-value" id="rfStatDuration">00:00</strong><span class="rf-stat-detail" id="rfStatAverage">--</span></div>
+                            <div class="rf-stat-card"><span class="rf-stat-label" data-i18n="rf_frequencies_short">FREQS</span><strong class="rf-stat-value" id="rfStatFrequencies">0</strong><span class="rf-stat-detail" id="rfStatChannels">--</span></div>
+                        </div>
+                        <div class="rf-analytics-head"><span data-i18n="rf_recent_activity">RECENT ACTIVITY</span><span class="rf-activity-legend"><i class="rf-dot rx"></i>RX<i class="rf-dot tx"></i>TX</span></div>
+                        <div class="rf-activity-strip" id="rfActivityStrip" aria-label="Recent RX and TX activity" data-i18n-aria-label="rf_recent_activity_aria"></div>
+                        <div class="rf-analytics-head"><span data-i18n="rf_battery">BATTERY</span><span id="rfBatteryMeta">--</span></div>
+                        <div class="rf-battery-chart" id="rfBatteryChart"></div>
+                        <div class="rf-analytics-head"><span data-i18n="rf_top_frequencies">TOP FREQUENCIES</span><span data-i18n="rf_airtime">AIRTIME</span></div>
+                        <div class="rf-top-list" id="rfTopFrequencies"></div>
+                        <div class="rf-dist-grid" id="rfDistributions"></div>
+                    </div>
+                </div>
+              </div>
+            </div>
+        </section>
+
+        <!-- ── Maintenance (uvtools2) ── -->
+        <section class="pane" id="pane-tools">
+          <div class="container">
+            <div class="tool-view active" id="flash-content" role="region">
+                <section class="section" aria-labelledby="labelFirmwareFile">
+                    <label id="labelFirmwareFile" for="firmwareFile">Firmware File (.bin)</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="firmwareFile" accept=".bin" />
+                        <div class="file-input-label" id="fileLabel">
+                            <span class="file-name" id="fileName">No file selected</span>
+                            <span class="file-button" id="fileButton">Choose file</span>
+                        </div>
+                    </div>
+                </section>
+                <button id="flashBtn" disabled aria-live="polite">Flash firmware</button>
+            </div>
+
+            <div class="tool-view" id="dump-content" role="region" hidden>
+                <section class="section">
+                    <p class="tab-description" id="dumpDescription">Extract calibration data from your UV-K5 V3 or UV-K1 device.</p>
+                    <button id="dumpBtn">Dump Calibration Data</button>
+                </section>
+                <div class="download-link" id="dumpDownload">
+                    <a href="#" id="dumpLink" download="calibration.dat"><svg class="dl-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="downloadText">Download calibration.dat</span></a>
+                </div>
+            </div>
+
+            <div class="tool-view" id="restore-content" role="region" hidden>
+                <section class="section" aria-labelledby="labelCalibFile">
+                    <label id="labelCalibFile" for="calibFile">Calibration Dump File (.dat)</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="calibFile" accept=".dat" />
+                        <div class="file-input-label" id="calibFileLabel">
+                            <span class="file-name" id="calibFileName">No file selected</span>
+                            <span class="file-button" id="calibFileButton">Choose file</span>
+                        </div>
+                    </div>
+                </section>
+                <button id="restoreBtn" disabled aria-live="polite">Restore Calibration Data</button>
+            </div>
+
+            <div class="tool-view" id="rf-log-content" role="region" hidden>
+                <section class="section">
+                    <p class="tab-description" id="rfLogDescription">Read the RF activity history from your radio and export it as CSV.</p>
+                    <button id="rfLogExportBtn">Export RF Log</button>
+                </section>
+                <div class="download-link" id="rfLogDownload">
+                    <a href="#" id="rfLogLink" download="rf-log.csv"><svg class="dl-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="rfLogDownloadText">Download rf-log.csv</span></a>
+                </div>
+            </div>
+
+            <div class="tool-view" id="logo-upload-content" role="region" hidden>
+                <section class="section">
+                    <p class="tab-description" id="logoUploadDescription">Upload a custom 128x64 boot logo to your device. Any image format is accepted (PNG, JPG, BMP, etc.).</p>
+                </section>
+                <section class="section" aria-labelledby="labelLogoFile">
+                    <label id="labelLogoFile" for="logoFile">Image File</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="logoFile" accept="image/*" />
+                        <div class="file-input-label" id="logoFileLabel">
+                            <span class="file-name" id="logoFileName">No file selected</span>
+                            <span class="file-button" id="logoFileButton">Choose file</span>
+                        </div>
+                    </div>
+                </section>
+                <section class="section logo-controls" id="logoControls" hidden>
+                    <label for="logoThreshold"><span id="labelLogoThreshold">Threshold</span>: <span id="logoThresholdValue">128</span></label>
+                    <input type="range" id="logoThreshold" min="0" max="255" value="128" />
+                    <label class="logo-checkbox-label"><input type="checkbox" id="logoInvert" /><span id="labelLogoInvert">Invert colors</span></label>
+                    <div class="logo-preview-wrapper">
+                        <span id="labelLogoPreview" class="logo-preview-label">Preview (128x64):</span>
+                        <canvas id="logoPreviewCanvas" width="128" height="64" class="logo-canvas" role="img" aria-labelledby="labelLogoPreview"></canvas>
+                    </div>
+                </section>
+                <button id="logoUploadBtn" disabled aria-live="polite">Upload Logo to Radio</button>
+            </div>
+
+            <div class="tool-view" id="logo-dump-content" role="region" hidden>
+                <section class="section">
+                    <p class="tab-description" id="logoDumpDescription">Read the current boot logo from your device and download it as a PNG.</p>
+                    <button id="logoDumpBtn">Download Logo from Radio</button>
+                </section>
+                <section class="section logo-dump-result" id="logoDumpResult" hidden>
+                    <div class="logo-preview-wrapper">
+                        <span class="logo-preview-label" id="logoDumpedLabel">Downloaded logo (128x64):</span>
+                        <canvas id="logoDumpedCanvas" width="128" height="64" class="logo-canvas" role="img" aria-labelledby="logoDumpedLabel"></canvas>
+                    </div>
+                    <div class="download-link" id="logoDumpDownload" style="display:block;">
+                        <a href="#" id="logoDumpLink" download="logo.png"><svg class="dl-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="logoDumpDownloadText">Download logo.png</span></a>
+                    </div>
+                </section>
+            </div>
+
+            <section class="progress-container" id="progressContainer" aria-live="polite">
+                <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div class="progress-fill" id="progressFill"></div>
+                    <div class="progress-label" id="progressLabel">0%</div>
+                </div>
+            </section>
+
+            <section class="log-container" aria-labelledby="logTitle">
+                <h2 class="sr-only" id="logTitle" data-i18n="logTitle">Console</h2>
+                <div class="log-header"><button class="log-toggle" id="logToggle" type="button" aria-expanded="false">Show Console</button></div>
+                <div class="log" id="log" aria-live="polite"></div>
+            </section>
+
+            <aside class="info-box" id="infoBox"><strong>Note:</strong> This application requires Chrome/Edge/Opera or Firefox 151+ on desktop.</aside>
+          </div>
+        </section>
+
+        <!-- ── About UV Studio ── -->
+        <section class="pane" id="pane-about">
+            <article class="about-card">
+                <div class="about-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 14c4-7 12-7 16 0"></path>
+                        <path d="M7 15c2.5-4 7.5-4 10 0"></path>
+                        <circle cx="12" cy="16" r="1.6" fill="currentColor" stroke="none"></circle>
+                    </svg>
+                </div>
+                <div class="about-heading">
+                    <p class="about-kicker">UV Studio</p>
+                    <h1 data-i18n="studio_about_title">About UV Studio</h1>
+                    <p class="about-intro" data-i18n="studio_about_intro">
+                        K5Viewer and UVTools2, brought together in one consistent interface.
+                    </p>
+                </div>
+                <dl class="about-details">
+                    <div>
+                        <dt data-i18n="studio_about_version">Version</dt>
+                        <dd id="aboutVersion">v—</dd>
+                    </div>
+                    <div>
+                        <dt data-i18n="studio_about_author">Author</dt>
+                        <dd>F4HWN</dd>
+                    </div>
+                    <div class="about-detail-wide">
+                        <dt data-i18n="studio_about_operation">Operation</dt>
+                        <dd data-i18n="studio_about_local">Local, directly in the browser</dd>
+                    </div>
+                </dl>
+                <p class="about-copy" data-i18n="studio_about_description">
+                    UV Studio communicates directly with compatible radios through the Web Serial API. No installation, server or account is required. UV Studio is open-source software licensed under the Apache License 2.0.
+                </p>
+                <nav class="about-links" data-i18n-aria-label="studio_about_documents" aria-label="Project documents">
+                    <a href="README.md" target="_blank" rel="noopener">README</a>
+                    <a href="LICENSE" target="_blank" rel="noopener">LICENSE</a>
+                    <a href="NOTICE" target="_blank" rel="noopener">NOTICE</a>
+                </nav>
+            </article>
+        </section>
+
+    </main>
+</div>
+
+<!-- ═══════════ Overlays (shared) ═══════════ -->
+<div class="notifications" id="notifications" role="status" aria-live="polite" aria-atomic="false"></div>
+
+<div class="modal" id="helpModal" role="dialog" aria-modal="true"
+     aria-labelledby="helpModalTitle" aria-hidden="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="helpModalTitle" data-i18n="help_title">Keyboard Controls</h2>
+            <button class="modal-close" id="closeModal" type="button"
+                    data-i18n-title="close_help" data-i18n-aria-label="close_help"
+                    title="Close help" aria-label="Close help">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="section">
+                <div class="section-title" data-i18n="display_controls">Display Controls</div>
+                <div class="shortcuts">
+                    <div class="shortcut"><span class="shortcut-key">SPACE</span><span class="shortcut-desc" data-i18n="screenshot_desc">Take a screenshot</span></div>
+                    <div class="shortcut"><span class="shortcut-key">P</span><span class="shortcut-desc" data-i18n="lcd_desc">Toggle LCD effect</span></div>
+                    <div class="shortcut"><span class="shortcut-key">K</span><span class="shortcut-desc" data-i18n="ghosting_desc">Toggle LCD ghosting effect</span></div>
+                    <div class="shortcut"><span class="shortcut-key">I</span><span class="shortcut-desc" data-i18n="invert_desc">Invert colors</span></div>
+                    <div class="shortcut"><span class="shortcut-key">+ / -</span><span class="shortcut-desc" data-i18n="pixel_size_desc">Adjust pixel size</span></div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-title" data-i18n="radio_controls">Radio Controls</div>
+                <div class="shortcuts">
+                    <div class="shortcut"><span class="shortcut-key">← → (UV-K1)</span><span class="shortcut-desc" data-i18n="radio_navigate_k1_desc">Navigate</span></div>
+                    <div class="shortcut"><span class="shortcut-key">↑ ↓ (UV-K5)</span><span class="shortcut-desc" data-i18n="radio_navigate_k5_desc">Navigate</span></div>
+                    <div class="shortcut"><span class="shortcut-key">0 – 9</span><span class="shortcut-desc" data-i18n="radio_short_desc">Short press</span></div>
+                    <div class="shortcut"><span class="shortcut-key">Shift+0 – 9</span><span class="shortcut-desc" data-i18n="radio_long_desc">Long press</span></div>
+                    <div class="shortcut"><span class="shortcut-key">Ctrl / F</span><span class="shortcut-desc" data-i18n="radio_hash_desc"># short press</span></div>
+                    <div class="shortcut"><span class="shortcut-key">Shift+Ctrl / Shift+F</span><span class="shortcut-desc" data-i18n="radio_hash_long_desc"># long press (lock)</span></div>
+                    <div class="shortcut"><span class="shortcut-key">Enter / M</span><span class="shortcut-desc" data-i18n="radio_menu_desc">MENU short press</span></div>
+                    <div class="shortcut"><span class="shortcut-key">Shift+Enter / Shift+M</span><span class="shortcut-desc" data-i18n="radio_menu_long_desc">MENU long press</span></div>
+                    <div class="shortcut"><span class="shortcut-key">Esc</span><span class="shortcut-desc" data-i18n="radio_exit_desc">EXIT</span></div>
+                    <div class="shortcut"><span class="shortcut-key">F1 / F2</span><span class="shortcut-desc" data-i18n="radio_side_desc">SIDE1 / SIDE2 short press</span></div>
+                    <div class="shortcut"><span class="shortcut-key">Shift+F1 / Shift+F2</span><span class="shortcut-desc" data-i18n="radio_side_long_desc">SIDE1 / SIDE2 long press</span></div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-title" data-i18n="color_controls">Screen color</div>
+                <div class="shortcuts">
+                    <div class="shortcut"><span class="shortcut-key">G</span><span class="shortcut-desc" data-i18n="grey_scheme">Switch to grey screen</span></div>
+                    <div class="shortcut"><span class="shortcut-key">O</span><span class="shortcut-desc" data-i18n="orange_scheme">Switch to orange screen</span></div>
+                    <div class="shortcut"><span class="shortcut-key">B</span><span class="shortcut-desc" data-i18n="blue_scheme">Switch to blue screen</span></div>
+                    <div class="shortcut"><span class="shortcut-key">W</span><span class="shortcut-desc" data-i18n="white_scheme">Switch to white screen</span></div>
+                    <div class="shortcut"><span class="shortcut-key">X</span><span class="shortcut-desc" data-i18n="olive_scheme">Olive scheme</span></div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-title" data-i18n="other_controls">Other</div>
+                <div class="shortcuts">
+                    <div class="shortcut"><span class="shortcut-key">Q</span><span class="shortcut-desc" data-i18n="quit_desc">Disconnect</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ Scripts (all local, file://-friendly) ═══════════ -->
+<script src="locales/version.js"></script>
+<script src="locales/en.js?v=6"></script>
+<script src="locales/fr.js?v=6"></script>
+<script src="locales/it.js?v=6"></script>
+<script src="locales/es.js?v=6"></script>
+<script src="locales/de.js?v=6"></script>
+<script src="locales/pt.js?v=6"></script>
+<script src="locales/ru.js?v=6"></script>
+<script src="locales/pl.js?v=6"></script>
+<script src="locales/zh.js?v=6"></script>
+<script src="locales/nl.js?v=6"></script>
+<script src="js/studio-preferences.js?v=1"></script>
+<script src="js/studio-i18n.js?v=2"></script>
+<script src="js/studio-serial.js?v=2"></script>
+<script src="js/rf-log.js?v=2"></script>
+<script src="js/k5viewer.js?v=8"></script>
+<script src="js/flash.js?v=4"></script>
+<script src="js/studio.js?v=9"></script>
+</body>
+</html>
