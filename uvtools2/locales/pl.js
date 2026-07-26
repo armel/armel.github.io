@@ -2,6 +2,8 @@ window.UVTOOLS_LOCALES = window.UVTOOLS_LOCALES || {};
 window.UVTOOLS_LOCALES.pl =
 {
   "title": "UVTools2",
+  "flash_counter_unit": "wgrań",
+  "flash_counter_title": "Firmware'ów wgranych do dziś",
   "subtitle": "UV-K5 V3 & UV-K1 · Firmware, kalibracja, logo i RF Log — wszystko w przeglądarce przez Web Serial API",
   "tabFlash": "Wgraj Firmware",
   "tabDump": "Zrzut Kalib.",

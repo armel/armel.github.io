@@ -2,6 +2,8 @@ window.UVTOOLS_LOCALES = window.UVTOOLS_LOCALES || {};
 window.UVTOOLS_LOCALES.ru =
 {
   "title": "UVTools2",
+  "flash_counter_unit": "прошивок",
+  "flash_counter_title": "Прошивок записано на сегодня",
   "subtitle": "UV-K5 V3 & UV-K1 · Прошивка, калибровка, логотип и RF Log — всё в браузере через Web Serial API",
   "tabFlash": "Прошить",
   "tabDump": "Дамп калибр.",

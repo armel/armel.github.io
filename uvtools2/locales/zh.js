@@ -2,6 +2,8 @@ window.UVTOOLS_LOCALES = window.UVTOOLS_LOCALES || {};
 window.UVTOOLS_LOCALES.zh =
 {
   "title": "UVTools2",
+  "flash_counter_unit": "次刷写",
+  "flash_counter_title": "迄今刷写的固件次数",
   "subtitle": "UV-K5 V3 & UV-K1 · 固件、校准、Logo 和 RF Log — 通过 Web Serial API 在浏览器中完成",
   "tabFlash": "写入固件",
   "tabDump": "导出校准数据",

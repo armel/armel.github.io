@@ -156,6 +156,8 @@ function t(key, ...args) {
 
 // ========== UI UPDATE ==========
 window.updateUI = function updateUI() {
+  // Keep the flash-counter label/number in sync with the active language.
+  if (window.UVToolsFlashCounter) window.UVToolsFlashCounter.updateLabel();
   // Brand name + version (e.g. "UVTools2 v2.4.0"), like k5viewer's title.
   if (titleEl) {
     titleEl.textContent = window.UVTOOLS_VERSION
@@ -653,6 +655,10 @@ async function flashFirmware() {
 
     updateProgress(100);
     log(t('programmingComplete'), 'success');
+
+    // Global community counter (shared with UV Studio): firmware flashed OK.
+    // Best-effort — never blocks or fails the flash.
+    try { window.UVToolsFlashCounter && window.UVToolsFlashCounter.increment(); } catch (e) {}
 
     setTimeout(() => {
       if (progressContainer) progressContainer.style.display = 'none';

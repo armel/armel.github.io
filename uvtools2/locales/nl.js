@@ -2,6 +2,8 @@ window.UVTOOLS_LOCALES = window.UVTOOLS_LOCALES || {};
 window.UVTOOLS_LOCALES.nl =
 {
   "title": "UVTools2",
+  "flash_counter_unit": "firmwares geflasht",
+  "flash_counter_title": "Firmwares geflasht tot nu toe",
   "subtitle": "UV-K5 V3 & UV-K1 · Firmware, kalibratie, logo en RF Log — alles in de browser via Web Serial API",
   "tabFlash": "Firmware flashen",
   "tabDump": "Kalib. uitlezen",

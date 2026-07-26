@@ -9,7 +9,7 @@
   <title>UVTools2 by F4HWN</title>
   <link rel="icon" type="image/svg+xml" href="img/uvtools2-favicon-color-v2.svg">
   <link rel="stylesheet" href="css/theme.css?v=1.0" />
-  <link rel="stylesheet" href="css/style.css?v=2.4" />
+  <link rel="stylesheet" href="css/style.css?v=2.5" />
 </head>
 <body data-theme="light">
   <main class="container">
@@ -21,6 +21,11 @@
         </h1>
       </div>
       <div class="header-controls">
+        <div class="flash-counter" id="flashCounter" role="status" aria-live="polite" hidden>
+          <span class="flash-counter-icon" aria-hidden="true">🔥</span>
+          <span class="flash-counter-value" id="flashCounterValue">—</span>
+          <span class="flash-counter-unit" id="flashCounterUnit">firmwares flashed</span>
+        </div>
         <button class="btn" id="themeToggle" type="button" aria-label="Toggle theme">◐</button>
         <label for="languageSelect" class="sr-only">Language</label>
         <select id="languageSelect" aria-label="Language">
@@ -194,19 +199,20 @@
   </main>
 
   <script src="js/theme-toggle.js?v=1.0"></script>
-  <script src="locales/version.js?v=2.4"></script>
-  <script src="locales/en.js?v=2.4"></script>
-  <script src="locales/fr.js?v=2.4"></script>
-  <script src="locales/it.js?v=2.4"></script>
-  <script src="locales/es.js?v=2.4"></script>
-  <script src="locales/de.js?v=2.4"></script>
-  <script src="locales/pt.js?v=2.4"></script>
-  <script src="locales/ru.js?v=2.4"></script>
-  <script src="locales/pl.js?v=2.4"></script>
-  <script src="locales/zh.js?v=2.4"></script>
-  <script src="locales/nl.js?v=2.4"></script>
-  <script src="js/i18n.js?v=2.4"></script>
-  <script src="js/rf-log.js?v=2.4"></script>
-  <script src="js/flash.js?v=2.4"></script>
+  <script src="locales/version.js?v=2.5"></script>
+  <script src="locales/en.js?v=2.5"></script>
+  <script src="locales/fr.js?v=2.5"></script>
+  <script src="locales/it.js?v=2.5"></script>
+  <script src="locales/es.js?v=2.5"></script>
+  <script src="locales/de.js?v=2.5"></script>
+  <script src="locales/pt.js?v=2.5"></script>
+  <script src="locales/ru.js?v=2.5"></script>
+  <script src="locales/pl.js?v=2.5"></script>
+  <script src="locales/zh.js?v=2.5"></script>
+  <script src="locales/nl.js?v=2.5"></script>
+  <script src="js/i18n.js?v=2.5"></script>
+  <script src="js/rf-log.js?v=2.5"></script>
+  <script src="js/flash.js?v=2.5"></script>
+  <script src="js/flash-counter.js?v=2.5"></script>
 </body>
 </html>
