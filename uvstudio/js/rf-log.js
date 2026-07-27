@@ -221,6 +221,17 @@
     return meter > 9 ? `S9+${String(meter - 9).padStart(2, '0')}` : `S${meter}`;
   }
 
+  function countDistinctMemoryChannels(rows) {
+    return new Set(Array.from(rows)
+      .filter(row => row.channel !== CHANNEL_NONE)
+      .map(row => {
+        const name = String(row.channelName || '').trim();
+        return name
+          ? `${row.frequency}:${name}`
+          : `${row.frequency}:#${row.channel}`;
+      })).size;
+  }
+
   function spreadsheetSafe(value) {
     const text = String(value ?? '');
     return /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
@@ -299,6 +310,7 @@
     mergeRows,
     limitVisibleRows,
     groupRowsBySession,
+    countDistinctMemoryChannels,
     rowsToCsv,
     featureKeepalive
   };

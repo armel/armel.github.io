@@ -205,6 +205,7 @@
 
 #pane-viewer .k1-model-tab {
     flex: 0 0 auto;
+    height: 24px;
     border-radius: 6px;
     font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
     font-size: 10px;
@@ -221,7 +222,9 @@
     margin-top: 12px;
     padding-top: 10px;
     border-top: 1px solid rgba(0,0,0,0.14);
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    --rf-ui-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --rf-data-font: var(--font-mono);
+    font-family: var(--rf-data-font);
     width: 100%;
 }
 
@@ -250,8 +253,6 @@
     --rf-hairline: rgba(100,116,139,.24);
     --rf-card: rgba(255,255,255,.42);
     --rf-chip: rgba(148,163,184,.16);
-    --rf-chip-active: #334155;
-    --rf-chip-active-ink: #f8fafc;
 }
 
 [data-theme="dark"] #pane-viewer .rf-log-panel {
@@ -265,40 +266,45 @@
     --rf-hairline: rgba(148,163,184,.2);
     --rf-card: rgba(15,23,42,.3);
     --rf-chip: rgba(15,23,42,.4);
-    --rf-chip-active: #475569;
 }
 
 #pane-viewer .rf-log-view-switch,
 #pane-viewer .rf-analytics-filter {
     display: inline-flex;
     align-items: center;
-    padding: 2px;
-    border: 1px solid var(--rf-hairline);
-    border-radius: 7px;
-    background: var(--rf-chip);
+    gap: 4px;
 }
 
 #pane-viewer .rf-log-view-btn,
 #pane-viewer .rf-filter-btn {
     appearance: none;
-    border: 0;
-    border-radius: 5px;
-    background: transparent;
-    color: var(--rf-ink-2);
-    font: 700 9px/1 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    height: 24px;
+    padding: 3px 10px;
+    border: 1px solid #9ca3af;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.5);
+    color: #6b7280;
+    font-family: var(--rf-data-font);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
     letter-spacing: .5px;
-    padding: 4px 8px;
     cursor: pointer;
-    transition: background .15s ease, color .15s ease;
+    transition: background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
 }
 
 #pane-viewer .rf-log-view-btn:hover,
-#pane-viewer .rf-filter-btn:hover { color: var(--rf-ink); }
+#pane-viewer .rf-filter-btn:hover {
+    border-color: #2563eb;
+    color: #2563eb;
+}
 
 #pane-viewer .rf-log-view-btn.active,
 #pane-viewer .rf-filter-btn.active {
-    color: var(--rf-chip-active-ink);
-    background: var(--rf-chip-active);
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.3);
 }
 
 #pane-viewer .rf-log-view { display: none; }
@@ -319,6 +325,7 @@
     background: rgba(255,255,255,0.45);
     border: 1px solid rgba(107,114,128,0.45);
     color: #6b7280;
+    font-family: var(--rf-ui-font);
     font-size: 10px;
     font-weight: 800;
     line-height: 1.2;
@@ -427,7 +434,8 @@
     padding: 2px;
     text-align: center;
     color: var(--rf-ink-2);
-    font-size: 8px;
+    font-family: var(--rf-ui-font);
+    font-size: 9.5px;
     font-weight: 800;
     letter-spacing: 1.2px;
     opacity: .75;
@@ -444,7 +452,8 @@
 #pane-viewer .rf-analytics-caption,
 #pane-viewer .rf-analytics-head {
     color: var(--rf-ink-2);
-    font-size: 9px;
+    font-family: var(--rf-ui-font);
+    font-size: 10px;
     font-weight: 800;
     letter-spacing: .5px;
 }
@@ -478,10 +487,12 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--rf-ink-2);
-    font-size: 9px;
+    font-size: 9.5px;
     font-weight: 700;
     letter-spacing: .4px;
 }
+
+#pane-viewer .rf-stat-label { font-family: var(--rf-ui-font); }
 
 #pane-viewer .rf-stat-value {
     display: block;
@@ -514,7 +525,10 @@
     border: 0;
     background: transparent;
     color: var(--rf-ink-2);
-    font: 800 9px/1 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    font-family: var(--rf-ui-font);
+    font-size: 9.5px;
+    font-weight: 800;
+    line-height: 1;
     letter-spacing: .4px;
     cursor: pointer;
 }
@@ -541,7 +555,8 @@
     justify-content: space-between;
     gap: 10px;
     color: var(--rf-ink-2);
-    font-size: 9px;
+    font-family: var(--rf-ui-font);
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: .35px;
 }
@@ -555,6 +570,7 @@
     flex: 0 0 auto;
     text-align: right;
     white-space: nowrap;
+    font-family: var(--rf-data-font);
     font-variant-numeric: tabular-nums;
 }
 
@@ -574,7 +590,8 @@
     border-radius: 4px;
     background: var(--rf-chip);
     color: var(--rf-ink-2);
-    font-size: 8px;
+    font-family: var(--rf-ui-font);
+    font-size: 8.5px;
 }
 
 #pane-viewer .rf-session-traffic {
@@ -615,7 +632,13 @@
     gap: 3px 10px;
     margin-top: 5px;
     color: var(--rf-ink-2);
-    font-size: 9px;
+    font-family: var(--rf-ui-font);
+    font-size: 9.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+#pane-viewer .rf-session-mono {
+    font-family: var(--rf-data-font);
     font-variant-numeric: tabular-nums;
 }
 
@@ -638,6 +661,7 @@
 #pane-viewer .rf-session-battery-base {
     stroke: var(--rf-hairline);
     stroke-width: 1;
+    vector-effect: non-scaling-stroke;
 }
 
 #pane-viewer .rf-session-battery-area {
@@ -651,6 +675,7 @@
     stroke-width: 1.35;
     stroke-linecap: round;
     stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
 }
 
 #pane-viewer .rf-session-battery-empty {
@@ -804,7 +829,8 @@
     padding: 14px 8px;
     color: var(--rf-ink-2);
     text-align: center;
-    font-size: 9px;
+    font-family: var(--rf-ui-font);
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: .4px;
 }
@@ -842,6 +868,27 @@
     background: rgba(245,158,11,0.16);
     border-color: rgba(245,158,11,0.5);
     color: #fcd34d;
+}
+
+[data-theme="dark"] #pane-viewer .rf-log-view-btn,
+[data-theme="dark"] #pane-viewer .rf-filter-btn {
+    border-color: #334155;
+    background: transparent;
+    color: #64748b;
+}
+
+[data-theme="dark"] #pane-viewer .rf-log-view-btn:hover,
+[data-theme="dark"] #pane-viewer .rf-filter-btn:hover {
+    border-color: #3b82f6;
+    color: #93c5fd;
+}
+
+[data-theme="dark"] #pane-viewer .rf-log-view-btn.active,
+[data-theme="dark"] #pane-viewer .rf-filter-btn.active {
+    border-color: #3b82f6;
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: #fff;
+    box-shadow: 0 0 8px rgba(59,130,246,0.4);
 }
 
 [data-theme="dark"] #pane-viewer .rf-log-scroll {

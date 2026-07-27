@@ -279,6 +279,7 @@ body {
     background: var(--rf-log-head-bg);
     border: 0;
     border-bottom: 1px solid var(--border);
+    font-family: var(--rf-ui-font);
     font-size: 10.5px;
     font-weight: 700;
     letter-spacing: 0.01em;
