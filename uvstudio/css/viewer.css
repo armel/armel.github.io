@@ -638,6 +638,7 @@
 #pane-viewer .rf-session-battery-base {
     stroke: var(--rf-hairline);
     stroke-width: 1;
+    vector-effect: non-scaling-stroke;
 }
 
 #pane-viewer .rf-session-battery-area {
@@ -651,6 +652,7 @@
     stroke-width: 1.35;
     stroke-linecap: round;
     stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
 }
 
 #pane-viewer .rf-session-battery-empty {
