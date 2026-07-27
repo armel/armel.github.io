@@ -79,3 +79,16 @@ test('keeps an empty current session but discards empty historical sessions', ()
   assert.equal(sessions[0].marker.sequence, 2);
   assert.deepEqual(sessions[0].rows, []);
 });
+
+test('counts memory channels by frequency and name rather than internal channel ID', () => {
+  const rows = [
+    { frequency: 44600625, channel: 9, channelName: 'PMR01' },
+    { frequency: 44600625, channel: 749, channelName: 'PMR01' },
+    { frequency: 44601875, channel: 10, channelName: 'PMR02' },
+    { frequency: 44601875, channel: 750, channelName: 'PMR02' },
+    { frequency: 44600625, channel: 19, channelName: 'PMR ALT' },
+    { frequency: 14550000, channel: rf.CHANNEL_NONE, channelName: '' }
+  ];
+
+  assert.equal(rf.countDistinctMemoryChannels(rows), 3);
+});

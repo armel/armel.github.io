@@ -565,9 +565,7 @@ function updateRfAnalytics() {
     const totalDuration = rows.reduce((sum, row) => sum + row.durationSeconds, 0);
     const averageDuration = rows.length ? Math.round(totalDuration / rows.length) : 0;
     const frequencyCount = new Set(rows.map(row => row.frequency)).size;
-    const channelCount = new Set(rows
-        .filter(row => row.channel !== RXTX_LOG_CHANNEL_NONE)
-        .map(row => row.channel)).size;
+    const channelCount = RF_LOG.countDistinctMemoryChannels(rows);
 
     if (rfAnalyticsCaption) {
         rfAnalyticsCaption.textContent = rfAnalyticsFilter === 'all'
@@ -648,7 +646,6 @@ function renderRfBattery(allRows) {
         svg += `<line x1="${bx}" y1="0" x2="${bx}" y2="${height}" stroke="var(--rf-hairline)" stroke-width="1"><title>${t('rf_power_on')}</title></line>`;
     });
     const last = points.length - 1;
-    svg += `<circle cx="${x(last).toFixed(1)}" cy="${y(points[last]).toFixed(1)}" r="2.5" fill="var(--rf-batt)"><title>${points[last].toFixed(2)} V</title></circle>`;
     svg += '</svg>';
     rfBatteryChart.innerHTML = svg;
 }
@@ -717,10 +714,10 @@ function renderRfSessions(allRows) {
             : '';
         const mostUsedDirections = [
             mostUsedRx !== null
-                ? `${t('rf_session_rx_most_active')} ${formatRfFrequency(mostUsedRx)} MHz`
+                ? `${t('rf_session_rx_most_active')} <span class="rf-session-mono">${formatRfFrequency(mostUsedRx)} MHz</span>`
                 : '',
             mostUsedTx !== null
-                ? `${t('rf_session_tx_most_used')} ${formatRfFrequency(mostUsedTx)} MHz`
+                ? `${t('rf_session_tx_most_used')} <span class="rf-session-mono">${formatRfFrequency(mostUsedTx)} MHz</span>`
                 : ''
         ].filter(Boolean);
         const mostUsedText = mostUsedDirections.length
@@ -745,7 +742,7 @@ function renderRfSessions(allRows) {
                         <span class="tx">TX <b>${txRows.length}</b> · ${formatRfDuration(txDuration)}</span>
                     </div>
                     <div class="rf-session-meta">
-                        <span>${frequencies.size} ${t('rf_frequencies_short')} · ${mostUsedText}</span>
+                        <span><span class="rf-session-mono">${frequencies.size}</span> ${t('rf_frequencies')} · ${mostUsedText}</span>
                     </div>
                 </div>
                 <div class="rf-session-battery">
