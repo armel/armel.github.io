@@ -24,6 +24,13 @@ test('loads resilient preferences before i18n and application consumers', () => 
   assert.ok(preferences > 0 && preferences < i18n && i18n < viewer && viewer < studio);
 });
 
+test('keeps live-view-only controls out of the RF Log toolbar', () => {
+  ['keyboardToggleBtn', 'keyboardDetachBtn', 'helpBtn'].forEach(id => {
+    assert.match(html, new RegExp(`class="[^"]*viewer-live-only[^"]*" id="${id}"`));
+  });
+  assert.match(html, /id="pane-viewer" data-viewer-mode="live"/);
+});
+
 test('maps every maintenance route directly to an existing tool view', () => {
   const views = [...html.matchAll(/data-tool-view="([^"]+)"/g)].map(match => match[1]);
   assert.deepEqual(views, ['flash', 'dump', 'restore', 'logo-upload', 'logo-dump', 'rf-log']);

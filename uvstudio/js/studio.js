@@ -143,6 +143,7 @@
 
         if (app === "viewer") {
             const viewerMode = view || "live";
+            paneViewer.dataset.viewerMode = viewerMode;
             viewLive.classList.toggle("active", viewerMode === "live");
             viewRflog.classList.toggle("active", viewerMode === "rflog");
         } else if (app === "tools" && toolView) {

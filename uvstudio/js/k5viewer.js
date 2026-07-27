@@ -116,9 +116,11 @@ const rfStatDuration = document.getElementById('rfStatDuration');
 const rfStatAverage = document.getElementById('rfStatAverage');
 const rfStatFrequencies = document.getElementById('rfStatFrequencies');
 const rfStatChannels = document.getElementById('rfStatChannels');
-const rfActivityStrip = document.getElementById('rfActivityStrip');
 const rfBatteryMeta = document.getElementById('rfBatteryMeta');
 const rfBatteryChart = document.getElementById('rfBatteryChart');
+const rfSessions = document.getElementById('rfSessions');
+const rfSessionsToggle = document.getElementById('rfSessionsToggle');
+const rfTopFrequenciesLabel = document.getElementById('rfTopFrequenciesLabel');
 const rfTopFrequencies = document.getElementById('rfTopFrequencies');
 const rfDistributions = document.getElementById('rfDistributions');
 let rfLogCache = new Map();
@@ -126,6 +128,8 @@ let rfLogLiveRow = null;
 let rfLogStatusFlags = 0;
 let rfLogRestartPending = true;
 let rfAnalyticsFilter = 'all';
+let rfSessionsExpanded = false;
+let rfAnalyticsResizeFrame = null;
 let serialSession = 0;
 
 document.querySelectorAll('[data-rf-view]').forEach(button => {
@@ -143,6 +147,13 @@ document.querySelectorAll('[data-rf-filter]').forEach(button => {
         updateRfAnalytics();
     });
 });
+
+if (rfSessionsToggle) {
+    rfSessionsToggle.addEventListener('click', () => {
+        rfSessionsExpanded = !rfSessionsExpanded;
+        updateRfAnalytics();
+    });
+}
 
 // Load local storage
 const pixelSizeLocal = parseInt(preferences.get('pixelSize', ''), 10);
@@ -546,7 +557,6 @@ function updateRfAnalytics() {
     if (!rfAnalyticsView || !rfAnalyticsView.classList.contains('active')) return;
 
     const allRows = Array.from(rfLogCache.values()).sort((a, b) => b.trafficSeq - a.trafficSeq);
-    const markers = allRows.filter(row => (row.flags & RF_LOG_FLAG_SESSION) !== 0);
     const traffic = allRows.filter(row => (row.flags & RF_LOG_FLAG_SESSION) === 0);
     const rows = traffic.filter(row => rfAnalyticsFilter === 'all' ||
         (rfAnalyticsFilter === 'tx') === ((row.flags & RF_LOG_FLAG_TX) !== 0));
@@ -571,38 +581,22 @@ function updateRfAnalytics() {
     if (rfStatFrequencies) rfStatFrequencies.textContent = frequencyCount;
     if (rfStatChannels) rfStatChannels.textContent = t(channelCount === 1 ? 'rf_channel_count' : 'rf_channels_count', { count: channelCount });
 
-    renderRfActivityStrip(rows, markers);
     renderRfBattery(allRows);
+    renderRfSessions(allRows);
     renderRfTopFrequencies(rows);
     renderRfDistributions(rows);
 }
 
-function renderRfActivityStrip(rows, markers) {
-    if (!rfActivityStrip) return;
-    const recent = rows.slice(0, 48);
-    if (recent.length === 0) {
-        rfActivityStrip.innerHTML = `<span class="rf-analytics-empty">${t('rf_no_activity')}</span>`;
-        return;
-    }
-
-    // Interleave the session markers that fall inside the shown window,
-    // oldest entry on the left, newest on the right.
-    const floorSeq = recent[recent.length - 1].trafficSeq;
-    const items = recent
-        .concat(markers.filter(marker => marker.trafficSeq > floorSeq))
-        .sort((a, b) => a.trafficSeq - b.trafficSeq);
-    const maxDuration = Math.max(1, ...recent.map(row => row.durationSeconds));
-    rfActivityStrip.innerHTML = items.map(row => {
-        if ((row.flags & RF_LOG_FLAG_SESSION) !== 0) {
-            return `<span class="rf-activity-gap" title="${t('rf_power_on')}"></span>`;
-        }
-        const tx = (row.flags & RF_LOG_FLAG_TX) !== 0;
-        // Square-root scale keeps short bursts visible next to long activities
-        const height = 12 + Math.round(Math.sqrt(row.durationSeconds / maxDuration) * 88);
-        const label = `${tx ? 'TX' : 'RX'} ${formatRfFrequency(row.frequency)} — ${formatRfDuration(row.durationSeconds)}`;
-        return `<span class="rf-activity-pulse${tx ? ' tx' : ''}" style="height:${height}%" title="${label}"></span>`;
-    }).join('');
+function scheduleRfAnalyticsResize() {
+    if (!rfAnalyticsView || !rfAnalyticsView.classList.contains('active')) return;
+    if (rfAnalyticsResizeFrame !== null) cancelAnimationFrame(rfAnalyticsResizeFrame);
+    rfAnalyticsResizeFrame = requestAnimationFrame(() => {
+        rfAnalyticsResizeFrame = null;
+        updateRfAnalytics();
+    });
 }
+
+window.addEventListener('resize', scheduleRfAnalyticsResize);
 
 // Battery voltage over the whole cached log. Power-on boundaries remain
 // visible, but the curve stays continuous because a reboot is not missing
@@ -659,6 +653,153 @@ function renderRfBattery(allRows) {
     rfBatteryChart.innerHTML = svg;
 }
 
+function renderRfSessions(allRows) {
+    if (!rfSessions || !rfSessionsToggle) return;
+    const sessions = RF_LOG.groupRowsBySession(allRows);
+    if (sessions.length === 0) {
+        rfSessions.innerHTML = `<div class="rf-analytics-empty">${t('rf_no_activity')}</div>`;
+        rfSessionsToggle.hidden = true;
+        return;
+    }
+
+    const visibleSessions = rfSessionsExpanded ? sessions : sessions.slice(0, 3);
+    rfSessionsToggle.hidden = sessions.length <= 3;
+    rfSessionsToggle.textContent = t(rfSessionsExpanded
+        ? 'rf_sessions_show_less'
+        : 'rf_sessions_show_all');
+    rfSessionsToggle.setAttribute('aria-expanded', String(rfSessionsExpanded));
+
+    const allSessionVoltages = sessions.flatMap(session => session.rows
+        .filter(row => row.battVolt !== RF_LOG_BATT_UNKNOWN)
+        .map(row => (RF_LOG_BATT_OFFSET + row.battVolt) / 100));
+    let voltageScaleMin = allSessionVoltages.length ? Math.min(...allSessionVoltages) : 0;
+    let voltageScaleMax = allSessionVoltages.length ? Math.max(...allSessionVoltages) : 0;
+    if (voltageScaleMax - voltageScaleMin < 0.05) {
+        const middle = (voltageScaleMin + voltageScaleMax) / 2;
+        voltageScaleMin = middle - 0.025;
+        voltageScaleMax = middle + 0.025;
+    }
+
+    rfSessions.innerHTML = visibleSessions.map((session, index) => {
+        const rows = session.rows;
+        const rxRows = rows.filter(row => (row.flags & RF_LOG_FLAG_TX) === 0);
+        const txRows = rows.filter(row => (row.flags & RF_LOG_FLAG_TX) !== 0);
+        const rxDuration = rxRows.reduce((sum, row) => sum + row.durationSeconds, 0);
+        const txDuration = txRows.reduce((sum, row) => sum + row.durationSeconds, 0);
+        const totalDuration = rxDuration + txDuration;
+        const rxWidth = totalDuration ? (rxDuration / totalDuration) * 100 : 0;
+        const txWidth = totalDuration ? (txDuration / totalDuration) * 100 : 0;
+        const frequencies = new Map();
+        rows.forEach(row => {
+            const duration = frequencies.get(row.frequency) || 0;
+            frequencies.set(row.frequency, duration + row.durationSeconds);
+        });
+        const mostUsedRx = findMostUsedRfFrequency(rxRows);
+        const mostUsedTx = findMostUsedRfFrequency(txRows);
+
+        const voltages = rows
+            .filter(row => row.battVolt !== RF_LOG_BATT_UNKNOWN)
+            .map(row => (RF_LOG_BATT_OFFSET + row.battVolt) / 100);
+        let battery = '--';
+        if (voltages.length > 0) {
+            const start = voltages[0];
+            const end = voltages[voltages.length - 1];
+            const delta = end - start;
+            const sign = delta < 0 ? '−' : '+';
+            battery = `${start.toFixed(2)} V → ${end.toFixed(2)} V · ${sign}${Math.abs(delta).toFixed(2)} V`;
+        }
+
+        const label = index === 0
+            ? t('rf_session_current')
+            : t('rf_session_ago', { count: index });
+        const partial = session.partial
+            ? `<span class="rf-session-badge">${t('rf_session_partial')}</span>`
+            : '';
+        const mostUsedDirections = [
+            mostUsedRx !== null
+                ? `${t('rf_session_rx_most_active')} ${formatRfFrequency(mostUsedRx)} MHz`
+                : '',
+            mostUsedTx !== null
+                ? `${t('rf_session_tx_most_used')} ${formatRfFrequency(mostUsedTx)} MHz`
+                : ''
+        ].filter(Boolean);
+        const mostUsedText = mostUsedDirections.length
+            ? mostUsedDirections.join(' · ')
+            : t('rf_no_activity');
+        const batteryChart = renderRfSessionBattery(
+            voltages, voltageScaleMin, voltageScaleMax, battery);
+
+        return `<section class="rf-session-row" role="listitem">
+            <div class="rf-session-title">
+                <span><strong>${label}</strong> / ${t('rf_session_activity_count', { count: rows.length })}${partial}</span>
+                <span class="rf-session-battery-summary">${battery}</span>
+            </div>
+            <div class="rf-session-body">
+                <div class="rf-session-data">
+                    <div class="rf-session-traffic">
+                        <span class="rx">RX <b>${rxRows.length}</b> · ${formatRfDuration(rxDuration)}</span>
+                        <span class="rf-session-track">
+                            ${rxWidth ? `<i class="rx" style="width:${rxWidth.toFixed(1)}%"></i>` : ''}
+                            ${txWidth ? `<i class="tx" style="width:${txWidth.toFixed(1)}%"></i>` : ''}
+                        </span>
+                        <span class="tx">TX <b>${txRows.length}</b> · ${formatRfDuration(txDuration)}</span>
+                    </div>
+                    <div class="rf-session-meta">
+                        <span>${frequencies.size} ${t('rf_frequencies_short')} · ${mostUsedText}</span>
+                    </div>
+                </div>
+                <div class="rf-session-battery">
+                    ${batteryChart}
+                </div>
+            </div>
+        </section>`;
+    }).join('');
+}
+
+function findMostUsedRfFrequency(rows) {
+    const airtimeByFrequency = new Map();
+    rows.forEach(row => {
+        airtimeByFrequency.set(
+            row.frequency,
+            (airtimeByFrequency.get(row.frequency) || 0) + row.durationSeconds
+        );
+    });
+    const mostUsed = Array.from(airtimeByFrequency.entries())
+        .sort((a, b) => b[1] - a[1])[0];
+    return mostUsed ? mostUsed[0] : null;
+}
+
+function renderRfSessionBattery(voltages, scaleMin, scaleMax, tooltip) {
+    if (voltages.length === 0) {
+        return '<div class="rf-session-battery-empty">--</div>';
+    }
+
+    const width = 112;
+    const height = 38;
+    const pad = 2;
+    const span = Math.max(0.05, scaleMax - scaleMin);
+    const x = index => voltages.length === 1
+        ? width / 2
+        : pad + (index / (voltages.length - 1)) * (width - pad * 2);
+    const y = voltage => height - pad -
+        ((voltage - scaleMin) / span) * (height - pad * 2);
+    const coords = voltages.map((voltage, index) =>
+        `${x(index).toFixed(1)},${y(voltage).toFixed(1)}`);
+
+    let svg = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${escapeRfHtml(t('rf_battery_chart_aria'))}"><title>${escapeRfHtml(tooltip)}</title>`;
+    svg += `<line x1="0" y1="${height - 0.5}" x2="${width}" y2="${height - 0.5}" class="rf-session-battery-base"></line>`;
+    if (voltages.length > 1) {
+        svg += `<polygon points="${x(0).toFixed(1)},${height - 1} ${coords.join(' ')} ${x(voltages.length - 1).toFixed(1)},${height - 1}" class="rf-session-battery-area"></polygon>`;
+        svg += `<polyline points="${coords.join(' ')}" class="rf-session-battery-line"></polyline>`;
+    } else {
+        const level = y(voltages[0]).toFixed(1);
+        svg += `<polygon points="${pad},${height - 1} ${pad},${level} ${width - pad},${level} ${width - pad},${height - 1}" class="rf-session-battery-area"></polygon>`;
+        svg += `<line x1="${pad}" y1="${level}" x2="${width - pad}" y2="${level}" class="rf-session-battery-line"></line>`;
+    }
+    svg += '</svg>';
+    return svg;
+}
+
 function renderRfTopFrequencies(rows) {
     if (!rfTopFrequencies) return;
     const groups = new Map();
@@ -686,7 +827,10 @@ function renderRfTopFrequencies(rows) {
         }
     });
 
-    const top = Array.from(groups.values()).sort((a, b) => b.duration - a.duration).slice(0, 10);
+    const top = Array.from(groups.values()).sort((a, b) => b.duration - a.duration).slice(0, 20);
+    if (rfTopFrequenciesLabel) {
+        rfTopFrequenciesLabel.textContent = t('rf_top_frequencies', { count: top.length });
+    }
     if (top.length === 0) {
         rfTopFrequencies.innerHTML = `<div class="rf-analytics-empty">${t('rf_no_activity')}</div>`;
         return;
@@ -705,8 +849,8 @@ function renderRfTopFrequencies(rows) {
         const rxWidth = (group.rxDuration / maxDuration) * 100;
         const txWidth = (group.txDuration / maxDuration) * 100;
         const activityCounts = [
-            group.rxCount ? `${group.rxCount}R` : '',
-            group.txCount ? `${group.txCount}T` : ''
+            group.rxCount ? `${group.rxCount} RX` : '',
+            group.txCount ? `${group.txCount} TX` : ''
         ].filter(Boolean).join(' · ');
         const tip = `${channel === '-' ? '' : `${channel} · `}${frequency} MHz — ` +
             t(group.count === 1 ? 'rf_activity_tooltip' : 'rf_activities_tooltip', {

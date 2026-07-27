@@ -49,3 +49,33 @@ test('preserves power-on markers when no traffic has been recorded yet', () => {
   const marker = { frequency: 0, sequence: 7, flags: rf.FLAG_SESSION };
   assert.deepEqual(rf.limitVisibleRows([marker]), [marker]);
 });
+
+test('groups traffic into newest-first power-on sessions and marks a truncated oldest session', () => {
+  const rows = [
+    { frequency: 14500000, sequence: 1, flags: 0 },
+    { frequency: 0, sequence: 2, flags: rf.FLAG_SESSION },
+    { frequency: 14550000, sequence: 3, flags: 0 },
+    { frequency: 43350000, sequence: 4, flags: rf.FLAG_TX },
+    { frequency: 0, sequence: 5, flags: rf.FLAG_SESSION },
+    { frequency: 44600000, sequence: 6, flags: 0 }
+  ];
+
+  const sessions = rf.groupRowsBySession(rows);
+  assert.deepEqual(sessions.map(session => session.rows.map(row => row.sequence)), [
+    [6],
+    [3, 4],
+    [1]
+  ]);
+  assert.equal(sessions[0].partial, false);
+  assert.equal(sessions[2].partial, true);
+});
+
+test('keeps an empty current session but discards empty historical sessions', () => {
+  const sessions = rf.groupRowsBySession([
+    { frequency: 0, sequence: 1, flags: rf.FLAG_SESSION },
+    { frequency: 0, sequence: 2, flags: rf.FLAG_SESSION }
+  ]);
+  assert.equal(sessions.length, 1);
+  assert.equal(sessions[0].marker.sequence, 2);
+  assert.deepEqual(sessions[0].rows, []);
+});

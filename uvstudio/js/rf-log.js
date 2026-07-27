@@ -185,6 +185,32 @@
     );
   }
 
+  // Split the visible log at power-on markers. The newest session comes first.
+  // When the 512-entry window starts after a missing marker, the oldest
+  // returned session is explicitly marked as partial.
+  function groupRowsBySession(rows) {
+    const sorted = Array.from(rows).sort((a, b) => a.sequence - b.sequence);
+    const sessions = [];
+    let current = null;
+
+    sorted.forEach(row => {
+      if ((row.flags & FLAG_SESSION) !== 0) {
+        if (current) sessions.push(current);
+        current = { marker: row, rows: [], partial: false };
+        return;
+      }
+      if (!current) current = { marker: null, rows: [], partial: true };
+      current.rows.push(row);
+    });
+    if (current) sessions.push(current);
+
+    // Empty historical sessions add no analytics value, but keep an empty
+    // current session so a fresh power-on remains visible.
+    return sessions
+      .filter((session, index) => session.rows.length > 0 || index === sessions.length - 1)
+      .reverse();
+  }
+
   function formatMeter(row) {
     if (row.meter === 0xFF) return '';
     if ((row.flags & FLAG_TX) !== 0) {
@@ -272,6 +298,7 @@
     parseHistoryPacket,
     mergeRows,
     limitVisibleRows,
+    groupRowsBySession,
     rowsToCsv,
     featureKeepalive
   };
