@@ -3,8 +3,11 @@
 ;(function () {
     "use strict";
 
-    const STORAGE_KEY = "uvstudio.language";
-    const LEGACY_STORAGE_KEYS = ["currentLanguage", "uv-k5-flasher-lang"];
+    // Canonical key shared with K5Viewer and UVTools2 so the language choice
+    // follows the user across all three apps (same origin), exactly like the
+    // theme's shared "isDarkTheme" key. Older keys stay as read-only fallbacks.
+    const STORAGE_KEY = "currentLanguage";
+    const LEGACY_STORAGE_KEYS = ["uvstudio.language", "uv-k5-flasher-lang"];
     const SUPPORTED_LANGUAGES = ["en", "fr", "it", "es", "de", "pt", "ru", "pl", "zh", "nl"];
     const dictionaries = window.UVSTUDIO_LOCALES || {};
     const preferences = window.UVStudioPreferences;
@@ -109,4 +112,15 @@
         console.error("UV Studio i18n initialization failed:", error);
         window.uvStudioI18nReady = Promise.resolve(i18n);
     }
+
+    // Live-sync the language when another same-origin tab changes the shared key,
+    // so open tabs update without a manual refresh. persist:false avoids a write
+    // loop (the value is already stored).
+    window.addEventListener("storage", function (event) {
+        if (event.key !== STORAGE_KEY) return;
+        const lang = preferences.get(STORAGE_KEY, "");
+        if (lang && normalizeLanguage(lang) !== i18n.lang) {
+            i18n.setLanguage(lang, { persist: false });
+        }
+    });
 })();

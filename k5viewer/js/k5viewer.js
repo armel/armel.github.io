@@ -280,6 +280,25 @@ function toggleTheme() {
     localStorage.setItem('isDarkTheme', isDarkTheme);
 }
 
+// Live-sync theme and language when another same-origin tab (uvstudio, uvtools2, …)
+// changes them, so open tabs update without a manual refresh.
+window.addEventListener('storage', (e) => {
+    if (e.key === 'isDarkTheme') {
+        isDarkTheme = localStorage.getItem('isDarkTheme') === 'true';
+        document.body.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+        if (themeToggle) themeToggle.textContent = isDarkTheme ? '◑' : '◐';
+    } else if (e.key === 'currentLanguage') {
+        const lang = localStorage.getItem('currentLanguage');
+        if (lang && lang in TRANSLATIONS && lang !== currentLanguage) {
+            currentLanguage = lang;
+            document.documentElement.lang = lang;
+            updateUI();
+            const sel = document.getElementById('languageSelect');
+            if (sel) sel.value = lang;
+        }
+    }
+});
+
 function updateCanvasSize() {
     canvas.width = WIDTH * (pixelSize - 1);
     canvas.height = HEIGHT * pixelSize;

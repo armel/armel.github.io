@@ -190,6 +190,14 @@ if (isDarkThemeLocal !== null) {
     document.body.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
 }
 
+// Live-sync the theme when another same-origin tab changes it (the toggle icon
+// follows data-theme via CSS, so setting the attribute is enough).
+window.addEventListener('storage', (e) => {
+    if (e.key !== 'isDarkTheme') return;
+    isDarkTheme = preferences.get('isDarkTheme', 'false') === 'true';
+    document.body.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+});
+
 // Update Connect/Disconnect button
 function updateConnectionButtonState(state) {
     if (!connectionBtn) return;

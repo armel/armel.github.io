@@ -76,4 +76,17 @@
     // resolve anyway to avoid blocking app; UI will display keys if needed
     return Promise.resolve();
   });
+
+  // Live-sync the language when another same-origin tab changes it, so open
+  // tabs update without a manual refresh.
+  window.addEventListener('storage', (e) => {
+    if (e.key !== LANGUAGE_STORAGE_KEY) return;
+    const lang = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (!lang || lang === i18n.lang) return;
+    i18n.setLanguage(lang).then(() => {
+      const sel = document.getElementById('languageSelect');
+      if (sel) sel.value = i18n.lang;
+      if (window.updateUI) window.updateUI();
+    });
+  });
 })();
