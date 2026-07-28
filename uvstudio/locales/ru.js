@@ -1,5 +1,8 @@
 window.UVSTUDIO_LOCALES = window.UVSTUDIO_LOCALES || {};
 window.UVSTUDIO_LOCALES.ru = {
+  "flash_catalog_label": "Официальная прошивка F4HWN Fusion",
+  "flash_catalog_placeholder": "— Выберите версию —",
+  "flash_catalog_or": "или загрузить локальный файл",
   "title": "UVTools2",
   "subtitle": "UV-K5 V3 & UV-K1 · Прошивка, калибровка, логотип и RF Log — всё в браузере через Web Serial API",
   "loadingFromUrl": "Загрузка прошивки по URL: {0}",

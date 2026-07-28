@@ -1,5 +1,8 @@
 window.UVSTUDIO_LOCALES = window.UVSTUDIO_LOCALES || {};
 window.UVSTUDIO_LOCALES.zh = {
+  "flash_catalog_label": "F4HWN Fusion 官方固件",
+  "flash_catalog_placeholder": "— 选择版本 —",
+  "flash_catalog_or": "或加载本地文件",
   "title": "UVTools2",
   "subtitle": "UV-K5 V3 & UV-K1 · 固件、校准、Logo 和 RF Log — 通过 Web Serial API 在浏览器中完成",
   "loadingFromUrl": "正在从 URL 加载固件：{0}",
