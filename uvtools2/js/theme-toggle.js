@@ -37,4 +37,12 @@
     } else {
         bind();
     }
+
+    // Live-sync the theme when another same-origin tab (k5viewer, uvstudio, …)
+    // changes it, so open tabs update without a manual refresh.
+    window.addEventListener('storage', function (e) {
+        if (e.key !== KEY) return;
+        isDark = localStorage.getItem(KEY) === 'true';
+        apply();
+    });
 })();
