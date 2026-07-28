@@ -116,6 +116,70 @@
   white-space: nowrap;
 }
 
+/* ---------- Firmware catalog picker ---------- */
+#pane-tools .firmware-catalog {
+  margin-bottom: 14px;
+}
+
+#pane-tools #firmwareCatalogSelect {
+  width: 100%;
+  /* Override the compact, fixed-height core.css select so the field grows to a
+     full-width form control that matches the local-file picker below it. */
+  height: auto;
+  padding: 12px 40px 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--surface);
+  box-shadow: none;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+#pane-tools #firmwareCatalogSelect:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+#pane-tools #firmwareCatalogSelect:focus {
+  border-color: var(--accent);
+}
+
+#pane-tools #firmwareCatalogSelect:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* The hidden attribute must beat the display rules below (class selectors would
+   otherwise override the UA [hidden] { display: none } and keep them visible). */
+#pane-tools .firmware-catalog[hidden],
+#pane-tools .catalog-or[hidden] {
+  display: none;
+}
+
+#pane-tools .catalog-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 18px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+#pane-tools .catalog-or::before,
+#pane-tools .catalog-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
 /* ---------- Primary action buttons (contained, centered CTA) ---------- */
 /* Scaled-up .btn.primary rather than a full-width slab, to match k5viewer's
    compact button vocabulary. */

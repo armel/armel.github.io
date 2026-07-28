@@ -65,6 +65,9 @@ let port = null;
 let reader = null;
 let writer = null;
 let firmwareData = null;
+// Out-of-order guard: only the most recent selection may commit firmwareData.
+let firmwareLoadSeq = 0;
+let firmwareLoadAbort = null;
 let calibData = null;
 let activeOperationToken = null;
 let activeToolsView = 'flash';
@@ -275,10 +278,33 @@ if (firmwareFileInput) {
   firmwareFileInput.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const seq = beginFirmwareLoad('local');
     const fr = new FileReader();
-    fr.onload = (ev) => setFirmwareBuffer(ev.target.result, file.name);
+    fr.onload = (ev) => { if (seq === firmwareLoadSeq) setFirmwareBuffer(ev.target.result, file.name); };
     fr.readAsArrayBuffer(file);
   });
+}
+
+// Start a new firmware selection: bump the generation so any earlier in-flight
+// load is ignored on completion, cancel a pending download, and keep the two
+// sources (catalog vs local file) mutually exclusive.
+function beginFirmwareLoad(source) {
+  const seq = ++firmwareLoadSeq;
+  if (firmwareLoadAbort) { try { firmwareLoadAbort.abort(); } catch (e) {} firmwareLoadAbort = null; }
+  // The previous firmware is no longer current: make it unavailable so Flash is
+  // disabled until the new selection has finished loading.
+  firmwareData = null;
+  updateFlashButton();
+  if (source === 'url' && firmwareFileInput) firmwareFileInput.value = '';
+  window.dispatchEvent(new CustomEvent('uvstudio:firmwareselect', { detail: { source } }));
+  return seq;
+}
+
+function clearFirmware() {
+  firmwareData = null;
+  if (fileName) { fileName.textContent = t('fileNoFile'); fileName.classList.remove('has-file'); }
+  if (fileLabel) fileLabel.classList.remove('has-file');
+  updateFlashButton();
 }
 
 function setFirmwareBuffer(buf, name = 'firmware.bin') {
@@ -295,6 +321,9 @@ function setFirmwareBuffer(buf, name = 'firmware.bin') {
 // ---------- Auto-load firmware from URL ----------
 
 async function loadFirmwareFromURL(url) {
+  const seq = beginFirmwareLoad('url');
+  const controller = new AbortController();
+  firmwareLoadAbort = controller;
   try {
     log(t('loadingFromUrl', url), 'info');
 
@@ -319,12 +348,14 @@ async function loadFirmwareFromURL(url) {
       }
     }
 
-    const res = await fetch(urlObj.toString(), { cache: 'no-cache', mode: 'cors' });
+    const res = await fetch(urlObj.toString(), { cache: 'no-cache', mode: 'cors', signal: controller.signal });
     if (!res.ok) {
       throw new Error(`${t('urlFetchError')} HTTP ${res.status}`);
     }
 
     const buf = await res.arrayBuffer();
+    if (seq !== firmwareLoadSeq) return; // superseded by a newer selection
+
     const fname = (urlObj.pathname.split('/').pop() || 'firmware.bin').split('?')[0];
 
     setFirmwareBuffer(buf, fname);
@@ -335,7 +366,11 @@ async function loadFirmwareFromURL(url) {
     clean.searchParams.delete('fw');
     window.history.replaceState({}, '', clean.toString());
   } catch (err) {
+    if (err && err.name === 'AbortError') return; // cancelled by a newer selection
     log(`${t('urlFetchError')} ${err?.message ?? String(err)}`, 'error');
+    if (seq === firmwareLoadSeq) clearFirmware();
+  } finally {
+    if (firmwareLoadAbort === controller) firmwareLoadAbort = null;
   }
 }
 
@@ -349,6 +384,12 @@ async function maybeLoadFirmwareFromQuery() {
     log(t('urlInvalid'), 'error');
   }
 }
+
+// Minimal entry point so the firmware catalog picker can reuse the URL loader.
+window.UVStudioFlash = Object.freeze({
+  loadFirmwareFromURL,
+  hasFirmware: () => Boolean(firmwareData)
+});
 
 function updateFlashButton() {
   updateActionButtons();
@@ -615,11 +656,13 @@ function arrayToHex(arr) {
 // ========== FLASH FIRMWARE (from original flash.js) ==========
 flashBtn.addEventListener('click', async () => {
   if (!firmwareData) return;
+  // Snapshot the buffer so a download finishing mid-flash cannot swap it out.
+  const fw = firmwareData;
   const operation = beginToolsOperation('flash-firmware', true);
   if (!operation) return;
   try {
     if (!port) await connect();
-    await flashFirmware();
+    await flashFirmware(fw);
   } catch (e) {
     log(t('flashError', e?.message ?? String(e)), 'error');
   } finally {
@@ -628,7 +671,7 @@ flashBtn.addEventListener('click', async () => {
   }
 });
 
-async function flashFirmware() {
+async function flashFirmware(fw) {
   if (progressContainer) progressContainer.style.display = 'block';
   updateProgress(0);
 
@@ -664,7 +707,7 @@ async function flashFirmware() {
   await performHandshake(devInfo.blVersion);
   log(t('handshakeComplete'), 'success');
 
-  await programFirmware();
+  await programFirmware(fw);
 
   updateProgress(100);
   log(t('programmingComplete'), 'success');
@@ -753,8 +796,8 @@ async function performHandshake(blVersion) {
   log(t('bufferCleaned', readBuffer.length), 'info');
 }
 
-async function programFirmware() {
-  const pageCount = Math.ceil(firmwareData.length / 256);
+async function programFirmware(fw) {
+  const pageCount = Math.ceil(fw.length / 256);
   const timestamp = Date.now() & 0xffffffff;
   log(t('programming', pageCount), 'info');
 
@@ -771,8 +814,8 @@ async function programFirmware() {
     view.setUint16(10, pageCount, true);
 
     const offset = pageIndex * 256;
-    const len = Math.min(256, firmwareData.length - offset);
-    for (let i = 0; i < len; i++) msg[16 + i] = firmwareData[offset + i];
+    const len = Math.min(256, fw.length - offset);
+    for (let i = 0; i < len; i++) msg[16 + i] = fw[offset + i];
 
     await sendMessage(msg);
 

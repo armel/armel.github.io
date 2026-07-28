@@ -1,5 +1,8 @@
 window.UVSTUDIO_LOCALES = window.UVSTUDIO_LOCALES || {};
 window.UVSTUDIO_LOCALES.pt = {
+  "flash_catalog_label": "Firmware oficial F4HWN Fusion",
+  "flash_catalog_placeholder": "— Escolher uma versão —",
+  "flash_catalog_or": "ou carregar um ficheiro local",
   "title": "UVTools2",
   "subtitle": "UV-K5 V3 & UV-K1 · Firmware, calibração, logótipo e RF Log — tudo no navegador via Web Serial API",
   "loadingFromUrl": "A carregar o firmware a partir do URL: {0}",
