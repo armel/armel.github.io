@@ -146,7 +146,7 @@ PREVIOUS_TAG="$(
     printf '\n## Installation\n\n'
     printf '1. Download `%s`.\n' "$ARCHIVE_NAME"
     printf '%s\n' '2. Extract the archive.'
-    printf '%s\n' '3. Open `index.html` using Chrome or Microsoft Edge.'
+    printf '%s\n' '3. Open `index.html` using Chrome/Edge/Opera or Firefox 151+ !'
 } >"$NOTES_PATH"
 
 printf '\nRelease candidate ready:\n'
