@@ -8,6 +8,13 @@ const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const studioVersionSource = fs.readFileSync(path.join(root, 'js', 'studio-version.js'), 'utf8');
+
+test('keeps the public version and its cache key aligned', () => {
+  const version = studioVersionSource.match(/UVSTUDIO_VERSION = "([^"]+)"/)?.[1];
+  assert.ok(version);
+  assert.match(html, new RegExp(`js/studio-version\\.js\\?v=${version.replaceAll('.', '\\.')}`));
+});
 
 test('loads the shared RF Log protocol before both consumers', () => {
   const rf = html.indexOf('js/rf-log.js');
@@ -29,6 +36,13 @@ test('keeps live-view-only controls out of the RF Log toolbar', () => {
     assert.match(html, new RegExp(`class="[^"]*viewer-live-only[^"]*" id="${id}"`));
   });
   assert.match(html, /id="pane-viewer" data-viewer-mode="live"/);
+});
+
+test('exposes the responsive sidebar toggle to assistive technologies', () => {
+  assert.match(html, /id="hamburgerMenu"[^>]*data-i18n-aria-label="toggle_menu"/);
+  assert.match(html, /id="hamburgerMenu"[^>]*aria-controls="studioSidebar"/);
+  assert.match(html, /id="hamburgerMenu"[^>]*aria-expanded="true"/);
+  assert.match(html, /<aside class="sidebar" id="studioSidebar">/);
 });
 
 test('maps every maintenance route directly to an existing tool view', () => {

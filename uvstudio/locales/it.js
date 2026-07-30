@@ -289,5 +289,6 @@ window.UVSTUDIO_LOCALES.it = {
   "studio_operation_restore_calibration": "Ripristino calibrazione…",
   "studio_operation_upload_logo": "Invio logo…",
   "studio_operation_dump_logo": "Lettura logo…",
-  "studio_operation_export_rf_log": "Esportazione RF Log…"
+  "studio_operation_export_rf_log": "Esportazione RF Log…",
+  "toggle_menu": "Mostra/nascondi il menu"
 };

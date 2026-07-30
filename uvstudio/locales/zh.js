@@ -289,5 +289,6 @@ window.UVSTUDIO_LOCALES.zh = {
   "studio_operation_restore_calibration": "正在恢复校准数据…",
   "studio_operation_upload_logo": "正在发送标志…",
   "studio_operation_dump_logo": "正在读取标志…",
-  "studio_operation_export_rf_log": "正在导出 RF 日志…"
+  "studio_operation_export_rf_log": "正在导出 RF 日志…",
+  "toggle_menu": "显示/隐藏菜单"
 };
