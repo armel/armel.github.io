@@ -46,6 +46,8 @@ window.UVSTUDIO_LOCALES.nl = {
   "rfLogVersionUnsupported": "Deze firmware gebruikt een niet-ondersteunde versie van het RF Log-protocol.",
   "rfLogProtocolUnavailable": "De RF Log-exportmodule kon niet worden geladen.",
   "firmwareLoaded": "Firmware geladen: {0}, grootte: {1} bytes",
+  "flash_chirp_driver_download": "CHIRP-driver v{0} downloaden",
+  "chirpDriverAvailable": "CHIRP-driver v{0} beschikbaar om te downloaden.",
   "calibLoaded": "Kalibratiebestand geladen: {0}, grootte: {1} bytes",
   "calibInvalidSize": "Ongeldige grootte van het kalibratiebestand. Verwacht 512 bytes, ontvangen {0} bytes",
   "connected": "Verbonden met seriële poort",

@@ -46,6 +46,8 @@ window.UVSTUDIO_LOCALES.pl = {
   "rfLogVersionUnsupported": "To oprogramowanie układowe korzysta z nieobsługiwanej wersji protokołu RF Log.",
   "rfLogProtocolUnavailable": "Nie udało się załadować modułu eksportu RF Log.",
   "firmwareLoaded": "Firmware załadowany: {0}, rozmiar: {1} bajtów",
+  "flash_chirp_driver_download": "Pobierz sterownik CHIRP v{0}",
+  "chirpDriverAvailable": "Sterownik CHIRP v{0} dostępny do pobrania.",
   "calibLoaded": "Plik kalibracji załadowany: {0}, rozmiar: {1} bajtów",
   "calibInvalidSize": "Nieprawidłowy rozmiar pliku kalibracji. Oczekiwano 512 bajtów, otrzymano {0} bajtów",
   "connected": "Połączono z portem szeregowym",

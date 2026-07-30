@@ -46,6 +46,8 @@ window.UVSTUDIO_LOCALES.en = {
   "rfLogVersionUnsupported": "This firmware uses an unsupported RF Log protocol version.",
   "rfLogProtocolUnavailable": "The RF Log export module could not be loaded.",
   "firmwareLoaded": "Firmware loaded: {0}, size: {1} bytes",
+  "flash_chirp_driver_download": "Download CHIRP driver v{0}",
+  "chirpDriverAvailable": "CHIRP driver v{0} available for download.",
   "calibLoaded": "Calibration file loaded: {0}, size: {1} bytes",
   "calibInvalidSize": "Invalid calibration file size. Expected 512 bytes, got {0} bytes",
   "connected": "Connected to serial port",

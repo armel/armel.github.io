@@ -46,6 +46,8 @@ window.UVSTUDIO_LOCALES.zh = {
   "rfLogVersionUnsupported": "此固件使用了不受支持的 RF 日志协议版本。",
   "rfLogProtocolUnavailable": "无法加载 RF 日志导出模块。",
   "firmwareLoaded": "固件已加载：{0}，大小：{1} 字节",
+  "flash_chirp_driver_download": "下载 CHIRP 驱动 v{0}",
+  "chirpDriverAvailable": "CHIRP 驱动 v{0} 可供下载。",
   "calibLoaded": "校准文件已加载：{0}，大小：{1} 字节",
   "calibInvalidSize": "校准文件大小无效。应为 512 字节，实际为 {0} 字节",
   "connected": "已连接到串口",

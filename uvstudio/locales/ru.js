@@ -46,6 +46,8 @@ window.UVSTUDIO_LOCALES.ru = {
   "rfLogVersionUnsupported": "Эта прошивка использует неподдерживаемую версию протокола RF Log.",
   "rfLogProtocolUnavailable": "Не удалось загрузить модуль экспорта RF Log.",
   "firmwareLoaded": "Прошивка загружена: {0}, размер: {1} байт",
+  "flash_chirp_driver_download": "Скачать драйвер CHIRP v{0}",
+  "chirpDriverAvailable": "Драйвер CHIRP v{0} доступен для скачивания.",
   "calibLoaded": "Файл калибровки загружен: {0}, размер: {1} байт",
   "calibInvalidSize": "Недопустимый размер файла калибровки. Ожидалось 512 байт, получено {0} байт",
   "connected": "Подключено к последовательному порту",

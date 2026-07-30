@@ -65,9 +65,12 @@ let port = null;
 let reader = null;
 let writer = null;
 let firmwareData = null;
+let firmwareFileName = 'firmware.bin';
 // Out-of-order guard: only the most recent selection may commit firmwareData.
 let firmwareLoadSeq = 0;
 let firmwareLoadAbort = null;
+// Version of the CHIRP driver currently offered for download, or null when none.
+let chirpDriverVersion = null;
 let calibData = null;
 let activeOperationToken = null;
 let activeToolsView = 'flash';
@@ -97,6 +100,9 @@ const logToggle = document.getElementById('logToggle');
 const languageSelect = document.getElementById('languageSelect');
 const dumpDownload = document.getElementById('dumpDownload');
 const dumpLink = document.getElementById('dumpLink');
+const chirpDriverDownload = document.getElementById('chirpDriverDownload');
+const chirpDriverLink = document.getElementById('chirpDriverLink');
+const chirpDriverText = document.getElementById('chirpDriverText');
 
 // File input labels
 const fileLabel = document.getElementById('fileLabel');
@@ -224,6 +230,10 @@ function refreshLocalizedToolsState() {
     if (calibFileLabel) calibFileLabel.classList.remove('has-file');
   }
 
+  if (chirpDriverText && chirpDriverVersion) {
+    chirpDriverText.textContent = t('flash_chirp_driver_download', chirpDriverVersion);
+  }
+
   if (languageSelect && window.uvStudioI18n) {
     languageSelect.value = window.uvStudioI18n.lang;
   }
@@ -309,6 +319,8 @@ function clearFirmware() {
 
 function setFirmwareBuffer(buf, name = 'firmware.bin') {
   firmwareData = new Uint8Array(buf);
+  firmwareFileName = name;
+  hideChirpDriverOffer();
   if (fileName) {
     fileName.textContent = name;
     fileName.classList.add('has-file');
@@ -316,6 +328,54 @@ function setFirmwareBuffer(buf, name = 'firmware.bin') {
   if (fileLabel) fileLabel.classList.add('has-file');
   log(t('firmwareLoaded', name, firmwareData.length), 'success');
   updateFlashButton();
+}
+
+// ---------- CHIRP driver offer ----------
+// F4HWN Fusion firmwares ship a matching CHIRP driver as a release asset named
+// f4hwn.fusion.chirp.v<version>.py (one driver covers UV-K1 and UV-K5 V3). After
+// a successful flash we resolve the driver for the flashed version and offer it.
+const CHIRP_DRIVER_REPO = 'armel/uv-k1-k5v3-firmware-custom';
+
+function hideChirpDriverOffer() {
+  chirpDriverVersion = null;
+  if (chirpDriverDownload) chirpDriverDownload.style.display = 'none';
+}
+
+function showChirpDriverOffer(version, url) {
+  if (!chirpDriverDownload || !chirpDriverLink) return;
+  chirpDriverVersion = version;
+  chirpDriverLink.href = url;
+  if (chirpDriverText) chirpDriverText.textContent = t('flash_chirp_driver_download', version);
+  chirpDriverDownload.style.display = 'block';
+  log(t('chirpDriverAvailable', version), 'success');
+}
+
+// Best-effort: resolve and offer the CHIRP driver for the flashed firmware.
+// Never throws — a missing driver or network hiccup must not disturb the flash.
+async function maybeOfferChirpDriver(fname) {
+  try {
+    const parse = window.UVStudioFlashCatalog?.parseFirmwareName;
+    const info = parse ? parse(fname) : null;
+    // Only versioned F4HWN Fusion builds have a matching driver (not stock
+    // Quansheng, not the unversioned development build).
+    if (!info || info.brand !== 'f4hwn' || info.isDevelopment || !info.version) return;
+
+    const tag = `v${info.version}`;
+    const apiUrl =
+      `https://api.github.com/repos/${CHIRP_DRIVER_REPO}/releases/tags/${encodeURIComponent(tag)}`;
+    const res = await fetch(apiUrl, { cache: 'no-cache', mode: 'cors' });
+    if (!res.ok) return; // no release for this version → nothing to offer
+
+    const release = await res.json();
+    const asset = (release.assets || []).find(
+      a => /chirp/i.test(a.name) && /\.py$/i.test(a.name)
+    );
+    if (!asset || !asset.browser_download_url) return;
+
+    showChirpDriverOffer(info.version, asset.browser_download_url);
+  } catch (e) {
+    // Swallowed on purpose: the driver offer is a bonus, never a failure path.
+  }
 }
 
 // ---------- Auto-load firmware from URL ----------
@@ -672,6 +732,7 @@ flashBtn.addEventListener('click', async () => {
 });
 
 async function flashFirmware(fw) {
+  hideChirpDriverOffer();
   if (progressContainer) progressContainer.style.display = 'block';
   updateProgress(0);
 
@@ -715,6 +776,9 @@ async function flashFirmware(fw) {
   // Global community counter: a firmware was successfully flashed.
   // Best-effort — never blocks or fails the flash.
   try { window.UVStudioFlashCounter?.increment(); } catch (e) {}
+
+  // Offer the matching CHIRP driver for download. Best-effort, never blocks.
+  maybeOfferChirpDriver(firmwareFileName);
 
   setTimeout(() => {
     if (progressContainer) progressContainer.style.display = 'none';
