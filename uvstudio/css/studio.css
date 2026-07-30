@@ -389,8 +389,8 @@ body {
     border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
 }
 .about-details > div { padding: 15px 18px; background: var(--bg); }
-.about-details > div:nth-child(2) { border-left: 1px solid var(--border); }
-.about-details .about-detail-wide { grid-column: 1 / -1; border-top: 1px solid var(--border); }
+.about-details > div:nth-child(even) { border-left: 1px solid var(--border); }
+.about-details > div:nth-child(n+3) { border-top: 1px solid var(--border); }
 .about-details dt {
     margin-bottom: 3px; color: var(--text-muted); font-size: 10px; font-weight: 800;
     letter-spacing: 0.08em; text-transform: uppercase;
@@ -451,8 +451,8 @@ body.sidebar-collapsed .sidebar {
     .about-mark { width: 54px; height: 54px; border-radius: 15px; }
     .about-mark svg { width: 29px; height: 29px; }
     .about-details { grid-template-columns: 1fr; }
-    .about-details > div:nth-child(2) { border-left: none; border-top: 1px solid var(--border); }
-    .about-details .about-detail-wide { grid-column: auto; }
+    .about-details > div:nth-child(even) { border-left: none; }
+    .about-details > div:nth-child(n+2) { border-top: 1px solid var(--border); }
     #view-rflog .rf-log-header {
         align-items: flex-start;
         flex-direction: column;

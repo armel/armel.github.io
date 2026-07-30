@@ -258,6 +258,8 @@ window.UVSTUDIO_LOCALES.nl = {
   "studio_about_author": "Auteur",
   "studio_about_operation": "Werking",
   "studio_about_local": "Lokaal, rechtstreeks in de browser",
+  "studio_about_compatibility": "Compatibiliteit",
+  "studio_about_devices": "UV-K5 V3 en UV-K1 met PY32F071-MCU",
   "studio_about_description": "UV Studio communiceert rechtstreeks met compatibele radio’s via de Web Serial API. Er is geen installatie, server of account nodig. UV Studio is opensourcesoftware die onder de Apache-licentie 2.0 wordt verspreid.",
   "studio_about_documents": "Projectdocumenten",
   "studio_language": "Taal",
