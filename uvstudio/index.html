@@ -4,19 +4,22 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>UV Studio by F4HWN</title>
-<script src="js/studio-version.js"></script>
+<script src="js/studio-version.js?v=1.0.1"></script>
 <link rel="icon" type="image/svg+xml" href="assets/uv-studio-radio.svg">
 <link href="css/core.css?v=3" rel="stylesheet">
 <link href="css/viewer.css?v=13" rel="stylesheet">
 <link href="css/tools.css?v=8" rel="stylesheet">
-<link href="css/studio.css?v=16" rel="stylesheet">
+<link href="css/studio.css?v=17" rel="stylesheet">
 </head>
 <body data-theme="light">
 
 <!-- ═══════════ Top bar ═══════════ -->
 <header class="topbar">
     <div class="sb-brand">
-        <button class="btn icon" id="hamburgerMenu" type="button" data-i18n-title="toggle_menu" aria-label="Toggle menu" title="Toggle menu">
+        <button class="btn icon" id="hamburgerMenu" type="button"
+                data-i18n-title="toggle_menu" data-i18n-aria-label="toggle_menu"
+                aria-controls="studioSidebar" aria-expanded="true"
+                aria-label="Toggle menu" title="Toggle menu">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="3" y1="12" x2="21" y2="12"></line>
                 <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -87,7 +90,7 @@
 
 <div class="shell">
     <!-- ═══════════ Sidebar ═══════════ -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="studioSidebar">
         <div class="nav-group">
             <div class="nav-label">K5Viewer</div>
             <button class="nav-item active" aria-current="page" data-route="live" data-app="viewer" data-view="live" data-name="Live Viewer" data-section-i18n="studio_nav_live">
@@ -498,16 +501,16 @@
 
 <!-- ═══════════ Scripts (all local, file://-friendly) ═══════════ -->
 <script src="locales/version.js"></script>
-<script src="locales/en.js?v=22"></script>
-<script src="locales/fr.js?v=22"></script>
-<script src="locales/it.js?v=22"></script>
-<script src="locales/es.js?v=22"></script>
-<script src="locales/de.js?v=22"></script>
-<script src="locales/pt.js?v=22"></script>
-<script src="locales/ru.js?v=22"></script>
-<script src="locales/pl.js?v=22"></script>
-<script src="locales/zh.js?v=22"></script>
-<script src="locales/nl.js?v=22"></script>
+<script src="locales/en.js?v=23"></script>
+<script src="locales/fr.js?v=23"></script>
+<script src="locales/it.js?v=23"></script>
+<script src="locales/es.js?v=23"></script>
+<script src="locales/de.js?v=23"></script>
+<script src="locales/pt.js?v=23"></script>
+<script src="locales/ru.js?v=23"></script>
+<script src="locales/pl.js?v=23"></script>
+<script src="locales/zh.js?v=23"></script>
+<script src="locales/nl.js?v=23"></script>
 <script src="js/studio-preferences.js?v=1"></script>
 <script src="js/studio-i18n.js?v=4"></script>
 <script src="js/studio-serial.js?v=2"></script>
@@ -516,7 +519,7 @@
 <script src="js/keypad-detach.js?v=1"></script>
 <script src="js/flash.js?v=8"></script>
 <script src="js/flash-catalog.js?v=9"></script>
-<script src="js/studio.js?v=11"></script>
+<script src="js/studio.js?v=12"></script>
 <script src="js/studio-flash-counter.js?v=2"></script>
 </body>
 </html>

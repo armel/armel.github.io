@@ -12,7 +12,7 @@
     const paneAbout = document.getElementById("pane-about");
     const viewLive = document.getElementById("view-live");
     const viewRflog = document.getElementById("view-rflog");
-    const hamburgerBtn = document.getElementById('hamburgerMenu');
+    const hamburgerBtn = document.getElementById("hamburgerMenu");
     const toolViews = Array.from(document.querySelectorAll("#pane-tools .tool-view"));
     const stage = document.querySelector(".stage");
     const version = window.UVSTUDIO_VERSION || "dev";
@@ -193,8 +193,9 @@
         if (item) void activate(item, { updateHash: false });
     });
 
-    hamburgerBtn.addEventListener('click', () => {
-        document.body.classList.toggle('sidebar-collapsed');
+    hamburgerBtn.addEventListener("click", () => {
+        const collapsed = document.body.classList.toggle("sidebar-collapsed");
+        hamburgerBtn.setAttribute("aria-expanded", String(!collapsed));
     });
 
     const initial = findRoute(readHashRoute())
