@@ -415,6 +415,7 @@ body {
 #hamburgerMenu {
     margin-right: 12px;
 }
+#hamburgerMenu svg { width: 17px; height: 17px; stroke-width: 2; }
 
 body.sidebar-collapsed .sidebar {
     display: none;

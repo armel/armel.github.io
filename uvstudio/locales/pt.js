@@ -46,6 +46,8 @@ window.UVSTUDIO_LOCALES.pt = {
   "rfLogVersionUnsupported": "Este firmware usa uma versão não suportada do protocolo RF Log.",
   "rfLogProtocolUnavailable": "Não foi possível carregar o módulo de exportação do RF Log.",
   "firmwareLoaded": "Firmware carregado: {0}, tamanho: {1} bytes",
+  "flash_chirp_driver_download": "Baixar o driver CHIRP v{0}",
+  "chirpDriverAvailable": "Driver CHIRP v{0} disponível para download.",
   "calibLoaded": "Ficheiro de calibração carregado: {0}, tamanho: {1} bytes",
   "calibInvalidSize": "Tamanho do ficheiro de calibração inválido. Esperados 512 bytes, recebidos {0} bytes",
   "connected": "Ligado à porta série",
