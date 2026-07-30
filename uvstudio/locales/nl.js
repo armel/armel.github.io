@@ -289,5 +289,6 @@ window.UVSTUDIO_LOCALES.nl = {
   "studio_operation_restore_calibration": "Kalibratie herstellen…",
   "studio_operation_upload_logo": "Logo verzenden…",
   "studio_operation_dump_logo": "Logo lezen…",
-  "studio_operation_export_rf_log": "RF-log exporteren…"
+  "studio_operation_export_rf_log": "RF-log exporteren…",
+  "toggle_menu": "Menu tonen/verbergen"
 };

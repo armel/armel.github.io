@@ -412,6 +412,14 @@ body {
     transform: translateY(-1px);
 }
 
+#hamburgerMenu {
+    margin-right: 12px;
+}
+
+body.sidebar-collapsed .sidebar {
+    display: none;
+}
+
 /* ── Responsive ── */
 @media (max-width: 860px) {
     body { overflow: auto; height: auto; }

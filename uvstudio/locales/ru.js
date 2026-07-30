@@ -289,5 +289,6 @@ window.UVSTUDIO_LOCALES.ru = {
   "studio_operation_restore_calibration": "Восстановление калибровки…",
   "studio_operation_upload_logo": "Отправка логотипа…",
   "studio_operation_dump_logo": "Чтение логотипа…",
-  "studio_operation_export_rf_log": "Экспорт журнала RF…"
+  "studio_operation_export_rf_log": "Экспорт журнала RF…",
+  "toggle_menu": "Показать/скрыть меню"
 };
