@@ -4,12 +4,12 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>UV Studio by F4HWN</title>
-<script src="js/studio-version.js?v=1.0.1"></script>
+<script src="js/studio-version.js?v=1.0.2"></script>
 <link rel="icon" type="image/svg+xml" href="assets/uv-studio-radio.svg">
 <link href="css/core.css?v=3" rel="stylesheet">
 <link href="css/viewer.css?v=13" rel="stylesheet">
 <link href="css/tools.css?v=8" rel="stylesheet">
-<link href="css/studio.css?v=17" rel="stylesheet">
+<link href="css/studio.css?v=18" rel="stylesheet">
 </head>
 <body data-theme="light">
 
@@ -398,11 +398,23 @@
         <section class="pane" id="pane-about">
             <article class="about-card">
                 <div class="about-mark" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                         stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 14c4-7 12-7 16 0"></path>
-                        <path d="M7 15c2.5-4 7.5-4 10 0"></path>
-                        <circle cx="12" cy="16" r="1.6" fill="currentColor" stroke="none"></circle>
+                    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor"
+                         stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 15V5"/>
+                        <path d="M40 15v-4h7v5"/>
+                        <rect x="15" y="14" width="34" height="44" rx="5"/>
+                        <rect x="20" y="20" width="24" height="12" rx="2"/>
+                        <g fill="currentColor" stroke="none">
+                            <circle cx="23" cy="39" r="1.7"/>
+                            <circle cx="32" cy="39" r="1.7"/>
+                            <circle cx="41" cy="39" r="1.7"/>
+                            <circle cx="23" cy="46" r="1.7"/>
+                            <circle cx="32" cy="46" r="1.7"/>
+                            <circle cx="41" cy="46" r="1.7"/>
+                            <circle cx="23" cy="53" r="1.7"/>
+                            <circle cx="32" cy="53" r="1.7"/>
+                            <circle cx="41" cy="53" r="1.7"/>
+                        </g>
                     </svg>
                 </div>
                 <div class="about-heading">
@@ -421,9 +433,13 @@
                         <dt data-i18n="studio_about_author">Author</dt>
                         <dd>F4HWN</dd>
                     </div>
-                    <div class="about-detail-wide">
+                    <div>
                         <dt data-i18n="studio_about_operation">Operation</dt>
                         <dd data-i18n="studio_about_local">Local, directly in the browser</dd>
+                    </div>
+                    <div>
+                        <dt data-i18n="studio_about_compatibility">Compatibility</dt>
+                        <dd data-i18n="studio_about_devices">UV-K5 V3 and UV-K1 with PY32F071 MCU</dd>
                     </div>
                 </dl>
                 <p class="about-copy" data-i18n="studio_about_description">
@@ -501,16 +517,16 @@
 
 <!-- ═══════════ Scripts (all local, file://-friendly) ═══════════ -->
 <script src="locales/version.js"></script>
-<script src="locales/en.js?v=23"></script>
-<script src="locales/fr.js?v=23"></script>
-<script src="locales/it.js?v=23"></script>
-<script src="locales/es.js?v=23"></script>
-<script src="locales/de.js?v=23"></script>
-<script src="locales/pt.js?v=23"></script>
-<script src="locales/ru.js?v=23"></script>
-<script src="locales/pl.js?v=23"></script>
-<script src="locales/zh.js?v=23"></script>
-<script src="locales/nl.js?v=23"></script>
+<script src="locales/en.js?v=24"></script>
+<script src="locales/fr.js?v=24"></script>
+<script src="locales/it.js?v=24"></script>
+<script src="locales/es.js?v=24"></script>
+<script src="locales/de.js?v=24"></script>
+<script src="locales/pt.js?v=24"></script>
+<script src="locales/ru.js?v=24"></script>
+<script src="locales/pl.js?v=24"></script>
+<script src="locales/zh.js?v=24"></script>
+<script src="locales/nl.js?v=24"></script>
 <script src="js/studio-preferences.js?v=1"></script>
 <script src="js/studio-i18n.js?v=4"></script>
 <script src="js/studio-serial.js?v=2"></script>

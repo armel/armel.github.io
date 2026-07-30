@@ -258,6 +258,8 @@ window.UVSTUDIO_LOCALES.ru = {
   "studio_about_author": "Автор",
   "studio_about_operation": "Режим работы",
   "studio_about_local": "Локально, непосредственно в браузере",
+  "studio_about_compatibility": "Совместимость",
+  "studio_about_devices": "UV-K5 V3 и UV-K1 на MCU PY32F071",
   "studio_about_description": "UV Studio напрямую взаимодействует с совместимыми радиостанциями через Web Serial API. Установка, сервер и учётная запись не требуются. UV Studio — программное обеспечение с открытым исходным кодом, распространяемое по лицензии Apache 2.0.",
   "studio_about_documents": "Документы проекта",
   "studio_language": "Язык",

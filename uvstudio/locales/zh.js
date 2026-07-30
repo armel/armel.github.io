@@ -258,6 +258,8 @@ window.UVSTUDIO_LOCALES.zh = {
   "studio_about_author": "作者",
   "studio_about_operation": "运行方式",
   "studio_about_local": "本地运行，直接在浏览器中使用",
+  "studio_about_compatibility": "兼容性",
+  "studio_about_devices": "UV-K5 V3 和采用 PY32F071 MCU 的 UV-K1",
   "studio_about_description": "UV Studio 通过 Web Serial API 与兼容的无线电设备直接通信。无需安装、服务器或账户。UV Studio 是依据 Apache 2.0 许可证发布的开源软件。",
   "studio_about_documents": "项目文档",
   "studio_language": "语言",

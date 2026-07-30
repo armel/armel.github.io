@@ -258,6 +258,8 @@ window.UVSTUDIO_LOCALES.de = {
   "studio_about_author": "Autor",
   "studio_about_operation": "Betrieb",
   "studio_about_local": "Lokal, direkt im Browser",
+  "studio_about_compatibility": "Kompatibilität",
+  "studio_about_devices": "UV-K5 V3 und UV-K1 mit PY32F071-MCU",
   "studio_about_description": "UV Studio kommuniziert über die Web Serial API direkt mit kompatiblen Funkgeräten. Es sind weder Installation noch Server oder Konto erforderlich. UV Studio ist Open-Source-Software und steht unter der Apache-Lizenz 2.0.",
   "studio_about_documents": "Projektdokumente",
   "studio_language": "Sprache",
