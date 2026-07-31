@@ -137,6 +137,7 @@ window.UVSTUDIO_LOCALES.it = {
   "connected_deep_sleep": "Connesso - Sospensione profonda",
   "connect": "Connetti",
   "disconnect": "Disconnetti",
+  "reboot_radio": "Riavvia",
   "help_title": "Controlli da tastiera",
   "close_help": "Chiudi la guida",
   "display_controls": "Controlli di visualizzazione",

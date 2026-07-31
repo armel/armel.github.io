@@ -31,6 +31,12 @@ const PROTOCOL_FLAGS_MASK = 0x0F;
 const PROTOCOL_FLAG_DEEP_SLEEP = 1 << 0;
 const PROTOCOL_FLAG_LED_RED = 1 << 1;
 const PROTOCOL_FLAG_LED_GREEN = 1 << 2;
+// Encrypted UART frame for the 0x05DD reboot command with an empty payload.
+const REBOOT_PACKET = new Uint8Array([
+    0xAB, 0xCD, 0x04, 0x00, 0xCB, 0x69,
+    0x14, 0xE6, 0x5B, 0xEB, 0xDC, 0xBA
+]);
+const REBOOT_FRAME_GUARD_MS = 500;
 
 // Keepalive ping period. The firmware grants a budget of 15 frames per
 // ping received, so the max frame rate is 15 / (KEEPALIVE_INTERVAL_MS / 1000).
@@ -89,12 +95,15 @@ let shiftHeld = false;
 let ctrlHeld  = false;
 let radioDeepSleep = false;
 let radioLedState = { red: false, green: false };
+let rebootPending = false;
+let rebootRequestedAt = 0;
 
 // DOM elements
 const canvas = document.getElementById('display');
 const ctx = canvas.getContext('2d');
 const status = document.getElementById('status');
 const connectionBtn = document.getElementById('connectionBtn');
+const rebootBtn = document.getElementById('rebootBtn');
 const notifications = document.getElementById('notifications');
 const themeToggle = document.getElementById('themeToggle');
 const helpBtn = document.getElementById('helpBtn');
@@ -201,6 +210,8 @@ window.addEventListener('storage', (e) => {
 // Update Connect/Disconnect button
 function updateConnectionButtonState(state) {
     if (!connectionBtn) return;
+
+    if (rebootBtn) rebootBtn.disabled = state !== 'connected';
     
     if (state === 'connected') {
         connectionBtn.disabled = false;
@@ -370,6 +381,8 @@ async function connectSerial() {
         reader = port.readable.getReader();
         writer = port.writable.getWriter();
         
+        rebootPending = false;
+        rebootRequestedAt = 0;
         isConnected = true;
         radioDeepSleep = false;
         updateRadioLeds(false, false);
@@ -421,6 +434,8 @@ async function closeSerialResources() {
 }
 
 async function disconnectSerial(context = {}) {
+    rebootPending = false;
+    rebootRequestedAt = 0;
     isConnected = false;
     serialSession++;
     radioDeepSleep = false;
@@ -458,6 +473,26 @@ async function disconnectSerial(context = {}) {
 const viewerSerial = window.UVStudioSerial.register('viewer', {
     disconnect: disconnectSerial
 });
+
+async function rebootRadio() {
+    if (!writer || !isConnected || !viewerSerial.isOwner()) return;
+
+    rebootBtn.disabled = true;
+    rebootPending = true;
+    rebootRequestedAt = performance.now();
+    updateStatus(t('rebooting'));
+    showNotification('rebooting', {}, 'info');
+
+    try {
+        await writer.write(REBOOT_PACKET);
+    } catch (error) {
+        rebootPending = false;
+        rebootRequestedAt = 0;
+        rebootBtn.disabled = !isConnected;
+        showNotification('connection_error', { error: error.message }, 'error');
+        console.error('Radio reboot error:', error);
+    }
+}
 
 async function sendKeepalive() {
     if (!writer || !isConnected) return;
@@ -1403,9 +1438,20 @@ function updateFPS() {
     frameCount++;
     const now = performance.now();
 
-    // First real frame after auto-reconnect
-    if (firstFrameAfterReconnect) {
+    const reconnected = firstFrameAfterReconnect;
+    const rebootCompleted = rebootPending &&
+        now - rebootRequestedAt >= REBOOT_FRAME_GUARD_MS;
+
+    if (reconnected) {
         firstFrameAfterReconnect = false;
+    }
+
+    if (rebootCompleted) {
+        rebootPending = false;
+        rebootRequestedAt = 0;
+        rebootBtn.disabled = false;
+        showNotification('rebootComplete', {}, 'success');
+    } else if (reconnected && !rebootPending) {
         showNotification('serial_reconnected', {}, 'success');
     }
     
@@ -1513,6 +1559,11 @@ connectionBtn.addEventListener('click', (event) => {
     } else {
         void connectSerial();
     }
+});
+
+rebootBtn.addEventListener('click', (event) => {
+    if (event.detail > 0) rebootBtn.blur();
+    void rebootRadio();
 });
 
 // Close modal when clicking outside

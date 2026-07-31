@@ -137,6 +137,7 @@ window.UVSTUDIO_LOCALES.nl = {
   "connected_deep_sleep": "Verbonden - Diepe slaap",
   "connect": "Verbinden",
   "disconnect": "Verbinding verbreken",
+  "reboot_radio": "Herstarten",
   "help_title": "Toetsenbordbediening",
   "close_help": "Hulp sluiten",
   "display_controls": "Beeldschermbediening",

@@ -137,6 +137,7 @@ window.UVSTUDIO_LOCALES.fr = {
   "connected_deep_sleep": "Connecté - Veille profonde",
   "connect": "Connexion",
   "disconnect": "Déconnexion",
+  "reboot_radio": "Redémarrer",
   "help_title": "Contrôles clavier",
   "close_help": "Fermer l’aide",
   "display_controls": "Affichage",
