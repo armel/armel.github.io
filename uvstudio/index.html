@@ -108,6 +108,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>
                 <span class="nav-item-label" data-i18n="studio_nav_flash">Flash Firmware</span>
             </button>
+            <button class="nav-item" data-route="firmware-slots" data-app="tools" data-tool-view="slots" data-name="Firmware Slots" data-section-i18n="studio_nav_slots">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_slots">Firmware Slots</span>
+            </button>
             <button class="nav-item" data-route="dump-calib" data-app="tools" data-tool-view="dump" data-name="Dump Calibration" data-section-i18n="studio_nav_dump_calib">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
                 <span class="nav-item-label" data-i18n="studio_nav_dump_calib">Dump Calib</span>
@@ -377,6 +381,51 @@
                     </div>
                     <div class="download-link" id="logoDumpDownload" style="display:block;">
                         <a href="#" id="logoDumpLink" download="logo.png"><svg class="dl-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="logoDumpDownloadText">Download logo.png</span></a>
+                    </div>
+                </section>
+            </div>
+
+            <div class="tool-view" id="slots-content" role="region" hidden>
+                <section class="section">
+                    <p class="tab-description" data-i18n="slotsDescription">Store several Fusion firmwares on the radio and pick one at boot (hold MENU). Writing only touches the external flash, so the radio stays usable.</p>
+                </section>
+                <section class="section">
+                    <div class="slots-table-wrap">
+                        <table class="slots-table" id="slotsTable">
+                            <thead>
+                                <tr>
+                                    <th class="slot-col-idx" data-i18n="slotColIdx">#</th>
+                                    <th data-i18n="slotColEdition">Edition</th>
+                                    <th data-i18n="slotColVersion">Version</th>
+                                    <th data-i18n="slotColSize">Size</th>
+                                    <th data-i18n="slotColState">Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="slotsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <button id="slotsRefreshBtn" class="slots-refresh"><span data-i18n="slotsRefresh">Refresh slots</span></button>
+                </section>
+                <section class="section" aria-labelledby="labelSlotFile">
+                    <label id="labelSlotFile" for="slotFile" data-i18n="slotFileLabel">Firmware file (.bin)</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="slotFile" accept=".bin" />
+                        <div class="file-input-label" id="slotFileLabel">
+                            <span class="file-name" id="slotFileName" data-i18n="fileNoFile">No file selected</span>
+                            <span class="file-button" id="slotFileButton" data-i18n="fileChoose">Choose file</span>
+                        </div>
+                    </div>
+                    <p class="slot-meta" id="slotMeta" aria-live="polite"></p>
+                    <div class="slots-write-row">
+                        <label for="slotTarget" data-i18n="slotTargetLabel">Target slot</label>
+                        <select id="slotTarget">
+                            <option value="0">0</option>
+                            <option value="1" selected>1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                        </select>
+                        <button id="slotWriteBtn" disabled aria-live="polite"><span data-i18n="slotWriteBtn">Write to slot</span></button>
                     </div>
                 </section>
             </div>

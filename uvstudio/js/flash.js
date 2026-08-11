@@ -75,9 +75,15 @@ let calibData = null;
 let activeOperationToken = null;
 let activeToolsView = 'flash';
 let readBuffer = [];
+let serialReadRevision = 0;
+const serialReadWaiters = new Set();
 let isReading = false;
 let rfLogDownloadUrl = null;
 const serialSupported = 'serial' in navigator;
+
+// Firmware Slots state
+let slotImage = null;   // Uint8Array of the selected .bin
+let slotMeta = { name: '', fwVersion: '' };
 
 // Logo state
 let logoSourceImage = null;       // HTMLImageElement of the user-picked file
@@ -127,6 +133,17 @@ const logoDumpBtn = document.getElementById('logoDumpBtn');
 const logoDumpResult = document.getElementById('logoDumpResult');
 const logoDumpedCanvas = document.getElementById('logoDumpedCanvas');
 const logoDumpLink = document.getElementById('logoDumpLink');
+
+// Firmware Slots (multiboot) UI
+const slotFileInput = document.getElementById('slotFile');
+const slotFileLabel = document.getElementById('slotFileLabel');
+const slotFileName = document.getElementById('slotFileName');
+const slotFileButton = document.getElementById('slotFileButton');
+const slotTargetSelect = document.getElementById('slotTarget');
+const slotWriteBtn = document.getElementById('slotWriteBtn');
+const slotsRefreshBtn = document.getElementById('slotsRefreshBtn');
+const slotsTableBody = document.getElementById('slotsTableBody');
+const slotMetaEl = document.getElementById('slotMeta');
 const rfLogExportBtn = document.getElementById('rfLogExportBtn');
 const rfLogDownload = document.getElementById('rfLogDownload');
 const rfLogLink = document.getElementById('rfLogLink');
@@ -251,6 +268,8 @@ function updateInfoBox() {
     infoBoxEl.innerHTML = t('infoBoxRfLog');
   } else if (tabName === 'logo-upload' || tabName === 'logo-dump') {
     infoBoxEl.innerHTML = t('infoBoxLogo');
+  } else if (tabName === 'slots') {
+    infoBoxEl.innerHTML = t('infoBoxSlots');
   } else {
     infoBoxEl.innerHTML = t('infoBoxDump');
   }
@@ -259,11 +278,17 @@ function updateInfoBox() {
 // Refresh dynamic tool labels after the shared language changes.
 window.addEventListener('uvstudio:languagechange', () => {
   refreshLocalizedToolsState();
+  slotLocalize();
 });
 
 window.addEventListener('uvstudio:toolviewchange', event => {
-  activeToolsView = event.detail?.view || 'flash';
+  const nextView = event.detail?.view || 'flash';
+  const leavingSlots = activeToolsView === 'slots' && nextView !== 'slots';
+  activeToolsView = nextView;
   updateInfoBox();
+  if (leavingSlots && !activeOperationToken && port) {
+    void disconnect();
+  }
 });
 
 // Initial i18n sync
@@ -564,6 +589,9 @@ function updateActionButtons() {
   if (logoUploadBtn) logoUploadBtn.disabled = !serialSupported || busy || !logoBitmap;
   if (logoDumpBtn) logoDumpBtn.disabled = !serialSupported || busy;
   if (rfLogExportBtn) rfLogExportBtn.disabled = !serialSupported || busy;
+  if (slotWriteBtn) slotWriteBtn.disabled = !serialSupported || busy || !slotImage;
+  if (slotsRefreshBtn) slotsRefreshBtn.disabled = !serialSupported || busy;
+  if (slotsTableBody) slotsTableBody.querySelectorAll('button').forEach(b => { b.disabled = !serialSupported || busy; });
 }
 
 function beginToolsOperation(name, critical) {
@@ -612,7 +640,8 @@ async function readLoop() {
       }
       if (value?.length) {
         readBuffer.push(...value);
-        log(t('rxData', value.length, readBuffer.length), 'info');
+        if (activeToolsView !== 'slots') log(t('rxData', value.length, readBuffer.length), 'info');
+        notifySerialRead();
       }
     }
   } catch (e) {
@@ -622,6 +651,29 @@ async function readLoop() {
 }
 
 // ========== PROTOCOL HELPERS ==========
+function notifySerialRead() {
+  serialReadRevision++;
+  const waiters = Array.from(serialReadWaiters);
+  serialReadWaiters.clear();
+  for (const wake of waiters) wake();
+}
+
+function waitForSerialRead(afterRevision, timeoutMs) {
+  if (serialReadRevision !== afterRevision) return Promise.resolve(true);
+  return new Promise(resolve => {
+    let timer = null;
+    const wake = () => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    serialReadWaiters.add(wake);
+    timer = setTimeout(() => {
+      serialReadWaiters.delete(wake);
+      resolve(false);
+    }, timeoutMs);
+  });
+}
+
 function createMessage(msgType, dataLen) {
   const msg = new Uint8Array(4 + dataLen);
   const view = new DataView(msg.buffer);
@@ -1593,15 +1645,346 @@ function log(message, type = '') {
 
 function updateProgress(percent) {
   const rounded = Math.round(percent);
-  if (progressFill) progressFill.style.width = `${rounded}%`;
-  if (progressLabel) progressLabel.textContent = `${rounded}%`;
+  const label = `${rounded}%`;
+  const changed = progressFill
+    ? progressFill.style.width !== label
+    : Boolean(progressLabel && progressLabel.textContent !== label);
+  if (progressFill) progressFill.style.width = label;
+  if (progressLabel) progressLabel.textContent = label;
   const bar = document.querySelector('.progress-bar');
   if (bar) bar.setAttribute('aria-valuenow', String(rounded));
+  return changed;
+}
+
+function waitForProgressPaint() {
+  if (document.visibilityState !== 'visible') return Promise.resolve();
+  return new Promise(resolve => requestAnimationFrame(() => resolve()));
 }
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
+
+// ========== FIRMWARE SLOTS (multiboot) ==========
+const SLOT_COUNT = 4;
+const SLOT_IMG_OFFSET = 0x1000;   // image starts after the header sector
+const SLOT_IMG_MAX = 0x1D800;     // 118 KiB application region
+// Wire command = 8 (frame) + 4 (msg hdr) + 12 (prefix) + chunk. The firmware VCP
+// RX ring is only 256 B (VCP_RX_BUF_SIZE) with no overflow guard, so keep the whole
+// command well under that: 128 -> 152 B command, ~104 B of headroom.
+const SLOT_WRITE_CHUNK = 128;
+const SLOT_HDR_SIZE = 64;
+const SLOT_MAGIC = 0x31424D46;    // "FMB1"
+const SLOT_HDR_VERSION = 1;
+const SLOT_FLAG_COMMITTED = 1;
+const SLOT_EDITIONS = ['Fusion', 'Bandscope', 'Broadcast', 'Basic', 'RescueOps', 'Game', 'Custom'];
+
+const MSG_SLOT_INFO = 0x0720, MSG_SLOT_INFO_RESP = 0x0721;
+const MSG_SLOT_ERASE = 0x0722, MSG_SLOT_ERASE_RESP = 0x0723;
+const MSG_SLOT_WRITE = 0x0724, MSG_SLOT_WRITE_RESP = 0x0725;
+const MSG_SLOT_VALIDATE = 0x0726, MSG_SLOT_VALIDATE_RESP = 0x0727;
+
+// Firmware MB_ERR_* codes (0..8) -> i18n status keys.
+const SLOT_STATUS_KEY = ['slotStateValid', 'slotStateEmpty', 'slotStateNewHdr',
+  'slotStateIncomplete', 'slotStateBadSize', 'slotStateCrc', 'slotStateSpi',
+  'slotStateBadSlot', 'slotStateAuth'];
+function slotStatusText(code) { return t(SLOT_STATUS_KEY[code] || 'slotStateError'); }
+
+// CRC-32 (zlib/PNG, poly 0xEDB88320) — must match the firmware mb_crc32_update.
+function slotCrc32(bytes) {
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) {
+    crc ^= bytes[i];
+    for (let k = 0; k < 8; k++) crc = (crc >>> 1) ^ (0xEDB88320 & -(crc & 1));
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+// Pull edition + version out of the raw application binary (plain ASCII).
+function slotExtractMeta(bytes, filename) {
+  let text = '';
+  for (let i = 0; i < bytes.length; i++) {
+    const c = bytes[i];
+    text += (c >= 32 && c < 127) ? String.fromCharCode(c) : '\n';
+  }
+  let fwVersion = '';
+  // Author token (no '+') + version, so we match "F4HWN v5.9.0" and not the
+  // combined "EGZUMER+F4HWN v5.9.0" from the UART banner string.
+  const vm = text.match(/[A-Za-z0-9]+ v\d+\.\d+\.\d+/);
+  if (vm) fwVersion = vm[0];
+  let name = '';
+  if (filename) {
+    const filenameTokens = filename.toLowerCase().split(/[^a-z0-9]+/);
+    name = SLOT_EDITIONS.find(e => filenameTokens.includes(e.toLowerCase())) || '';
+  }
+  if (!name) {
+    const detectedEditions = SLOT_EDITIONS.filter(e => text.includes(e));
+    if (detectedEditions.length === 1) name = detectedEditions[0];
+  }
+  return { name: name.slice(0, 15), fwVersion: fwVersion.slice(0, 15) };
+}
+
+function slotBuildHeader(imageSize, crc, meta) {
+  const h = new Uint8Array(SLOT_HDR_SIZE);
+  const dv = new DataView(h.buffer);
+  dv.setUint32(0, SLOT_MAGIC, true);
+  dv.setUint16(4, SLOT_HDR_VERSION, true);
+  dv.setUint16(6, SLOT_FLAG_COMMITTED, true);
+  dv.setUint32(8, imageSize, true);
+  dv.setUint32(12, crc, true);
+  const putStr = (off, len, s) => { for (let i = 0; i < len; i++) h[off + i] = i < s.length ? (s.charCodeAt(i) & 0x7f) : 0; };
+  putStr(16, 16, meta.name || '');
+  putStr(32, 16, meta.fwVersion || '');
+  return h;
+}
+
+function slotParseHeader(b) {
+  const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const readStr = (off, len) => { let s = ''; for (let i = 0; i < len; i++) { const c = b[off + i]; if (!c) break; s += String.fromCharCode(c); } return s; };
+  return {
+    magic: dv.getUint32(0, true),
+    imageSize: dv.getUint32(8, true),
+    imageCrc32: dv.getUint32(12, true),
+    name: readStr(16, 16),
+    fwVersion: readStr(32, 16)
+  };
+}
+
+// Send one slot command and wait for its matching response; returns data bytes.
+async function slotCommand(msgType, dataBytes, respType, timeoutMs) {
+  readBuffer = [];
+  const msg = createMessage(msgType, dataBytes.length);
+  msg.set(dataBytes, 4);
+  await sendMessage(msg);
+
+  let revision = serialReadRevision;
+  const deadline = performance.now() + timeoutMs;
+  for (;;) {
+    for (;;) {
+      const buffered = readBuffer.length;
+      const resp = fetchMessage(readBuffer);
+      if (resp && resp.msgType === respType) return resp.data;
+      if (resp === null && readBuffer.length === buffered) break;
+    }
+
+    const remaining = deadline - performance.now();
+    if (remaining <= 0) break;
+    const received = await waitForSerialRead(revision, remaining);
+    revision = serialReadRevision;
+    if (!received) break;
+  }
+  throw new Error(t('slotsTimeout'));
+}
+
+async function slotInfo(slot) {
+  const data = await slotCommand(MSG_SLOT_INFO, Uint8Array.of(slot), MSG_SLOT_INFO_RESP, 3000);
+  return { slot, status: data[1], hdr: slotParseHeader(data.subarray(2, 2 + SLOT_HDR_SIZE)) };
+}
+
+async function slotErase(slot, ts) {
+  const d = new Uint8Array(6);
+  d[0] = slot;
+  new DataView(d.buffer).setUint32(2, ts, true);
+  const data = await slotCommand(MSG_SLOT_ERASE, d, MSG_SLOT_ERASE_RESP, 30000);
+  return data[1];
+}
+
+async function slotWriteChunk(slot, offset, ts, chunk) {
+  const d = new Uint8Array(12 + chunk.length);
+  const dv = new DataView(d.buffer);
+  d[0] = slot;
+  dv.setUint32(2, offset, true);
+  dv.setUint16(6, chunk.length, true);
+  dv.setUint32(8, ts, true);
+  d.set(chunk, 12);
+  const data = await slotCommand(MSG_SLOT_WRITE, d, MSG_SLOT_WRITE_RESP, 1500);
+  return data[1];
+}
+
+// Programming the same bytes onto already-erased (or matching) NOR flash is
+// idempotent, so a lost/garbled reply can be recovered by re-sending the chunk.
+async function slotWriteChunkRetry(slot, offset, ts, chunk) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await slotWriteChunk(slot, offset, ts, chunk);
+    } catch (e) {
+      if (attempt >= 4) throw e;
+      log(t('slotRetry', offset), 'info');
+      await sleep(60);
+    }
+  }
+}
+
+async function slotValidate(slot) {
+  const data = await slotCommand(MSG_SLOT_VALIDATE, Uint8Array.of(slot), MSG_SLOT_VALIDATE_RESP, 20000);
+  const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  return { crc: dv.getUint32(0, true) >>> 0, status: data[5] };
+}
+
+function slotRenderRow(slot, info) {
+  if (!slotsTableBody) return;
+  const row = slotsTableBody.querySelector(`tr[data-slot="${slot}"]`);
+  if (!row) return;
+  const valid = info && info.status === 0;
+  const committed = info && (info.status === 0 || info.status === 5); // header present (CRC may be bad)
+  const hdr = info && info.hdr;
+  row.querySelector('.slot-name').textContent = committed ? (hdr.name || '—') : '—';
+  row.querySelector('.slot-version').textContent = committed ? (hdr.fwVersion || '—') : '—';
+  row.querySelector('.slot-size').textContent = committed ? `${Math.round(hdr.imageSize / 1024)} KB` : '—';
+  const stateCell = row.querySelector('.slot-state');
+  stateCell.textContent = info ? slotStatusText(info.status) : '—';
+  stateCell.className = 'slot-state ' + (valid ? 'ok' : (info && info.status === 1 ? 'empty' : 'bad'));
+}
+
+function slotBuildTable() {
+  if (!slotsTableBody) return;
+  slotsTableBody.innerHTML = '';
+  for (let s = 0; s < SLOT_COUNT; s++) {
+    const tr = document.createElement('tr');
+    tr.dataset.slot = String(s);
+    tr.innerHTML =
+      `<td class="slot-idx">${s}</td>` +
+      `<td class="slot-name">—</td>` +
+      `<td class="slot-version">—</td>` +
+      `<td class="slot-size">—</td>` +
+      `<td><span class="slot-state">—</span></td>` +
+      `<td class="slot-actions"></td>`;
+    const eraseBtn = document.createElement('button');
+    eraseBtn.type = 'button';
+    eraseBtn.className = 'slot-act-erase';
+    eraseBtn.textContent = t('slotErase');
+    eraseBtn.addEventListener('click', () => { void slotEraseFlow(s); });
+    tr.querySelector('.slot-actions').appendChild(eraseBtn);
+    slotsTableBody.appendChild(tr);
+  }
+}
+
+// Re-localize the static slot labels after a language change.
+function slotLocalize() {
+  if (slotsTableBody) slotsTableBody.querySelectorAll('.slot-act-erase').forEach(b => { b.textContent = t('slotErase'); });
+  if (slotImage && slotMetaEl) {
+    slotMetaEl.textContent = t('slotDetected', slotMeta.name || '?', slotMeta.fwVersion || '?', Math.round(slotImage.length / 1024));
+  }
+}
+
+async function finishSlotOperation(op) {
+  try {
+    if (activeToolsView !== 'slots' && port) await disconnect();
+  } finally {
+    endToolsOperation(op);
+  }
+}
+
+async function slotRefreshFlow() {
+  const op = beginToolsOperation('slots-refresh', false);
+  if (!op) return;
+  try {
+    if (!port) await connect();
+    log(t('slotsScanning'), 'info');
+    for (let s = 0; s < SLOT_COUNT; s++) {
+      try { slotRenderRow(s, await slotInfo(s)); }
+      catch (e) { slotRenderRow(s, { slot: s, status: 6, hdr: null }); }
+    }
+    log(t('slotsScanDone'), 'success');
+  } catch (e) {
+    log(t('slotsError', e?.message ?? String(e)), 'error');
+  } finally {
+    await finishSlotOperation(op);
+  }
+}
+
+async function slotEraseFlow(slot) {
+  const op = beginToolsOperation('slots-erase', true);
+  if (!op) return;
+  try {
+    if (!port) await connect();
+    readBuffer = [];
+    await sleep(500);
+    const dev = await requestDeviceInfo();
+    log(t('slotErasing', slot), 'info');
+    const st = await slotErase(slot, dev.timestamp);
+    if (st !== 0) throw new Error(slotStatusText(st));
+    log(t('slotErased', slot), 'success');
+    slotRenderRow(slot, await slotInfo(slot));
+  } catch (e) {
+    log(t('slotsError', e?.message ?? String(e)), 'error');
+  } finally {
+    await finishSlotOperation(op);
+  }
+}
+
+async function slotWriteFlow() {
+  if (!slotImage) return;
+  const slot = slotTargetSelect ? parseInt(slotTargetSelect.value, 10) : 0;
+  if (!(slot >= 0 && slot < SLOT_COUNT)) return;
+  if (slotImage.length > SLOT_IMG_MAX) { log(t('slotTooBig'), 'error'); return; }
+
+  const op = beginToolsOperation('slots-write', true);
+  if (!op) return;
+  if (progressContainer) progressContainer.style.display = 'block';
+  updateProgress(0);
+  try {
+    if (!port) await connect();
+    readBuffer = [];
+    await sleep(500);
+    const dev = await requestDeviceInfo();
+    const ts = dev.timestamp;
+    const image = slotImage;
+    const crc = slotCrc32(image);
+
+    log(t('slotErasing', slot), 'info');
+    let st = await slotErase(slot, ts);
+    if (st !== 0) throw new Error('erase: ' + slotStatusText(st));
+
+    log(t('slotWriting', slot), 'info');
+    for (let off = 0; off < image.length; off += SLOT_WRITE_CHUNK) {
+      const chunk = image.subarray(off, Math.min(off + SLOT_WRITE_CHUNK, image.length));
+      st = await slotWriteChunkRetry(slot, SLOT_IMG_OFFSET + off, ts, chunk);
+      if (st !== 0) throw new Error('write @' + off + ': ' + slotStatusText(st));
+      const progressChanged = updateProgress(((off + chunk.length) / image.length) * 95);
+      if (progressChanged) await waitForProgressPaint();
+    }
+
+    const hdr = slotBuildHeader(image.length, crc, slotMeta);
+    st = await slotWriteChunkRetry(slot, 0, ts, hdr);
+    if (st !== 0) throw new Error('header: ' + slotStatusText(st));
+
+    updateProgress(97);
+    await waitForProgressPaint();
+    log(t('slotVerifying', slot), 'info');
+    const v = await slotValidate(slot);
+    if (v.status !== 0 || v.crc !== crc) throw new Error('verify: ' + slotStatusText(v.status));
+    updateProgress(100);
+    log(t('slotWriteOk', slot), 'success');
+    slotRenderRow(slot, await slotInfo(slot));
+    setTimeout(() => { if (progressContainer) progressContainer.style.display = 'none'; }, 1200);
+  } catch (e) {
+    log(t('slotsError', e?.message ?? String(e)), 'error');
+  } finally {
+    await finishSlotOperation(op);
+  }
+}
+
+if (slotFileInput) {
+  slotFileInput.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fr = new FileReader();
+    fr.onload = (ev) => {
+      slotImage = new Uint8Array(ev.target.result);
+      slotMeta = slotExtractMeta(slotImage, file.name);
+      if (slotFileName) { slotFileName.removeAttribute('data-i18n'); slotFileName.textContent = file.name; slotFileName.classList.add('has-file'); }
+      if (slotFileLabel) slotFileLabel.classList.add('has-file');
+      if (slotMetaEl) slotMetaEl.textContent = t('slotDetected', slotMeta.name || '?', slotMeta.fwVersion || '?', Math.round(slotImage.length / 1024));
+      log(t('slotFileLoaded', file.name), 'success');
+      updateActionButtons();
+    };
+    fr.readAsArrayBuffer(file);
+  });
+}
+if (slotWriteBtn) slotWriteBtn.addEventListener('click', () => { void slotWriteFlow(); });
+if (slotsRefreshBtn) slotsRefreshBtn.addEventListener('click', () => { void slotRefreshFlow(); });
+slotBuildTable();
 
 // ========== CAPABILITY CHECK ==========
 if (!('serial' in navigator)) {
