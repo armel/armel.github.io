@@ -35,6 +35,15 @@ test('keeps the public version and its cache key aligned', () => {
   assert.match(html, new RegExp(`js/studio-version\\.js\\?v=${version.replaceAll('.', '\\.')}`));
 });
 
+test('reconnects Firmware Slots and refreshes them after the serial port returns', () => {
+  assert.ok(flashSource.includes("navigator.serial.addEventListener('disconnect'"));
+  assert.ok(flashSource.includes("navigator.serial.addEventListener('connect'"));
+  assert.ok(flashSource.includes('navigator.serial.getPorts()'));
+  assert.ok(flashSource.includes("toolsSerial.setState('reconnecting'"));
+  assert.ok(flashSource.includes('slotRefreshPending = true'));
+  assert.ok(flashSource.includes('void slotRefreshFlow()'));
+});
+
 test('loads the shared RF Log protocol before both consumers', () => {
   const rf = html.indexOf('js/rf-log.js');
   const viewer = html.indexOf('js/k5viewer.js');

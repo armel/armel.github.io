@@ -78,12 +78,19 @@ let readBuffer = [];
 let serialReadRevision = 0;
 const serialReadWaiters = new Set();
 let isReading = false;
+let toolsSerialSession = 0;
 let rfLogDownloadUrl = null;
 const serialSupported = 'serial' in navigator;
 
 // Firmware Slots state
 let slotImage = null;   // Uint8Array of the selected .bin
 let slotMeta = { name: '', fwVersion: '' };
+let slotAutoReconnecting = false;
+let slotReconnectTimer = null;
+let slotReconnectInProgress = false;
+let slotLastPortInfo = null;
+let slotHardwareDisconnectPromise = null;
+let slotRefreshPending = false;
 
 // Logo state
 let logoSourceImage = null;       // HTMLImageElement of the user-picked file
@@ -286,8 +293,8 @@ window.addEventListener('uvstudio:toolviewchange', event => {
   const leavingSlots = activeToolsView === 'slots' && nextView !== 'slots';
   activeToolsView = nextView;
   updateInfoBox();
-  if (leavingSlots && !activeOperationToken && port) {
-    void disconnect();
+  if (leavingSlots && !activeOperationToken && toolsSerial.isOwner()) {
+    void toolsSerial.release('navigation');
   }
 });
 
@@ -512,6 +519,7 @@ function updateRestoreButton() {
 // ========== SERIAL CONNECTION ==========
 async function connect() {
   try {
+    stopSlotAutoReconnect({ forgetPort: true });
     await toolsSerial.acquire({ source: 'tools' });
     if (!toolsSerial.isOwner()) {
       throw Object.assign(new Error(t('tools_disconnected')), { code: 'UVSTUDIO_SERIAL_RELEASED' });
@@ -533,6 +541,8 @@ async function connect() {
     reader = port.readable.getReader();
     log(t('gettingWriter'), 'info');
     writer = port.writable.getWriter();
+    toolsSerialSession++;
+    slotLastPortInfo = port.getInfo();
 
     log(t('startingRead'), 'info');
     startReading();
@@ -559,6 +569,8 @@ async function connect() {
 }
 
 async function disconnectPort(context = {}) {
+  const hardwareDisconnect = context.reason === 'hardware-disconnect';
+  if (!hardwareDisconnect) stopSlotAutoReconnect({ forgetPort: true });
   isReading = false;
   const activeReader = reader;
   const activeWriter = writer;
@@ -566,6 +578,8 @@ async function disconnectPort(context = {}) {
   reader = null;
   writer = null;
   port = null;
+  if (activeReader || activeWriter || activePort) toolsSerialSession++;
+  notifySerialRead();
 
   await window.UVStudioSerial.closeResources({
     reader: activeReader,
@@ -582,7 +596,7 @@ const toolsSerial = window.UVStudioSerial.register('tools', {
 });
 
 function updateActionButtons() {
-  const busy = Boolean(activeOperationToken);
+  const busy = Boolean(activeOperationToken) || slotAutoReconnecting || slotReconnectInProgress;
   if (flashBtn) flashBtn.disabled = !serialSupported || busy || !firmwareData;
   if (dumpBtn) dumpBtn.disabled = !serialSupported || busy;
   if (restoreBtn) restoreBtn.disabled = !serialSupported || busy || !calibData;
@@ -608,6 +622,7 @@ function endToolsOperation(token) {
   toolsSerial.endOperation(token);
   activeOperationToken = null;
   updateActionButtons();
+  runPendingSlotRefresh();
 }
 
 window.addEventListener('beforeunload', event => {
@@ -631,11 +646,13 @@ function startReading() {
 
 async function readLoop() {
   log(t('startReading'), 'info');
+  let unexpectedlyClosed = false;
   try {
     while (isReading && reader) {
       const { value, done } = await reader.read();
       if (done) {
         log(t('streamClosed'), 'info');
+        unexpectedlyClosed = isReading;
         break;
       }
       if (value?.length) {
@@ -645,9 +662,128 @@ async function readLoop() {
       }
     }
   } catch (e) {
-    if (isReading) log(t('readError', e?.message ?? String(e)), 'error');
+    if (isReading) {
+      unexpectedlyClosed = true;
+      log(t('readError', e?.message ?? String(e)), 'error');
+    }
   }
   log(t('readComplete'), 'info');
+  if (unexpectedlyClosed) void handleSlotHardwareDisconnect();
+}
+
+// ========== FIRMWARE SLOTS AUTO-RECONNECT ==========
+function sameSlotPort(candidate) {
+  if (!candidate || !slotLastPortInfo) return false;
+  const info = candidate.getInfo();
+  return info.usbVendorId === slotLastPortInfo.usbVendorId &&
+    info.usbProductId === slotLastPortInfo.usbProductId;
+}
+
+function stopSlotAutoReconnect(options = {}) {
+  slotAutoReconnecting = false;
+  clearTimeout(slotReconnectTimer);
+  slotReconnectTimer = null;
+  slotRefreshPending = false;
+  if (options.forgetPort) slotLastPortInfo = null;
+  updateActionButtons();
+}
+
+async function handleSlotHardwareDisconnect() {
+  if (slotHardwareDisconnectPromise) return slotHardwareDisconnectPromise;
+  if (activeToolsView !== 'slots' || !port || !toolsSerial.isOwner() || !slotLastPortInfo) return;
+
+  slotHardwareDisconnectPromise = (async () => {
+    await disconnectPort({ reason: 'hardware-disconnect' });
+    if (activeToolsView !== 'slots' || !toolsSerial.isOwner()) return;
+
+    slotAutoReconnecting = true;
+    toolsSerial.setState('reconnecting', { reason: 'hardware-disconnect' });
+    log(t('serial_disconnected_auto'), 'info');
+    updateActionButtons();
+    scheduleSlotReconnectProbe();
+  })();
+
+  try {
+    await slotHardwareDisconnectPromise;
+  } finally {
+    slotHardwareDisconnectPromise = null;
+  }
+}
+
+function scheduleSlotReconnectProbe() {
+  if (slotReconnectTimer || !slotAutoReconnecting) return;
+  slotReconnectTimer = setTimeout(async () => {
+    slotReconnectTimer = null;
+    if (!slotAutoReconnecting || !slotLastPortInfo) return;
+
+    try {
+      const ports = await navigator.serial.getPorts();
+      for (const candidate of ports.filter(sameSlotPort)) {
+        await reconnectSlotPort(candidate);
+        if (!slotAutoReconnecting) break;
+      }
+    } catch (error) {
+      console.warn('Unable to enumerate serial ports during slot reconnect:', error);
+    }
+    if (slotAutoReconnecting) scheduleSlotReconnectProbe();
+  }, 500);
+}
+
+async function reconnectSlotPort(candidate) {
+  if (!slotAutoReconnecting || slotReconnectInProgress || !sameSlotPort(candidate)) return;
+  slotReconnectInProgress = true;
+  updateActionButtons();
+
+  await sleep(500);
+  if (!slotAutoReconnecting || activeToolsView !== 'slots' || !toolsSerial.isOwner()) {
+    slotReconnectInProgress = false;
+    updateActionButtons();
+    return;
+  }
+
+  try {
+    port = candidate;
+    await port.open({ baudRate: BAUDRATE });
+    if (!slotAutoReconnecting || activeToolsView !== 'slots' || !toolsSerial.isOwner()) {
+      await disconnectPort({ reason: 'hardware-disconnect' });
+      return;
+    }
+
+    reader = port.readable.getReader();
+    writer = port.writable.getWriter();
+    toolsSerialSession++;
+    startReading();
+
+    slotAutoReconnecting = false;
+    clearTimeout(slotReconnectTimer);
+    slotReconnectTimer = null;
+    toolsSerial.setState('connected', { reason: 'auto-reconnect' });
+    log(t('serial_reconnected'), 'success');
+    slotRefreshPending = true;
+  } catch (error) {
+    console.warn('Firmware Slots auto-reconnect failed:', error);
+    await disconnectPort({ reason: 'hardware-disconnect' });
+  } finally {
+    slotReconnectInProgress = false;
+    updateActionButtons();
+    runPendingSlotRefresh();
+  }
+}
+
+function runPendingSlotRefresh() {
+  if (!slotRefreshPending || activeOperationToken || activeToolsView !== 'slots' ||
+      !port || !writer || !toolsSerial.isOwner()) return;
+  slotRefreshPending = false;
+  void slotRefreshFlow();
+}
+
+if (serialSupported) {
+  navigator.serial.addEventListener('disconnect', event => {
+    if (port && event.target === port) void handleSlotHardwareDisconnect();
+  });
+  navigator.serial.addEventListener('connect', event => {
+    void reconnectSlotPort(event.target);
+  });
 }
 
 // ========== PROTOCOL HELPERS ==========
@@ -1760,6 +1896,7 @@ function slotParseHeader(b) {
 
 // Send one slot command and wait for its matching response; returns data bytes.
 async function slotCommand(msgType, dataBytes, respType, timeoutMs) {
+  const session = toolsSerialSession;
   readBuffer = [];
   const msg = createMessage(msgType, dataBytes.length);
   msg.set(dataBytes, 4);
@@ -1768,6 +1905,9 @@ async function slotCommand(msgType, dataBytes, respType, timeoutMs) {
   let revision = serialReadRevision;
   const deadline = performance.now() + timeoutMs;
   for (;;) {
+    if (session !== toolsSerialSession) {
+      throw Object.assign(new Error(t('tools_disconnected')), { code: 'UVSTUDIO_SERIAL_SESSION_CHANGED' });
+    }
     for (;;) {
       const buffered = readBuffer.length;
       const resp = fetchMessage(readBuffer);
@@ -1878,7 +2018,7 @@ function slotLocalize() {
 
 async function finishSlotOperation(op) {
   try {
-    if (activeToolsView !== 'slots' && port) await disconnect();
+    if (activeToolsView !== 'slots' && toolsSerial.isOwner()) await disconnect();
   } finally {
     endToolsOperation(op);
   }
@@ -1902,7 +2042,10 @@ async function slotRefreshFlow() {
     log(t('slotsScanning'), 'info');
     for (let s = 0; s < SLOT_COUNT; s++) {
       try { slotRenderRow(s, await slotInfo(s)); }
-      catch (e) { slotRenderRow(s, { slot: s, status: 6, hdr: null }); }
+      catch (e) {
+        if (e?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e;
+        slotRenderRow(s, { slot: s, status: 6, hdr: null });
+      }
     }
     slotPickDefaultTarget();
     log(t('slotsScanDone'), 'success');
