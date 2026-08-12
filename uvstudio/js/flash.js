@@ -1677,7 +1677,7 @@ const SLOT_HDR_SIZE = 64;
 const SLOT_MAGIC = 0x31424D46;    // "FMB1"
 const SLOT_HDR_VERSION = 1;
 const SLOT_FLAG_COMMITTED = 1;
-const SLOT_EDITIONS = ['Fusion', 'Bandscope', 'Broadcast', 'Basic', 'RescueOps', 'Game', 'Custom'];
+const slotStatuses = [null, null, null, null]; // last known MB_ERR_* per slot (1 = empty)
 
 const MSG_SLOT_INFO = 0x0720, MSG_SLOT_INFO_RESP = 0x0721;
 const MSG_SLOT_ERASE = 0x0722, MSG_SLOT_ERASE_RESP = 0x0723;
@@ -1700,7 +1700,23 @@ function slotCrc32(bytes) {
   return (crc ^ 0xFFFFFFFF) >>> 0;
 }
 
-// Pull edition + version out of the raw application binary (plain ASCII).
+// Derive the edition from the canonical f4hwn.<preset>.bin filename. Model and
+// version suffixes remain supported, without maintaining a preset allowlist.
+function slotEditionFromFilename(filename) {
+  if (!filename) return '';
+  const match = filename.match(
+    /^f4hwn[._-](?:(?:k1|k5v3)[._-])?([a-z][a-z0-9-]*)(?:[._-].*)?\.bin$/i
+  );
+  if (!match) return '';
+  return match[1]
+    .split('-')
+    .filter(Boolean)
+    .map(token => token.charAt(0).toUpperCase() + token.slice(1).toLowerCase())
+    .join(' ')
+    .slice(0, 15);
+}
+
+// Pull the edition from the filename and the version from the raw binary.
 function slotExtractMeta(bytes, filename) {
   let text = '';
   for (let i = 0; i < bytes.length; i++) {
@@ -1712,16 +1728,8 @@ function slotExtractMeta(bytes, filename) {
   // combined "EGZUMER+F4HWN v5.9.0" from the UART banner string.
   const vm = text.match(/[A-Za-z0-9]+ v\d+\.\d+\.\d+/);
   if (vm) fwVersion = vm[0];
-  let name = '';
-  if (filename) {
-    const filenameTokens = filename.toLowerCase().split(/[^a-z0-9]+/);
-    name = SLOT_EDITIONS.find(e => filenameTokens.includes(e.toLowerCase())) || '';
-  }
-  if (!name) {
-    const detectedEditions = SLOT_EDITIONS.filter(e => text.includes(e));
-    if (detectedEditions.length === 1) name = detectedEditions[0];
-  }
-  return { name: name.slice(0, 15), fwVersion: fwVersion.slice(0, 15) };
+  const name = slotEditionFromFilename(filename);
+  return { name, fwVersion: fwVersion.slice(0, 15) };
 }
 
 function slotBuildHeader(imageSize, crc, meta) {
@@ -1822,6 +1830,7 @@ async function slotValidate(slot) {
 }
 
 function slotRenderRow(slot, info) {
+  slotStatuses[slot] = info ? info.status : null;
   if (!slotsTableBody) return;
   const row = slotsTableBody.querySelector(`tr[data-slot="${slot}"]`);
   if (!row) return;
@@ -1875,6 +1884,16 @@ async function finishSlotOperation(op) {
   }
 }
 
+// Smart default target: first empty slot (no FMB1 header), else slot 0.
+function slotPickDefaultTarget() {
+  if (!slotTargetSelect) return;
+  let target = 0;
+  for (let s = 0; s < SLOT_COUNT; s++) {
+    if (slotStatuses[s] === 1) { target = s; break; }
+  }
+  slotTargetSelect.value = String(target);
+}
+
 async function slotRefreshFlow() {
   const op = beginToolsOperation('slots-refresh', false);
   if (!op) return;
@@ -1885,6 +1904,7 @@ async function slotRefreshFlow() {
       try { slotRenderRow(s, await slotInfo(s)); }
       catch (e) { slotRenderRow(s, { slot: s, status: 6, hdr: null }); }
     }
+    slotPickDefaultTarget();
     log(t('slotsScanDone'), 'success');
   } catch (e) {
     log(t('slotsError', e?.message ?? String(e)), 'error');
@@ -1957,6 +1977,7 @@ async function slotWriteFlow() {
     updateProgress(100);
     log(t('slotWriteOk', slot), 'success');
     slotRenderRow(slot, await slotInfo(slot));
+    slotPickDefaultTarget();
     setTimeout(() => { if (progressContainer) progressContainer.style.display = 'none'; }, 1200);
   } catch (e) {
     log(t('slotsError', e?.message ?? String(e)), 'error');

@@ -9,6 +9,25 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const studioVersionSource = fs.readFileSync(path.join(root, 'js', 'studio-version.js'), 'utf8');
+const flashSource = fs.readFileSync(path.join(root, 'js', 'flash.js'), 'utf8');
+
+test('derives any multiboot edition from the canonical firmware filename', () => {
+  const start = flashSource.indexOf('function slotEditionFromFilename');
+  const end = flashSource.indexOf('\n\n// Pull the edition from the filename', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {};
+  vm.runInNewContext(
+    `${flashSource.slice(start, end)}; this.extractEdition = slotEditionFromFilename;`,
+    context
+  );
+
+  assert.equal(context.extractEdition('f4hwn.fusion.bin'), 'Fusion');
+  assert.equal(context.extractEdition('f4hwn.extended.bin'), 'Extended');
+  assert.equal(context.extractEdition('f4hwn.expedition.bin'), 'Expedition');
+  assert.equal(context.extractEdition('f4hwn.future-profile.bin'), 'Future Profile');
+  assert.equal(context.extractEdition('f4hwn.k1.fusion.v5.9.0.bin'), 'Fusion');
+  assert.equal(context.extractEdition('unrelated-firmware.bin'), '');
+});
 
 test('keeps the public version and its cache key aligned', () => {
   const version = studioVersionSource.match(/UVSTUDIO_VERSION = "([^"]+)"/)?.[1];
@@ -47,7 +66,7 @@ test('exposes the responsive sidebar toggle to assistive technologies', () => {
 
 test('maps every maintenance route directly to an existing tool view', () => {
   const views = [...html.matchAll(/data-tool-view="([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(views, ['flash', 'dump', 'restore', 'logo-upload', 'logo-dump', 'rf-log']);
+  assert.deepEqual(views, ['flash', 'slots', 'dump', 'restore', 'logo-upload', 'logo-dump', 'rf-log']);
   views.forEach(view => assert.match(html, new RegExp(`id="${view}-content"`)));
   assert.doesNotMatch(html, /class="tabs"|class="tab btn"/);
 });
