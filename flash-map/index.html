@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>F4HWN External Flash Map</title>
+  <link rel="stylesheet" href="flash-map.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow" data-i18n="eyebrow"></p>
+        <h1 data-i18n="title"></h1>
+        <p class="subtitle" data-i18n="subtitle"></p>
+      </div>
+      <div class="language-switch" role="group" aria-label="Language">
+        <button type="button" data-language="fr">FR</button>
+        <button type="button" data-language="en">EN</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="overview-panel" aria-labelledby="overview-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="overview-title" data-i18n="overviewTitle"></h2>
+            <p data-i18n="overviewSubtitle"></p>
+          </div>
+          <span class="updated"><span data-i18n="updated"></span> <time id="map-updated"></time></span>
+        </div>
+        <div id="memory-bar" class="memory-bar"></div>
+        <div class="address-ticks mono" aria-hidden="true">
+          <span>0x000000</span><span>0x080000</span><span>0x100000</span><span>0x180000</span><span>0x1FFFFF</span>
+        </div>
+        <div id="map-legend" class="legend"></div>
+      </section>
+
+      <div id="detail-sections" class="detail-grid"></div>
+    </main>
+
+    <footer class="page-footer">
+      <p><strong data-i18n="sourceTitle"></strong> <span data-i18n="sourceIntro"></span></p>
+      <ul>
+        <li><a href="https://github.com/armel/uv-k1-k5v3-firmware-custom/blob/feature_update_mb/App/driver/eeprom_compat.c">App/driver/eeprom_compat.c</a></li>
+        <li><a href="https://github.com/armel/uv-k1-k5v3-firmware-custom/blob/feature_update_mb/App/settings.c">App/settings.c</a></li>
+        <li><a href="https://github.com/armel/uv-k1-k5v3-firmware-custom/blob/feature_update_mb/App/driver/mb_flash.h">App/driver/mb_flash.h</a></li>
+        <li><a href="https://github.com/armel/uv-k1-k5v3-firmware-custom/blob/feature_update_mb/App/ui/welcome.c">App/ui/welcome.c</a></li>
+        <li><a href="https://github.com/armel/uv-k1-k5v3-firmware-custom/blob/feature_update_mb/App/app/rxtx_log.c">App/app/rxtx_log.c</a></li>
+        <li><a href="https://github.com/armel/uv-k1-k5v3-firmware-custom/blob/feature_update_mb/App/audio.c">App/audio.c</a></li>
+      </ul>
+      <p class="mapping-note" data-i18n="mappingWarning"></p>
+    </footer>
+  </div>
+
+  <script src="flash-map.js"></script>
+</body>
+</html>
