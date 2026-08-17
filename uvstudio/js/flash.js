@@ -530,7 +530,7 @@ async function connect() {
       throw Object.assign(new Error(t('tools_disconnected')), { code: 'UVSTUDIO_SERIAL_RELEASED' });
     }
     log(t('openingPort'), 'info');
-    await port.open({ baudRate: BAUDRATE });
+    await port.open({ baudRate: BAUDRATE, bufferSize: 65536 });
     if (!toolsSerial.isOwner()) {
       try { await port.close(); } catch {}
       port = null;
@@ -743,7 +743,7 @@ async function reconnectSlotPort(candidate) {
 
   try {
     port = candidate;
-    await port.open({ baudRate: BAUDRATE });
+    await port.open({ baudRate: BAUDRATE, bufferSize: 65536 });
     if (!slotAutoReconnecting || activeToolsView !== 'slots' || !toolsSerial.isOwner()) {
       await disconnectPort({ reason: 'hardware-disconnect' });
       return;
