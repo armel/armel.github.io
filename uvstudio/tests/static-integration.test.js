@@ -13,7 +13,7 @@ const flashSource = fs.readFileSync(path.join(root, 'js', 'flash.js'), 'utf8');
 
 test('derives any multiboot edition from the canonical firmware filename', () => {
   const start = flashSource.indexOf('function slotEditionFromFilename');
-  const end = flashSource.indexOf('\n\n// Pull the edition from the filename', start);
+  const end = flashSource.indexOf('\n\nfunction slotVersionFromFilename', start);
   assert.ok(start >= 0 && end > start);
   const context = {};
   vm.runInNewContext(
@@ -26,7 +26,40 @@ test('derives any multiboot edition from the canonical firmware filename', () =>
   assert.equal(context.extractEdition('f4hwn.expedition.bin'), 'Expedition');
   assert.equal(context.extractEdition('f4hwn.future-profile.bin'), 'Future Profile');
   assert.equal(context.extractEdition('f4hwn.k1.fusion.v5.9.0.bin'), 'Fusion');
+  assert.equal(context.extractEdition('f4hwn.compact.usb.v50.bin'), 'Compact');
   assert.equal(context.extractEdition('unrelated-firmware.bin'), '');
+});
+
+test('accepts compact and dotted versions in multiboot firmware metadata', () => {
+  const start = flashSource.indexOf('function slotEditionFromFilename');
+  const end = flashSource.indexOf('\n\nfunction slotBuildHeader', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {};
+  vm.runInNewContext(
+    `${flashSource.slice(start, end)}; this.extractMeta = slotExtractMeta;`,
+    context
+  );
+
+  const compact = context.extractMeta(
+    Array.from(Buffer.from('\0RADIO v50\0', 'ascii')),
+    'f4hwn.compact.usb.v50.bin'
+  );
+  assert.equal(compact.name, 'Compact');
+  assert.equal(compact.fwVersion, 'v50');
+
+  const dotted = context.extractMeta(
+    Array.from(Buffer.from('\0F4HWN v5.9.0\0', 'ascii')),
+    'f4hwn.fusion.v5.9.0.bin'
+  );
+  assert.equal(dotted.name, 'Fusion');
+  assert.equal(dotted.fwVersion, 'v5.9.0');
+
+  const legacy = context.extractMeta(
+    Array.from(Buffer.from('\0F4HWN v5.9.0\0', 'ascii')),
+    'f4hwn.fusion.bin'
+  );
+  assert.equal(legacy.name, 'Fusion');
+  assert.equal(legacy.fwVersion, 'F4HWN v5.9.0');
 });
 
 test('keeps the public version and its cache key aligned', () => {

@@ -1308,8 +1308,9 @@ function logDeviceInfo(data) {
   if (deviceInfoStr) {
     log(`Device: ${deviceInfoStr}`, 'success');
     
-    // Extract version from string (e.g., "F4HWN v4.3.3" -> "4.3.3")
-    const versionMatch = deviceInfoStr.match(/v(\d+\.\d+\.\d+)/);
+    // The canonical version is everything numeric after "v": v50 and
+    // dotted forms such as v5.0.0 are both valid.
+    const versionMatch = deviceInfoStr.match(/v(\d+(?:\.\d+)*)/i);
     if (versionMatch) {
       const version = versionMatch[1];
       const [major, minor, patch] = version.split('.').map(Number);
@@ -1856,18 +1857,25 @@ function slotEditionFromFilename(filename) {
     .slice(0, 15);
 }
 
-// Pull the edition from the filename and the version from the raw binary.
+function slotVersionFromFilename(filename) {
+  if (!filename) return '';
+  const match = filename.match(/[._-]v(\d+(?:\.\d+)*)\.bin$/i);
+  return match ? `v${match[1]}`.slice(0, 15) : '';
+}
+
+// Pull canonical metadata from the filename, with an embedded-version fallback
+// for older filenames which do not carry a final .v<version> component.
 function slotExtractMeta(bytes, filename) {
   let text = '';
   for (let i = 0; i < bytes.length; i++) {
     const c = bytes[i];
     text += (c >= 32 && c < 127) ? String.fromCharCode(c) : '\n';
   }
-  let fwVersion = '';
-  // Author token (no '+') + version, so we match "F4HWN v5.9.0" and not the
-  // combined "EGZUMER+F4HWN v5.9.0" from the UART banner string.
-  const vm = text.match(/[A-Za-z0-9]+ v\d+\.\d+\.\d+/);
-  if (vm) fwVersion = vm[0];
+  let fwVersion = slotVersionFromFilename(filename);
+  // Author token (no '+') + a canonical numeric version. This accepts compact
+  // versions such as "RADIO v50" as well as "F4HWN v5.9.0".
+  const vm = text.match(/[A-Za-z0-9]+ v\d+(?:\.\d+)*/i);
+  if (!fwVersion && vm) fwVersion = vm[0];
   const name = slotEditionFromFilename(filename);
   return { name, fwVersion: fwVersion.slice(0, 15) };
 }
