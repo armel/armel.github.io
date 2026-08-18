@@ -16,6 +16,8 @@
   --log-strong: light-dark(#aa6118, #f2af61);
   --free: light-dark(#e9edf2, #252d38);
   --free-strong: light-dark(#697687, #a8b2bf);
+  --profile: light-dark(#ffe1ec, #47202f);
+  --profile-strong: light-dark(#b23a6b, #f58cb3);
   --focus: light-dark(#125ea9, #73b8ff);
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -148,6 +150,7 @@ h3 { margin-bottom: 2px; font-size: 15px; }
 .kind-slot { background: var(--slot); }
 .kind-voice { background: var(--voice); }
 .kind-log { background: var(--log); }
+.kind-profile { background: var(--profile); }
 .kind-free { background: var(--free); color: var(--muted); }
 
 .address-ticks {
@@ -224,6 +227,9 @@ h3 { margin-bottom: 2px; font-size: 15px; }
 .record-field { min-height: 58px; padding: 7px 4px; text-align: center; font-size: 10px; line-height: 1.3; }
 .record-field b { display: block; margin-bottom: 4px; font: 10px var(--mono); }
 .slot-card { overflow: hidden; }
+/* The "Main" slot (base backup) sits alone on the first row; the user slots
+   1..4 flow on the row(s) below. */
+.slot-card-main { grid-column: 1 / -1; }
 .slot-card h4 { margin: 0; padding: 7px 8px; background: var(--slot); font-size: 12px; }
 .slot-card dl { margin: 0; padding: 7px 8px; font: 10px/1.45 var(--mono); }
 .slot-card dt { float: left; clear: left; color: var(--muted); }

@@ -10,7 +10,7 @@
 
 const FLASH_MAP = {
   meta: {
-    updated: "2026-08-16",
+    updated: "2026-08-17",
     flashSize: 0x200000,
     eraseSize: 0x1000,
     programSize: 0x100,
@@ -18,20 +18,27 @@ const FLASH_MAP = {
   multiboot: {
     slotBase: 0x020000,
     slotStride: 0x020000,
-    slotCount: 4,
+    slotCount: 5,
     imageOffset: 0x001000,
     maxImageSize: 0x01D800,
     headerSize: 64,
     internalDestination: 0x08002800,
   },
   overview: [
-    { id: "shared", start: 0x000000, end: 0x011FFF, kind: "shared", target: "radio-data", short: { fr: "Radio", en: "Radio" } },
+    { id: "profile-0", start: 0x000000, end: 0x00FFFF, kind: "profile", target: "radio-data", short: { fr: "PM", en: "PM" } },
+    { id: "cal-logo", start: 0x010000, end: 0x011FFF, kind: "shared", target: "calibration-logo", short: { fr: "Cal/Logo", en: "Cal/Logo" } },
     { id: "gap-low", start: 0x012000, end: 0x01FFFF, kind: "free", target: "unused", short: { fr: "Libre", en: "Free" } },
-    { id: "slot-0", start: 0x020000, end: 0x03FFFF, kind: "slot", target: "slots", short: { fr: "S0", en: "S0" } },
+    { id: "slot-0", start: 0x020000, end: 0x03FFFF, kind: "slot", target: "slots", short: { fr: "SM", en: "SM" } },
     { id: "slot-1", start: 0x040000, end: 0x05FFFF, kind: "slot", target: "slots", short: { fr: "S1", en: "S1" } },
     { id: "slot-2", start: 0x060000, end: 0x07FFFF, kind: "slot", target: "slots", short: { fr: "S2", en: "S2" } },
     { id: "slot-3", start: 0x080000, end: 0x09FFFF, kind: "slot", target: "slots", short: { fr: "S3", en: "S3" } },
-    { id: "gap-mid", start: 0x0A0000, end: 0x14BFFF, kind: "free", target: "unused", short: { fr: "Non attribué", en: "Unallocated" } },
+    { id: "slot-4", start: 0x0A0000, end: 0x0BFFFF, kind: "slot", target: "slots", short: { fr: "S4", en: "S4" } },
+    { id: "profile-1", start: 0x0C0000, end: 0x0CFFFF, kind: "profile", target: "profiles", short: { fr: "P1", en: "P1" } },
+    { id: "profile-2", start: 0x0D0000, end: 0x0DFFFF, kind: "profile", target: "profiles", short: { fr: "P2", en: "P2" } },
+    { id: "profile-3", start: 0x0E0000, end: 0x0EFFFF, kind: "profile", target: "profiles", short: { fr: "P3", en: "P3" } },
+    { id: "profile-4", start: 0x0F0000, end: 0x0FFFFF, kind: "profile", target: "profiles", short: { fr: "P4", en: "P4" } },
+    { id: "mb-state", start: 0x100000, end: 0x100FFF, kind: "shared", target: "profiles", short: { fr: "État", en: "State" } },
+    { id: "gap-mid", start: 0x101000, end: 0x14BFFF, kind: "free", target: "unused", short: { fr: "Non attribué", en: "Unallocated" } },
     { id: "voice", start: 0x14C000, end: 0x1DFFFF, kind: "voice", target: "voice-log", short: { fr: "Voix", en: "Voice" } },
     { id: "log", start: 0x1E0000, end: 0x1E7FFF, kind: "log", target: "voice-log", short: { fr: "Log", en: "Log" } },
     { id: "gap-high", start: 0x1E8000, end: 0x1FFFFF, kind: "free", target: "unused", short: { fr: "Libre", en: "Free" } },
@@ -39,7 +46,7 @@ const FLASH_MAP = {
   sections: [
     {
       id: "radio-data", wide: true, range: [0x000000, 0x00FFFF],
-      title: { fr: "Données radio partagées", en: "Shared radio data" },
+      title: { fr: "Profil Main — canaux & paramètres", en: "Profile Main — channels & settings" },
       rows: [
         [0x000000, 0x003FFF, { fr: "1024 canaux mémoire × 16 octets", en: "1024 memory channels × 16 bytes" }],
         [0x004000, 0x007FFF, { fr: "Noms des 1024 canaux × 16 octets ; 10 caractères utilisés", en: "1024 channel names × 16 bytes; 10 characters used" }],
@@ -63,6 +70,7 @@ const FLASH_MAP = {
         ["+0D…0F", { fr: "DTMF / pas / réserve", en: "DTMF / step / reserved" }],
       ],
       recordTitle: { fr: "Structure d’un canal mémoire (16 octets)", en: "Memory-channel record layout (16 bytes)" },
+      note: { fr: "Même structure pour tous les profils ; les profils 1 à 3 en sont des copies (0x0A0000+). La calibration et le logo restent partagés.", en: "Same layout for every profile; profiles 1 to 3 are copies of it (0x0A0000+). Calibration and logo stay shared." },
     },
     {
       id: "settings", range: [0x00A000, 0x00AFFF],
@@ -104,7 +112,7 @@ const FLASH_MAP = {
       note: { fr: "Fenêtre de calibration réservée : 0x010000–0x0101FF (512 octets).", en: "Reserved calibration window: 0x010000–0x0101FF (512 bytes)." },
     },
     {
-      id: "slots", wide: true, range: [0x020000, 0x09FFFF],
+      id: "slots", wide: true, range: [0x020000, 0x0BFFFF],
       title: { fr: "Slots firmware multiboot", en: "Multiboot firmware slots" },
       slotSection: true,
       rows: [
@@ -112,6 +120,7 @@ const FLASH_MAP = {
         ["slot + 0x1000", "0x1E7FF", { fr: "Image binaire, 118 Kio maximum, destinée à la Flash interne 0x08002800", en: "Binary image, up to 118 KiB, targeting internal Flash at 0x08002800" }],
         ["slot + 0x1E800", "0x1FFFF", { fr: "Marge de 6 Kio après l’image maximale", en: "6 KiB spare area after the maximum image" }],
       ],
+      note: { fr: "Slot 0 = backup du firmware « Main », écrit par le firmware (auto-sauvegarde au 1er boot après un flash normal) et protégé en écriture ; slots 1-4 gérés depuis UV Studio.", en: "Slot 0 = backup of the “Main” firmware, written by the firmware (self-backup on the first boot after a normal flash) and write-protected; slots 1-4 are managed from UV Studio." },
     },
     {
       id: "voice-log", range: [0x14C000, 0x1E7FFF],
@@ -124,11 +133,23 @@ const FLASH_MAP = {
       ],
     },
     {
+      id: "profiles", range: [0x0C0000, 0x100FFF],
+      title: { fr: "Banks de config — profils 1 à 4", en: "Config banks — profiles 1 to 4" },
+      rows: [
+        [0x0C0000, 0x0CFFFF, { fr: "Profil 1 : copie privée des canaux et paramètres (64 Kio ; empreinte réelle ~44 Kio)", en: "Profile 1: private copy of channels and settings (64 KiB; ~44 KiB used)" }],
+        [0x0D0000, 0x0DFFFF, { fr: "Profil 2 : canaux et paramètres", en: "Profile 2: channels and settings" }],
+        [0x0E0000, 0x0EFFFF, { fr: "Profil 3 : canaux et paramètres", en: "Profile 3: channels and settings" }],
+        [0x0F0000, 0x0FFFFF, { fr: "Profil 4 : canaux et paramètres", en: "Profile 4: channels and settings" }],
+        [0x100000, 0x100FFF, { fr: "Marqueur multiboot « FMP1 » : profil actif (magic + index + ~index), partagé", en: "Multiboot marker “FMP1”: active profile (magic + index + ~index), shared" }],
+      ],
+      note: { fr: "Le profil 0 réutilise la zone historique 0x000000 (aucune migration). Chaque slot est lié à son profil (slot 0 → profil 0, « Main »). La calibration reste partagée. Frontière du banking : tout accès physique < 0x010000 est redirigé dans la bank active.", en: "Profile 0 reuses the historical region at 0x000000 (no migration). Each slot is bound to its profile (slot 0 → profile 0, “Main”). Calibration stays shared. Banking boundary: every physical access below 0x010000 is redirected into the active bank." },
+    },
+    {
       id: "unused", range: [0x012000, 0x1FFFFF],
       title: { fr: "Zones non attribuées", en: "Unallocated areas" },
       rows: [
         [0x012000, 0x01FFFF, { fr: "Non attribué", en: "Unallocated" }],
-        [0x0A0000, 0x14BFFF, { fr: "Non attribué par F4HWN", en: "Unallocated by F4HWN" }],
+        [0x101000, 0x14BFFF, { fr: "Non attribué par F4HWN", en: "Unallocated by F4HWN" }],
         [0x1E8000, 0x1FFFFF, { fr: "Non attribué", en: "Unallocated" }],
       ],
       note: { fr: "« Non attribué » décrit le code F4HWN actuel ; un autre firmware peut employer ces adresses.", en: "“Unallocated” describes the current F4HWN code; another firmware may use these addresses." },
@@ -146,7 +167,7 @@ const I18N = {
     updated: "Mise à jour :",
     sourceTitle: "Sources :",
     sourceIntro: "cette carte est dérivée des constantes et des accès physiques du firmware.",
-    mappingWarning: "Les paramètres, canaux, calibrations et logo sont partagés ; les slots multiboot ne contiennent que les images de firmware et leurs métadonnées.",
+    mappingWarning: "La calibration et le logo sont partagés par tous les profils ; les canaux et paramètres sont propres à chaque slot (banks de config par profil). Les slots multiboot ne contiennent que les images de firmware et leurs métadonnées.",
     address: "Adresses inclusives",
     size: "Taille",
     content: "Contenu",
@@ -155,7 +176,7 @@ const I18N = {
     header: "Secteur header",
     image: "Image",
     spare: "Réserve",
-    legend: { shared: "Données partagées", slot: "Images multiboot", voice: "Données vocales", log: "Journal RX/TX", free: "Non attribué / réservé" },
+    legend: { shared: "Données partagées", profile: "Config par profil", slot: "Images multiboot", voice: "Données vocales", log: "Journal RX/TX", free: "Non attribué / réservé" },
   },
   en: {
     eyebrow: "F4HWN · Developer reference",
@@ -166,7 +187,7 @@ const I18N = {
     updated: "Updated:",
     sourceTitle: "Sources:",
     sourceIntro: "this map is derived from the firmware constants and physical accesses.",
-    mappingWarning: "Settings, channels, calibration and logo are shared; multiboot slots contain only firmware images and their metadata.",
+    mappingWarning: "Calibration and logo are shared across all profiles; channels and settings are private to each slot (per-profile config banks). Multiboot slots contain only firmware images and their metadata.",
     address: "Inclusive addresses",
     size: "Size",
     content: "Contents",
@@ -175,7 +196,7 @@ const I18N = {
     header: "Header sector",
     image: "Image",
     spare: "Spare",
-    legend: { shared: "Shared data", slot: "Multiboot images", voice: "Voice data", log: "RX/TX log", free: "Unallocated / reserved" },
+    legend: { shared: "Shared data", profile: "Per-profile config", slot: "Multiboot images", voice: "Voice data", log: "RX/TX log", free: "Unallocated / reserved" },
   },
 };
 
@@ -243,7 +264,7 @@ function renderOverview(language) {
 
   const legend = $("#map-legend");
   legend.replaceChildren();
-  for (const kind of ["shared", "slot", "voice", "log", "free"]) {
+  for (const kind of ["shared", "profile", "slot", "voice", "log", "free"]) {
     const item = make("span", "legend-item");
     item.append(make("i", `legend-swatch kind-${kind}`), document.createTextNode(I18N[language].legend[kind]));
     legend.append(item);
@@ -281,8 +302,10 @@ function renderSlots(panel, language) {
     const imageStart = start + mb.imageOffset;
     const imageEnd = imageStart + mb.maxImageSize - 1;
     const end = start + mb.slotStride - 1;
-    const card = make("article", "slot-card");
-    card.append(make("h4", "", `${I18N[language].slot} ${index} · ${hex(start)}–${hex(end)}`));
+    const isMain = index === 0;
+    const card = make("article", isMain ? "slot-card slot-card-main" : "slot-card");
+    const label = isMain ? `${I18N[language].slot} Main` : `${I18N[language].slot} ${index}`;
+    card.append(make("h4", "", `${label} · ${hex(start)}–${hex(end)}`));
     const list = document.createElement("dl");
     for (const [label, value] of [
       [I18N[language].header, `${hex(start)}–${hex(headerEnd)}`],

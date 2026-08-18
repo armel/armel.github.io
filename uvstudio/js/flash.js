@@ -1802,7 +1802,10 @@ function sleep(ms) {
 }
 
 // ========== FIRMWARE SLOTS (multiboot) ==========
-const SLOT_COUNT = 4;
+const SLOT_COUNT = 4;             // user slots shown in UV Studio (1..4)
+const SLOT_FIRST = 1;             // firmware index of the first user slot; slot 0 is the
+                                  // firmware-managed base backup (hidden here, write-protected)
+const SLOT_END = SLOT_FIRST + SLOT_COUNT;  // exclusive upper bound (5)
 const SLOT_IMG_OFFSET = 0x1000;   // image starts after the header sector
 const SLOT_IMG_MAX = 0x1D800;     // 118 KiB application region
 // Wire command = 8 (frame) + 4 (msg hdr) + 12 (prefix) + chunk. The firmware VCP
@@ -1813,12 +1816,13 @@ const SLOT_HDR_SIZE = 64;
 const SLOT_MAGIC = 0x31424D46;    // "FMB1"
 const SLOT_HDR_VERSION = 1;
 const SLOT_FLAG_COMMITTED = 1;
-const slotStatuses = [null, null, null, null]; // last known MB_ERR_* per slot (1 = empty)
+const slotStatuses = [null, null, null, null, null]; // last known MB_ERR_* per firmware slot (index 0 = base backup, unused here)
 
 const MSG_SLOT_INFO = 0x0720, MSG_SLOT_INFO_RESP = 0x0721;
 const MSG_SLOT_ERASE = 0x0722, MSG_SLOT_ERASE_RESP = 0x0723;
 const MSG_SLOT_WRITE = 0x0724, MSG_SLOT_WRITE_RESP = 0x0725;
 const MSG_SLOT_VALIDATE = 0x0726, MSG_SLOT_VALIDATE_RESP = 0x0727;
+const MSG_PROFILE_ERASE = 0x0728, MSG_PROFILE_ERASE_RESP = 0x0729;
 
 // Firmware MB_ERR_* codes (0..8) -> i18n status keys.
 const SLOT_STATUS_KEY = ['slotStateValid', 'slotStateEmpty', 'slotStateNewHdr',
@@ -1937,6 +1941,14 @@ async function slotErase(slot, ts) {
   return data[1];
 }
 
+async function slotProfileErase(slot, ts) {
+  const d = new Uint8Array(6);
+  d[0] = slot;
+  new DataView(d.buffer).setUint32(2, ts, true);
+  const data = await slotCommand(MSG_PROFILE_ERASE, d, MSG_PROFILE_ERASE_RESP, 30000);
+  return data[1];
+}
+
 async function slotWriteChunk(slot, offset, ts, chunk) {
   const d = new Uint8Array(12 + chunk.length);
   const dv = new DataView(d.buffer);
@@ -1988,7 +2000,7 @@ function slotRenderRow(slot, info) {
 function slotBuildTable() {
   if (!slotsTableBody) return;
   slotsTableBody.innerHTML = '';
-  for (let s = 0; s < SLOT_COUNT; s++) {
+  for (let s = SLOT_FIRST; s < SLOT_END; s++) {
     const tr = document.createElement('tr');
     tr.dataset.slot = String(s);
     tr.innerHTML =
@@ -2001,16 +2013,26 @@ function slotBuildTable() {
     const eraseBtn = document.createElement('button');
     eraseBtn.type = 'button';
     eraseBtn.className = 'slot-act-erase';
-    eraseBtn.textContent = t('slotErase');
+    eraseBtn.textContent = t('slotEraseFw');
     eraseBtn.addEventListener('click', () => { void slotEraseFlow(s); });
-    tr.querySelector('.slot-actions').appendChild(eraseBtn);
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'slot-act-reset';
+    resetBtn.textContent = t('slotResetConfig');
+    resetBtn.addEventListener('click', () => { void slotResetConfigFlow(s); });
+    const actions = tr.querySelector('.slot-actions');
+    actions.appendChild(eraseBtn);
+    actions.appendChild(resetBtn);
     slotsTableBody.appendChild(tr);
   }
 }
 
 // Re-localize the static slot labels after a language change.
 function slotLocalize() {
-  if (slotsTableBody) slotsTableBody.querySelectorAll('.slot-act-erase').forEach(b => { b.textContent = t('slotErase'); });
+  if (slotsTableBody) {
+    slotsTableBody.querySelectorAll('.slot-act-erase').forEach(b => { b.textContent = t('slotEraseFw'); });
+    slotsTableBody.querySelectorAll('.slot-act-reset').forEach(b => { b.textContent = t('slotResetConfig'); });
+  }
   if (slotImage && slotMetaEl) {
     slotMetaEl.textContent = t('slotDetected', slotMeta.name || '?', slotMeta.fwVersion || '?', Math.round(slotImage.length / 1024));
   }
@@ -2024,11 +2046,11 @@ async function finishSlotOperation(op) {
   }
 }
 
-// Smart default target: first empty slot (no FMB1 header), else slot 0.
+// Smart default target: first empty slot (no FMB1 header), else the first user slot.
 function slotPickDefaultTarget() {
   if (!slotTargetSelect) return;
-  let target = 0;
-  for (let s = 0; s < SLOT_COUNT; s++) {
+  let target = SLOT_FIRST;
+  for (let s = SLOT_FIRST; s < SLOT_END; s++) {
     if (slotStatuses[s] === 1) { target = s; break; }
   }
   slotTargetSelect.value = String(target);
@@ -2040,7 +2062,7 @@ async function slotRefreshFlow() {
   try {
     if (!port) await connect();
     log(t('slotsScanning'), 'info');
-    for (let s = 0; s < SLOT_COUNT; s++) {
+    for (let s = SLOT_FIRST; s < SLOT_END; s++) {
       try { slotRenderRow(s, await slotInfo(s)); }
       catch (e) {
         if (e?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e;
@@ -2076,10 +2098,31 @@ async function slotEraseFlow(slot) {
   }
 }
 
+// Reset a slot's config profile (channels/settings). The firmware slot image is
+// untouched; the next boot on that slot re-seeds factory defaults.
+async function slotResetConfigFlow(slot) {
+  const op = beginToolsOperation('slots-reset-config', true);
+  if (!op) return;
+  try {
+    if (!port) await connect();
+    readBuffer = [];
+    await sleep(500);
+    const dev = await requestDeviceInfo();
+    log(t('slotConfigResetting', slot), 'info');
+    const st = await slotProfileErase(slot, dev.timestamp);
+    if (st !== 0) throw new Error(slotStatusText(st));
+    log(t('slotConfigReset', slot), 'success');
+  } catch (e) {
+    log(t('slotsError', e?.message ?? String(e)), 'error');
+  } finally {
+    await finishSlotOperation(op);
+  }
+}
+
 async function slotWriteFlow() {
   if (!slotImage) return;
-  const slot = slotTargetSelect ? parseInt(slotTargetSelect.value, 10) : 0;
-  if (!(slot >= 0 && slot < SLOT_COUNT)) return;
+  const slot = slotTargetSelect ? parseInt(slotTargetSelect.value, 10) : SLOT_FIRST;
+  if (!(slot >= SLOT_FIRST && slot < SLOT_END)) return;
   if (slotImage.length > SLOT_IMG_MAX) { log(t('slotTooBig'), 'error'); return; }
 
   const op = beginToolsOperation('slots-write', true);

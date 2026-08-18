@@ -532,6 +532,25 @@
   transform: none;
   box-shadow: none;
 }
+/* Compact per-row "reset config" button, next to erase but neutral: it wipes
+   the slot's config profile (channels/settings), not the firmware image. */
+#pane-tools .slots-table .slot-actions button.slot-act-reset {
+  display: inline-block;
+  min-width: 0;
+  margin: 0 0 0 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+#pane-tools .slots-table .slot-actions button.slot-act-reset:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--text-muted) 12%, transparent);
+  border-color: var(--text-muted);
+  transform: none;
+  box-shadow: none;
+}
 #pane-tools #slotsRefreshBtn {
   min-width: 0;
 }
