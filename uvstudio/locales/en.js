@@ -257,6 +257,7 @@ window.UVSTUDIO_LOCALES.en = {
   "slotsRefresh": "Refresh slots",
   "slotFileLabel": "Firmware file (.bin)",
   "slotTargetLabel": "Target slot",
+  "slotNameLabel": "Display name",
   "slotWriteBtn": "Write to slot",
   "slotErase": "Erase",
   "slotEraseFw": "Erase FW",

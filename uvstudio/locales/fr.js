@@ -257,6 +257,7 @@ window.UVSTUDIO_LOCALES.fr = {
   "slotsRefresh": "Rafraîchir les slots",
   "slotFileLabel": "Fichier firmware (.bin)",
   "slotTargetLabel": "Slot cible",
+  "slotNameLabel": "Nom affiché",
   "slotWriteBtn": "Écrire dans le slot",
   "slotErase": "Effacer",
   "slotEraseFw": "Effacer FW",

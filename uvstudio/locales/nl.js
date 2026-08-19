@@ -257,6 +257,7 @@ window.UVSTUDIO_LOCALES.nl = {
   "slotsRefresh": "Slots vernieuwen",
   "slotFileLabel": "Firmwarebestand (.bin)",
   "slotTargetLabel": "Doelslot",
+  "slotNameLabel": "Weergavenaam",
   "slotWriteBtn": "Naar slot schrijven",
   "slotErase": "Wissen",
   "slotDetected": "Gedetecteerd: {0} · {1} · {2} KB",

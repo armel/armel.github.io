@@ -62,6 +62,34 @@ test('accepts compact and dotted versions in multiboot firmware metadata', () =>
   assert.equal(legacy.fwVersion, 'F4HWN v5.9.0');
 });
 
+test('stores a custom display name in the multiboot header', () => {
+  const start = flashSource.indexOf('function slotNormalizeName');
+  const end = flashSource.indexOf('\n\nfunction slotParseHeader', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {};
+  vm.runInNewContext(
+    `const SLOT_HDR_SIZE = 64;
+     const SLOT_MAGIC = 0x31424D46;
+     const SLOT_HDR_VERSION = 1;
+     const SLOT_FLAG_COMMITTED = 1;
+     ${flashSource.slice(start, end)};
+     this.normalizeName = slotNormalizeName;
+     this.buildHeader = slotBuildHeader;`,
+    context
+  );
+
+  assert.equal(context.normalizeName('  Été   France  '), 'Ete France');
+  assert.equal(context.normalizeName('12345678901234567890'), '123456789012345');
+  const header = context.buildHeader(1234, 0xAABBCCDD, { name: 'France', fwVersion: 'v5.9.0' });
+  const name = Buffer.from(header.slice(16, 32)).toString('ascii').replace(/\0.*$/, '');
+  assert.equal(name, 'France');
+});
+
+test('offers the custom slot name before writing', () => {
+  assert.match(html, /id="slotName"[^>]*maxlength="15"[^>]*disabled/);
+  assert.ok(html.indexOf('id="slotName"') < html.indexOf('id="slotWriteBtn"'));
+});
+
 test('keeps the public version and its cache key aligned', () => {
   const version = studioVersionSource.match(/UVSTUDIO_VERSION = "([^"]+)"/)?.[1];
   assert.ok(version);

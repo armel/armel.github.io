@@ -257,6 +257,7 @@ window.UVSTUDIO_LOCALES.zh = {
   "slotsRefresh": "刷新插槽",
   "slotFileLabel": "固件文件 (.bin)",
   "slotTargetLabel": "目标插槽",
+  "slotNameLabel": "显示名称",
   "slotWriteBtn": "写入插槽",
   "slotErase": "擦除",
   "slotDetected": "已检测：{0} · {1} · {2} KB",

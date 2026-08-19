@@ -147,6 +147,7 @@ const slotFileLabel = document.getElementById('slotFileLabel');
 const slotFileName = document.getElementById('slotFileName');
 const slotFileButton = document.getElementById('slotFileButton');
 const slotTargetSelect = document.getElementById('slotTarget');
+const slotNameInput = document.getElementById('slotName');
 const slotWriteBtn = document.getElementById('slotWriteBtn');
 const slotsRefreshBtn = document.getElementById('slotsRefreshBtn');
 const slotsTableBody = document.getElementById('slotsTableBody');
@@ -597,13 +598,15 @@ const toolsSerial = window.UVStudioSerial.register('tools', {
 
 function updateActionButtons() {
   const busy = Boolean(activeOperationToken) || slotAutoReconnecting || slotReconnectInProgress;
+  const slotNameValid = Boolean(slotNormalizeName(slotNameInput?.value ?? slotMeta.name));
   if (flashBtn) flashBtn.disabled = !serialSupported || busy || !firmwareData;
   if (dumpBtn) dumpBtn.disabled = !serialSupported || busy;
   if (restoreBtn) restoreBtn.disabled = !serialSupported || busy || !calibData;
   if (logoUploadBtn) logoUploadBtn.disabled = !serialSupported || busy || !logoBitmap;
   if (logoDumpBtn) logoDumpBtn.disabled = !serialSupported || busy;
   if (rfLogExportBtn) rfLogExportBtn.disabled = !serialSupported || busy;
-  if (slotWriteBtn) slotWriteBtn.disabled = !serialSupported || busy || !slotImage;
+  if (slotNameInput) slotNameInput.disabled = busy || !slotImage;
+  if (slotWriteBtn) slotWriteBtn.disabled = !serialSupported || busy || !slotImage || !slotNameValid;
   if (slotsRefreshBtn) slotsRefreshBtn.disabled = !serialSupported || busy;
   if (slotsTableBody) slotsTableBody.querySelectorAll('button').forEach(b => { b.disabled = !serialSupported || busy; });
 }
@@ -1880,6 +1883,18 @@ function slotExtractMeta(bytes, filename) {
   return { name, fwVersion: fwVersion.slice(0, 15) };
 }
 
+// The radio's multiboot font/header are ASCII-only and reserve one byte for
+// NUL. Transliterate common accented names and keep at most 15 visible bytes.
+function slotNormalizeName(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x20-\x7E]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 15);
+}
+
 function slotBuildHeader(imageSize, crc, meta) {
   const h = new Uint8Array(SLOT_HDR_SIZE);
   const dv = new DataView(h.buffer);
@@ -2132,6 +2147,9 @@ async function slotWriteFlow() {
   const slot = slotTargetSelect ? parseInt(slotTargetSelect.value, 10) : SLOT_FIRST;
   if (!(slot >= SLOT_FIRST && slot < SLOT_END)) return;
   if (slotImage.length > SLOT_IMG_MAX) { log(t('slotTooBig'), 'error'); return; }
+  const displayName = slotNormalizeName(slotNameInput?.value ?? slotMeta.name);
+  if (!displayName) return;
+  if (slotNameInput) slotNameInput.value = displayName;
 
   const op = beginToolsOperation('slots-write', true);
   if (!op) return;
@@ -2159,7 +2177,7 @@ async function slotWriteFlow() {
       if (progressChanged) await waitForProgressPaint();
     }
 
-    const hdr = slotBuildHeader(image.length, crc, slotMeta);
+    const hdr = slotBuildHeader(image.length, crc, { ...slotMeta, name: displayName });
     st = await slotWriteChunkRetry(slot, 0, ts, hdr);
     if (st !== 0) throw new Error('header: ' + slotStatusText(st));
 
@@ -2188,6 +2206,7 @@ if (slotFileInput) {
     fr.onload = (ev) => {
       slotImage = new Uint8Array(ev.target.result);
       slotMeta = slotExtractMeta(slotImage, file.name);
+      if (slotNameInput) slotNameInput.value = slotMeta.name;
       if (slotFileName) { slotFileName.removeAttribute('data-i18n'); slotFileName.textContent = file.name; slotFileName.classList.add('has-file'); }
       if (slotFileLabel) slotFileLabel.classList.add('has-file');
       if (slotMetaEl) slotMetaEl.textContent = t('slotDetected', slotMeta.name || '?', slotMeta.fwVersion || '?', Math.round(slotImage.length / 1024));
@@ -2197,6 +2216,7 @@ if (slotFileInput) {
     fr.readAsArrayBuffer(file);
   });
 }
+if (slotNameInput) slotNameInput.addEventListener('input', updateActionButtons);
 if (slotWriteBtn) slotWriteBtn.addEventListener('click', () => { void slotWriteFlow(); });
 if (slotsRefreshBtn) slotsRefreshBtn.addEventListener('click', () => { void slotRefreshFlow(); });
 slotBuildTable();

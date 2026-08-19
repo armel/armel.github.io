@@ -257,6 +257,7 @@ window.UVSTUDIO_LOCALES.pl = {
   "slotsRefresh": "Odśwież sloty",
   "slotFileLabel": "Plik firmware (.bin)",
   "slotTargetLabel": "Slot docelowy",
+  "slotNameLabel": "Nazwa wyświetlana",
   "slotWriteBtn": "Zapisz do slotu",
   "slotErase": "Wymaż",
   "slotDetected": "Wykryto: {0} · {1} · {2} KB",

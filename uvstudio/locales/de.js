@@ -257,6 +257,7 @@ window.UVSTUDIO_LOCALES.de = {
   "slotsRefresh": "Slots aktualisieren",
   "slotFileLabel": "Firmware-Datei (.bin)",
   "slotTargetLabel": "Ziel-Slot",
+  "slotNameLabel": "Anzeigename",
   "slotWriteBtn": "In Slot schreiben",
   "slotErase": "Löschen",
   "slotDetected": "Erkannt: {0} · {1} · {2} KB",

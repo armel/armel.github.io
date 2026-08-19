@@ -257,6 +257,7 @@ window.UVSTUDIO_LOCALES.ru = {
   "slotsRefresh": "Обновить слоты",
   "slotFileLabel": "Файл прошивки (.bin)",
   "slotTargetLabel": "Целевой слот",
+  "slotNameLabel": "Отображаемое имя",
   "slotWriteBtn": "Записать в слот",
   "slotErase": "Стереть",
   "slotDetected": "Обнаружено: {0} · {1} · {2} КБ",
