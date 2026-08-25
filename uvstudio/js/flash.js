@@ -85,6 +85,9 @@ const serialSupported = 'serial' in navigator;
 // Firmware Slots state
 let slotImage = null;   // Uint8Array of the selected .bin
 let slotMeta = { name: '', fwVersion: '' };
+// Out-of-order guard for the slot image picker (catalog or local file).
+let slotImageLoadSeq = 0;
+let slotImageLoadAbort = null;
 let slotAutoReconnecting = false;
 let slotReconnectTimer = null;
 let slotReconnectInProgress = false;
@@ -364,9 +367,10 @@ function setFirmwareBuffer(buf, name = 'firmware.bin') {
 }
 
 // ---------- CHIRP driver offer ----------
-// F4HWN Fusion firmwares ship a matching CHIRP driver as a release asset named
-// f4hwn.fusion.chirp.v<version>.py (one driver covers UV-K1 and UV-K5 V3). After
-// a successful flash we resolve the driver for the flashed version and offer it.
+// All stable F4HWN editions share the matching CHIRP driver release asset named
+// f4hwn.fusion.chirp.v<version>.py (one driver covers Fusion, FieldOps, Transfer,
+// Max, UV-K1 and UV-K5 V3). After a successful flash, resolve the driver
+// for the flashed version and offer it.
 const CHIRP_DRIVER_REPO = 'armel/uv-k1-k5v3-firmware-custom';
 
 function hideChirpDriverOffer() {
@@ -389,9 +393,8 @@ async function maybeOfferChirpDriver(fname) {
   try {
     const parse = window.UVStudioFlashCatalog?.parseFirmwareName;
     const info = parse ? parse(fname) : null;
-    // Only versioned F4HWN Fusion builds have a matching driver (not stock
-    // Quansheng, not the unversioned development build).
-    if (!info || info.brand !== 'f4hwn' || info.isDevelopment || !info.version) return;
+    const hasSharedDriver = window.UVStudioFlashCatalog?.hasSharedChirpDriver;
+    if (!hasSharedDriver || !hasSharedDriver(info)) return;
 
     const tag = `v${info.version}`;
     const apiUrl =
@@ -413,6 +416,30 @@ async function maybeOfferChirpDriver(fname) {
 
 // ---------- Auto-load firmware from URL ----------
 
+function normalizeFirmwareDownloadURL(url) {
+  const urlObj = new URL(url);
+
+  if (urlObj.protocol !== 'https:') {
+    throw new Error(t('urlHttpNotHttps'));
+  }
+
+  // GitHub convenience: github.com/.../raw/... → raw.githubusercontent.com/...
+  if (urlObj.hostname === 'github.com' && urlObj.pathname.includes('/raw/')) {
+    const parts = urlObj.pathname.split('/').filter(Boolean);
+    const i = parts.indexOf('raw');
+    if (i > 1 && i < parts.length - 1) {
+      const user = parts[0];
+      const repo = parts[1];
+      const branch = parts[i + 1];
+      const rest = parts.slice(i + 2).join('/');
+      urlObj.hostname = 'raw.githubusercontent.com';
+      urlObj.pathname = `/${user}/${repo}/${branch}/${rest}`;
+    }
+  }
+
+  return urlObj;
+}
+
 async function loadFirmwareFromURL(url) {
   const seq = beginFirmwareLoad('url');
   const controller = new AbortController();
@@ -420,26 +447,7 @@ async function loadFirmwareFromURL(url) {
   try {
     log(t('loadingFromUrl', url), 'info');
 
-    const urlObj = new URL(url);
-
-    // Only HTTPS
-    if (urlObj.protocol !== 'https:') {
-      throw new Error(t('urlHttpNotHttps'));
-    }
-
-    // GitHub convenience: github.com/.../raw/... → raw.githubusercontent.com/...
-    if (urlObj.hostname === 'github.com' && urlObj.pathname.includes('/raw/')) {
-      const parts = urlObj.pathname.split('/').filter(Boolean);
-      const i = parts.indexOf('raw');
-      if (i > 1 && i < parts.length - 1) {
-        const user = parts[0];
-        const repo = parts[1];
-        const branch = parts[i + 1];
-        const rest = parts.slice(i + 2).join('/');
-        urlObj.hostname = 'raw.githubusercontent.com';
-        urlObj.pathname = `/${user}/${repo}/${branch}/${rest}`;
-      }
-    }
+    const urlObj = normalizeFirmwareDownloadURL(url);
 
     const res = await fetch(urlObj.toString(), { cache: 'no-cache', mode: 'cors', signal: controller.signal });
     if (!res.ok) {
@@ -481,6 +489,7 @@ async function maybeLoadFirmwareFromQuery() {
 // Minimal entry point so the firmware catalog picker can reuse the URL loader.
 window.UVStudioFlash = Object.freeze({
   loadFirmwareFromURL,
+  loadSlotFirmwareFromURL,
   hasFirmware: () => Boolean(firmwareData)
 });
 
@@ -1852,10 +1861,13 @@ function slotEditionFromFilename(filename) {
     /^f4hwn[._-](?:(?:k1|k5v3)[._-])?([a-z][a-z0-9-]*)(?:[._-].*)?\.bin$/i
   );
   if (!match) return '';
+  // FieldOps is the only current edition with an internal capital letter.
   return match[1]
     .split('-')
     .filter(Boolean)
-    .map(token => token.charAt(0).toUpperCase() + token.slice(1).toLowerCase())
+    .map(token => token.toLowerCase() === 'fieldops'
+      ? 'FieldOps'
+      : token.charAt(0).toUpperCase() + token.slice(1).toLowerCase())
     .join(' ')
     .slice(0, 15);
 }
@@ -2198,20 +2210,92 @@ async function slotWriteFlow() {
   }
 }
 
+function clearSlotImage() {
+  slotImage = null;
+  slotMeta = { name: '', fwVersion: '' };
+  if (slotNameInput) slotNameInput.value = '';
+  if (slotFileName) {
+    slotFileName.setAttribute('data-i18n', 'fileNoFile');
+    slotFileName.textContent = t('fileNoFile');
+    slotFileName.classList.remove('has-file');
+  }
+  if (slotFileLabel) slotFileLabel.classList.remove('has-file');
+  if (slotMetaEl) slotMetaEl.textContent = '';
+  updateActionButtons();
+}
+
+// Start a new slot-image selection and keep the catalog and local picker
+// mutually exclusive. Any older in-flight download or FileReader completion is
+// ignored, so a quick second choice always wins.
+function beginSlotImageLoad(source) {
+  const seq = ++slotImageLoadSeq;
+  if (slotImageLoadAbort) {
+    try { slotImageLoadAbort.abort(); } catch (e) {}
+    slotImageLoadAbort = null;
+  }
+  clearSlotImage();
+  if (source === 'url' && slotFileInput) slotFileInput.value = '';
+  window.dispatchEvent(new CustomEvent('uvstudio:slotfirmwareselect', { detail: { source } }));
+  return seq;
+}
+
+function setSlotImageBuffer(buf, name = 'firmware.bin') {
+  slotImage = new Uint8Array(buf);
+  slotMeta = slotExtractMeta(slotImage, name);
+  if (slotNameInput) slotNameInput.value = slotMeta.name;
+  if (slotFileName) {
+    slotFileName.removeAttribute('data-i18n');
+    slotFileName.textContent = name;
+    slotFileName.classList.add('has-file');
+  }
+  if (slotFileLabel) slotFileLabel.classList.add('has-file');
+  if (slotMetaEl) {
+    slotMetaEl.textContent = t(
+      'slotDetected',
+      slotMeta.name || '?',
+      slotMeta.fwVersion || '?',
+      Math.round(slotImage.length / 1024)
+    );
+  }
+  log(t('slotFileLoaded', name), 'success');
+  updateActionButtons();
+}
+
+async function loadSlotFirmwareFromURL(url) {
+  const seq = beginSlotImageLoad('url');
+  const controller = new AbortController();
+  slotImageLoadAbort = controller;
+  try {
+    log(t('loadingFromUrl', url), 'info');
+    const urlObj = normalizeFirmwareDownloadURL(url);
+    const res = await fetch(urlObj.toString(), {
+      cache: 'no-cache',
+      mode: 'cors',
+      signal: controller.signal
+    });
+    if (!res.ok) throw new Error(`${t('urlFetchError')} HTTP ${res.status}`);
+
+    const buf = await res.arrayBuffer();
+    if (seq !== slotImageLoadSeq) return;
+    const fname = (urlObj.pathname.split('/').pop() || 'firmware.bin').split('?')[0];
+    setSlotImageBuffer(buf, fname);
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;
+    log(`${t('urlFetchError')} ${err?.message ?? String(err)}`, 'error');
+    if (seq === slotImageLoadSeq) clearSlotImage();
+  } finally {
+    if (slotImageLoadAbort === controller) slotImageLoadAbort = null;
+  }
+}
+
 if (slotFileInput) {
   slotFileInput.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const seq = beginSlotImageLoad('local');
     const fr = new FileReader();
     fr.onload = (ev) => {
-      slotImage = new Uint8Array(ev.target.result);
-      slotMeta = slotExtractMeta(slotImage, file.name);
-      if (slotNameInput) slotNameInput.value = slotMeta.name;
-      if (slotFileName) { slotFileName.removeAttribute('data-i18n'); slotFileName.textContent = file.name; slotFileName.classList.add('has-file'); }
-      if (slotFileLabel) slotFileLabel.classList.add('has-file');
-      if (slotMetaEl) slotMetaEl.textContent = t('slotDetected', slotMeta.name || '?', slotMeta.fwVersion || '?', Math.round(slotImage.length / 1024));
-      log(t('slotFileLoaded', file.name), 'success');
-      updateActionButtons();
+      if (seq === slotImageLoadSeq) setSlotImageBuffer(ev.target.result, file.name);
     };
     fr.readAsArrayBuffer(file);
   });

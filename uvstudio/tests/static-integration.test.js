@@ -22,8 +22,8 @@ test('derives any multiboot edition from the canonical firmware filename', () =>
   );
 
   assert.equal(context.extractEdition('f4hwn.fusion.bin'), 'Fusion');
-  assert.equal(context.extractEdition('f4hwn.extended.bin'), 'Extended');
   assert.equal(context.extractEdition('f4hwn.expedition.bin'), 'Expedition');
+  assert.equal(context.extractEdition('f4hwn.fieldops.bin'), 'FieldOps');
   assert.equal(context.extractEdition('f4hwn.future-profile.bin'), 'Future Profile');
   assert.equal(context.extractEdition('f4hwn.k1.fusion.v5.9.0.bin'), 'Fusion');
   assert.equal(context.extractEdition('f4hwn.compact.usb.v50.bin'), 'Compact');

@@ -121,7 +121,7 @@
   margin-bottom: 14px;
 }
 
-#pane-tools #firmwareCatalogSelect {
+#pane-tools .firmware-catalog-select {
   width: 100%;
   /* Override the compact, fixed-height core.css select so the field grows to a
      full-width form control that matches the local-file picker below it. */
@@ -143,15 +143,15 @@
   background-position: right 12px center;
 }
 
-#pane-tools #firmwareCatalogSelect:hover:not(:disabled) {
+#pane-tools .firmware-catalog-select:hover:not(:disabled) {
   border-color: var(--accent);
 }
 
-#pane-tools #firmwareCatalogSelect:focus {
+#pane-tools .firmware-catalog-select:focus {
   border-color: var(--accent);
 }
 
-#pane-tools #firmwareCatalogSelect:disabled {
+#pane-tools .firmware-catalog-select:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }

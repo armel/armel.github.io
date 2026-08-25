@@ -1,8 +1,9 @@
 window.UVSTUDIO_LOCALES = window.UVSTUDIO_LOCALES || {};
 window.UVSTUDIO_LOCALES.fr = {
-  "flash_catalog_label": "Firmware officiel F4HWN Fusion",
+  "flash_catalog_label": "Firmware officiel F4HWN",
   "flash_catalog_placeholder": "— Choisir une version —",
   "flash_catalog_or": "ou charger un fichier local",
+  "slot_catalog_label": "Firmware F4HWN compatible multiboot",
   "title": "UVTools2",
   "subtitle": "UV-K5 V3 & UV-K1 · Firmware, calibration, logo et RF Log — le tout dans le navigateur via Web Serial API",
   "loadingFromUrl": "Chargement du firmware depuis l’URL : {0}",
@@ -248,7 +249,7 @@ window.UVSTUDIO_LOCALES.fr = {
   "studio_nav_rf_log": "Journal RF",
   "studio_nav_flash": "Flasher le firmware",
   "studio_nav_slots": "Emplacements firmware",
-  "slotsDescription": "Stockez plusieurs firmwares Fusion sur la radio et choisissez-en un au démarrage (maintenir MENU). L'écriture ne touche que la flash externe : la radio reste utilisable.",
+  "slotsDescription": "Stockez plusieurs firmwares F4HWN compatibles sur la radio et choisissez-en un au démarrage (maintenir MENU). L'écriture ne touche que la flash externe : la radio reste utilisable.",
   "slotColIdx": "#",
   "slotColEdition": "Édition",
   "slotColVersion": "Version",
