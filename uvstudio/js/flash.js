@@ -281,6 +281,8 @@ function updateInfoBox() {
     infoBoxEl.innerHTML = t('infoBoxLogo');
   } else if (tabName === 'slots') {
     infoBoxEl.innerHTML = t('infoBoxSlots');
+  } else if (tabName === 'apps') {
+    infoBoxEl.innerHTML = t('infoBoxApps');
   } else {
     infoBoxEl.innerHTML = t('infoBoxDump');
   }
@@ -2304,6 +2306,274 @@ if (slotNameInput) slotNameInput.addEventListener('input', updateActionButtons);
 if (slotWriteBtn) slotWriteBtn.addEventListener('click', () => { void slotWriteFlow(); });
 if (slotsRefreshBtn) slotsRefreshBtn.addEventListener('click', () => { void slotRefreshFlow(); });
 slotBuildTable();
+
+// ========== OVERLAY APPS ==========
+// Parallels the firmware-slots feature, targeting the external-flash "Apps"
+// region via the 0x073x command family. A .app file already carries its 64-byte
+// header (built by pack_app.py), so we just split header/code and write both.
+const APP_SLOT_COUNT = 16;        // firmware capacity (0..15)
+const APP_SLOT_FIRST = 0;         // physical slot indices used here: 0..7
+const APP_SLOT_LAST = 7;          // shown to the user as 1..8 (label = index + 1)
+const appSlotLabel = (s) => String(s + 1);   // physical slot -> user-facing number
+const APP_IMG_OFFSET = 0x1000;    // code starts after the header sector
+const APP_HDR_SIZE = 64;
+const APP_MAGIC = 0x31504146;     // "FAP1"
+const APP_FLAG_COMMITTED = 1;
+const APP_WRITE_CHUNK = 128;      // keep the whole command under the 256 B VCP ring
+
+const MSG_APP_INFO = 0x0730, MSG_APP_INFO_RESP = 0x0731;
+const MSG_APP_ERASE = 0x0732, MSG_APP_ERASE_RESP = 0x0733;
+const MSG_APP_WRITE = 0x0734, MSG_APP_WRITE_RESP = 0x0735;
+const MSG_APP_VALIDATE = 0x0736, MSG_APP_VALIDATE_RESP = 0x0737;
+
+// APP_ERR_* (0..8) -> i18n status keys.
+const APP_STATUS_KEY = ['appStateValid', 'appStateBadSlot', 'appStateEmpty', 'appStateAbi',
+  'appStateIncomplete', 'appStateBadSize', 'appStateCrc', 'appStateVma', 'appStateAuth'];
+function appStatusText(code) { return t(APP_STATUS_KEY[code] || 'slotStateError'); }
+
+const appFileInput   = document.getElementById('appFile');
+const appFileLabel   = document.getElementById('appFileLabel');
+const appFileName    = document.getElementById('appFileName');
+const appTargetSelect = document.getElementById('appTarget');
+const appInstallBtn  = document.getElementById('appInstallBtn');
+const appsRefreshBtn = document.getElementById('appsRefreshBtn');
+const appsTableBody  = document.getElementById('appsTableBody');
+const appMetaEl      = document.getElementById('appMeta');
+
+let appImage = null;   // full .app bytes (header + code)
+let appMeta  = { name: '', version: '', codeSize: 0 };
+
+function appParseHeader(b) {
+  const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const readStr = (off, len) => { let s = ''; for (let i = 0; i < len; i++) { const c = b[off + i]; if (!c) break; s += String.fromCharCode(c); } return s; };
+  // app_header_t: magic@0 hdr@4 abi@6 codeSize@8 crc@12 entry@16 flags@18
+  //               name@20 version@36 linkVma@52 (differs from the firmware header).
+  return {
+    magic: dv.getUint32(0, true),
+    abiVersion: dv.getUint16(6, true),
+    codeSize: dv.getUint32(8, true),
+    codeCrc32: dv.getUint32(12, true),
+    name: readStr(20, 16),
+    version: readStr(36, 16),
+    linkVma: dv.getUint32(52, true) >>> 0
+  };
+}
+
+async function appInfo(slot) {
+  const data = await slotCommand(MSG_APP_INFO, Uint8Array.of(slot), MSG_APP_INFO_RESP, 3000);
+  return { slot, status: data[1], hdr: appParseHeader(data.subarray(2, 2 + APP_HDR_SIZE)) };
+}
+async function appErase(slot, ts) {
+  const d = new Uint8Array(6); d[0] = slot; new DataView(d.buffer).setUint32(2, ts, true);
+  return (await slotCommand(MSG_APP_ERASE, d, MSG_APP_ERASE_RESP, 30000))[1];
+}
+async function appWriteChunk(slot, offset, ts, chunk) {
+  const d = new Uint8Array(12 + chunk.length); const dv = new DataView(d.buffer);
+  d[0] = slot; dv.setUint32(2, offset, true); dv.setUint16(6, chunk.length, true); dv.setUint32(8, ts, true);
+  d.set(chunk, 12);
+  return (await slotCommand(MSG_APP_WRITE, d, MSG_APP_WRITE_RESP, 1500))[1];
+}
+async function appWriteChunkRetry(slot, offset, ts, chunk) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await appWriteChunk(slot, offset, ts, chunk); }
+    catch (e) { if (attempt >= 4) throw e; await sleep(60); }
+  }
+}
+async function appValidate(slot) {
+  return (await slotCommand(MSG_APP_VALIDATE, Uint8Array.of(slot), MSG_APP_VALIDATE_RESP, 20000))[1];
+}
+
+function appRenderRow(slot, info) {
+  if (!appsTableBody) return;
+  const row = appsTableBody.querySelector(`tr[data-slot="${slot}"]`);
+  if (!row) return;
+  const valid = info && info.status === 0;
+  const hdr = info && info.hdr;
+  row.querySelector('.slot-name').textContent = valid ? (hdr.name || '—') : '—';
+  row.querySelector('.slot-version').textContent = valid ? (hdr.version || '—') : '—';
+  row.querySelector('.slot-size').textContent = valid ? `${(hdr.codeSize / 1024).toFixed(1)} KB` : '—';
+  const stateCell = row.querySelector('.slot-state');
+  stateCell.textContent = info ? appStatusText(info.status) : '—';
+  stateCell.className = 'slot-state ' + (valid ? 'ok' : (info && info.status === 2 ? 'empty' : 'bad'));
+  const del = row.querySelector('.app-act-delete');
+  if (del) del.disabled = !valid;
+}
+
+function appBuildTable() {
+  if (!appsTableBody) return;
+  appsTableBody.innerHTML = '';
+  for (let s = APP_SLOT_FIRST; s <= APP_SLOT_LAST; s++) {
+    const tr = document.createElement('tr');
+    tr.dataset.slot = String(s);
+    tr.innerHTML =
+      `<td class="slot-idx">${appSlotLabel(s)}</td>` +
+      `<td class="slot-name">—</td>` +
+      `<td class="slot-version">—</td>` +
+      `<td class="slot-size">—</td>` +
+      `<td><span class="slot-state">—</span></td>` +
+      `<td class="slot-actions"></td>`;
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'app-act-delete';
+    del.textContent = t('appDelete');
+    del.disabled = true;
+    del.addEventListener('click', () => { void appDeleteFlow(s); });
+    tr.querySelector('.slot-actions').appendChild(del);
+    appsTableBody.appendChild(tr);
+  }
+  if (appTargetSelect && !appTargetSelect.options.length) {
+    for (let s = APP_SLOT_FIRST; s <= APP_SLOT_LAST; s++) {
+      const o = document.createElement('option'); o.value = String(s); o.textContent = appSlotLabel(s);
+      appTargetSelect.appendChild(o);
+    }
+  }
+}
+
+async function finishAppOperation(op) {
+  try { if (activeToolsView !== 'apps' && toolsSerial.isOwner()) await disconnect(); }
+  finally { endToolsOperation(op); updateAppButtons(); }
+}
+
+async function appRefreshFlow() {
+  const op = beginToolsOperation('apps-refresh', false);
+  if (!op) return;
+  try {
+    if (!port) await connect();
+    log(t('appsScanning'), 'info');
+    for (let s = APP_SLOT_FIRST; s <= APP_SLOT_LAST; s++) {
+      try { appRenderRow(s, await appInfo(s)); }
+      catch (e) {
+        if (e?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e;
+        appRenderRow(s, { slot: s, status: 6, hdr: null });
+      }
+    }
+    log(t('appsScanDone'), 'success');
+  } catch (e) {
+    log(t('appsError', e?.message ?? String(e)), 'error');
+  } finally {
+    await finishAppOperation(op);
+  }
+}
+
+async function appDeleteFlow(slot) {
+  const op = beginToolsOperation('apps-delete', true);
+  if (!op) return;
+  try {
+    if (!port) await connect();
+    readBuffer = []; await sleep(500);
+    const dev = await requestDeviceInfo();
+    log(t('appErasing', appSlotLabel(slot)), 'info');
+    const st = await appErase(slot, dev.timestamp);
+    if (st !== 0) throw new Error(appStatusText(st));
+    log(t('appErased', appSlotLabel(slot)), 'success');
+    appRenderRow(slot, await appInfo(slot));
+  } catch (e) {
+    log(t('appsError', e?.message ?? String(e)), 'error');
+  } finally {
+    await finishAppOperation(op);
+  }
+}
+
+async function appInstallFlow() {
+  if (!appImage) return;
+  const slot = appTargetSelect ? parseInt(appTargetSelect.value, 10) : APP_SLOT_FIRST;
+  if (!(slot >= APP_SLOT_FIRST && slot <= APP_SLOT_LAST)) return;
+  const code = appImage.subarray(APP_HDR_SIZE);
+  const header = appImage.subarray(0, APP_HDR_SIZE);
+  if (code.length > 0x1000) { log(t('appTooBig'), 'error'); return; }
+
+  const op = beginToolsOperation('apps-install', true);
+  if (!op) return;
+  if (progressContainer) progressContainer.style.display = 'block';
+  updateProgress(0);
+  try {
+    if (!port) await connect();
+    readBuffer = []; await sleep(500);
+    const dev = await requestDeviceInfo();
+    const ts = dev.timestamp;
+
+    log(t('appErasing', appSlotLabel(slot)), 'info');
+    let st = await appErase(slot, ts);
+    if (st !== 0) throw new Error('erase: ' + appStatusText(st));
+
+    log(t('appInstalling', appSlotLabel(slot)), 'info');
+    for (let off = 0; off < code.length; off += APP_WRITE_CHUNK) {
+      const chunk = code.subarray(off, Math.min(off + APP_WRITE_CHUNK, code.length));
+      st = await appWriteChunkRetry(slot, APP_IMG_OFFSET + off, ts, chunk);
+      if (st !== 0) throw new Error('write @' + off + ': ' + appStatusText(st));
+      const changed = updateProgress(((off + chunk.length) / code.length) * 95);
+      if (changed) await waitForProgressPaint();
+    }
+    // header last: it carries the committed flag, so a partial write never validates
+    st = await appWriteChunkRetry(slot, 0, ts, header);
+    if (st !== 0) throw new Error('header: ' + appStatusText(st));
+
+    updateProgress(97); await waitForProgressPaint();
+    log(t('appVerifying', appSlotLabel(slot)), 'info');
+    const vs = await appValidate(slot);
+    if (vs !== 0) throw new Error('verify: ' + appStatusText(vs));
+    updateProgress(100);
+    log(t('appInstalled', appSlotLabel(slot)), 'success');
+    appRenderRow(slot, await appInfo(slot));
+    setTimeout(() => { if (progressContainer) progressContainer.style.display = 'none'; }, 1200);
+  } catch (e) {
+    log(t('appsError', e?.message ?? String(e)), 'error');
+  } finally {
+    await finishAppOperation(op);
+  }
+}
+
+function updateAppButtons() {
+  const busy = !!activeOperationToken;
+  if (appInstallBtn) appInstallBtn.disabled = !serialSupported || busy || !appImage;
+  if (appsRefreshBtn) appsRefreshBtn.disabled = !serialSupported || busy;
+  if (appsTableBody) appsTableBody.querySelectorAll('button').forEach(b => { if (busy) b.disabled = true; });
+}
+
+function clearAppImage() {
+  appImage = null;
+  appMeta = { name: '', version: '', codeSize: 0 };
+  if (appFileName) { appFileName.setAttribute('data-i18n', 'fileNoFile'); appFileName.textContent = t('fileNoFile'); appFileName.classList.remove('has-file'); }
+  if (appFileLabel) appFileLabel.classList.remove('has-file');
+  if (appMetaEl) appMetaEl.textContent = '';
+  updateAppButtons();
+}
+
+function setAppImageBuffer(buf, name) {
+  const bytes = new Uint8Array(buf);
+  if (bytes.length <= APP_HDR_SIZE) { log(t('appBadFile'), 'error'); clearAppImage(); return; }
+  const hdr = appParseHeader(bytes);
+  if (hdr.magic !== APP_MAGIC) { log(t('appBadFile'), 'error'); clearAppImage(); return; }
+  appImage = bytes;
+  appMeta = { name: hdr.name, version: hdr.version, codeSize: hdr.codeSize };
+  if (appFileName) { appFileName.removeAttribute('data-i18n'); appFileName.textContent = name; appFileName.classList.add('has-file'); }
+  if (appFileLabel) appFileLabel.classList.add('has-file');
+  if (appMetaEl) appMetaEl.textContent = t('appDetected', hdr.name || '?', hdr.version || '?', (hdr.codeSize / 1024).toFixed(1));
+  updateAppButtons();
+}
+
+if (appFileInput) {
+  appFileInput.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fr = new FileReader();
+    fr.onload = (ev) => setAppImageBuffer(ev.target.result, file.name);
+    fr.readAsArrayBuffer(file);
+  });
+}
+if (appInstallBtn) appInstallBtn.addEventListener('click', () => { void appInstallFlow(); });
+if (appsRefreshBtn) appsRefreshBtn.addEventListener('click', () => { void appRefreshFlow(); });
+appBuildTable();
+
+// Refresh the app list on entering the Apps view; release serial on leaving.
+window.addEventListener('uvstudio:toolviewchange', event => {
+  const nextView = event.detail?.view || 'flash';
+  if (nextView === 'apps') { updateAppButtons(); void appRefreshFlow(); }
+});
+window.addEventListener('uvstudio:languagechange', () => {
+  if (appsTableBody) appsTableBody.querySelectorAll('.app-act-delete').forEach(b => { b.textContent = t('appDelete'); });
+  if (appImage && appMetaEl) appMetaEl.textContent = t('appDetected', appMeta.name || '?', appMeta.version || '?', (appMeta.codeSize / 1024).toFixed(1));
+});
 
 // ========== CAPABILITY CHECK ==========
 if (!('serial' in navigator)) {

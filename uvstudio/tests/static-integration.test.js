@@ -136,7 +136,7 @@ test('exposes the responsive sidebar toggle to assistive technologies', () => {
 
 test('maps every maintenance route directly to an existing tool view', () => {
   const views = [...html.matchAll(/data-tool-view="([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(views, ['flash', 'slots', 'dump', 'restore', 'logo-upload', 'logo-dump', 'rf-log']);
+  assert.deepEqual(views, ['flash', 'slots', 'apps', 'dump', 'restore', 'logo-upload', 'logo-dump', 'rf-log']);
   views.forEach(view => assert.match(html, new RegExp(`id="${view}-content"`)));
   assert.doesNotMatch(html, /class="tabs"|class="tab btn"/);
 });

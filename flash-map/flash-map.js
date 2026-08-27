@@ -10,7 +10,7 @@
 
 const FLASH_MAP = {
   meta: {
-    updated: "2026-08-17",
+    updated: "2026-08-28",
     flashSize: 0x200000,
     eraseSize: 0x1000,
     programSize: 0x100,
@@ -38,7 +38,9 @@ const FLASH_MAP = {
     { id: "profile-3", start: 0x0E0000, end: 0x0EFFFF, kind: "profile", target: "profiles", short: { fr: "P3", en: "P3" } },
     { id: "profile-4", start: 0x0F0000, end: 0x0FFFFF, kind: "profile", target: "profiles", short: { fr: "P4", en: "P4" } },
     { id: "mb-state", start: 0x100000, end: 0x100FFF, kind: "shared", target: "profiles", short: { fr: "État", en: "State" } },
-    { id: "gap-mid", start: 0x101000, end: 0x14BFFF, kind: "free", target: "unused", short: { fr: "Non attribué", en: "Unallocated" } },
+    { id: "gap-mid-a", start: 0x101000, end: 0x101FFF, kind: "free", target: "unused", short: { fr: "Libre", en: "Free" } },
+    { id: "apps", start: 0x102000, end: 0x121FFF, kind: "apps", target: "apps", short: { fr: "Apps", en: "Apps" } },
+    { id: "gap-mid-b", start: 0x122000, end: 0x14BFFF, kind: "free", target: "unused", short: { fr: "Non attribué", en: "Unallocated" } },
     { id: "voice", start: 0x14C000, end: 0x1DFFFF, kind: "voice", target: "voice-log", short: { fr: "Voix", en: "Voice" } },
     { id: "log", start: 0x1E0000, end: 0x1E7FFF, kind: "log", target: "voice-log", short: { fr: "Log", en: "Log" } },
     { id: "gap-high", start: 0x1E8000, end: 0x1FFFFF, kind: "free", target: "unused", short: { fr: "Libre", en: "Free" } },
@@ -145,11 +147,23 @@ const FLASH_MAP = {
       note: { fr: "Le profil 0 réutilise la zone historique 0x000000 (aucune migration). Chaque slot est lié à son profil (slot 0 → profil 0, « Main »). La calibration reste partagée. Frontière du banking : tout accès physique < 0x010000 est redirigé dans la bank active.", en: "Profile 0 reuses the historical region at 0x000000 (no migration). Each slot is bound to its profile (slot 0 → profile 0, “Main”). Calibration stays shared. Banking boundary: every physical access below 0x010000 is redirected into the active bank." },
     },
     {
+      id: "apps", range: [0x102000, 0x121FFF],
+      title: { fr: "Slots Apps Overlay", en: "Overlay-app slots" },
+      rows: [
+        ["slot + 0x0000", "0x003F", { fr: "En-tête FAP1 de 64 octets : magic, versions hdr/ABI, taille code, CRC32, offset d’entrée, flags, nom, version, VMA de link", en: "64-byte FAP1 header: magic, hdr/ABI versions, code size, CRC32, entry offset, flags, name, version, link VMA" }],
+        ["slot + 0x0040", "0x004F", { fr: "Config de l’app (16 octets max), préservée entre lancements et écrite par le firmware à la sortie", en: "App config (up to 16 bytes), kept across launches and written by the firmware on exit" }],
+        ["slot + 0x0050", "0x0FFF", { fr: "Reste du secteur en-tête de 4 Kio, réservé", en: "Remainder of the 4 KiB header sector, reserved" }],
+        ["slot + 0x1000", "0x1FFF", { fr: "Secteur code de 4 Kio : blob de l’app (≤ 4 Kio), vérifié par CRC puis copié dans l’overlay RAM pour exécution", en: "4 KiB code sector: app blob (≤ 4 KiB), CRC-checked then copied into the RAM overlay to run" }],
+      ],
+      note: { fr: "16 slots de 8 Kio (0x102000–0x121FFF), taillés dans l’espace libre après les marqueurs multiboot. Gérés en UART/USB (commandes 0x073x) depuis UV Studio ; Flash externe uniquement — la Flash interne n’est jamais touchée. Une app est du code natif de confiance, exécuté depuis l’overlay RAM de 4 Kio partagé avec le stub multiboot.", en: "16 slots of 8 KiB (0x102000–0x121FFF), carved from the free space after the multiboot markers. Managed over UART/USB (0x073x commands) from UV Studio; external Flash only — the internal Flash is never touched. An app is trusted native code, run from the 4 KiB RAM overlay shared with the multiboot stub." },
+    },
+    {
       id: "unused", range: [0x012000, 0x1FFFFF],
       title: { fr: "Zones non attribuées", en: "Unallocated areas" },
       rows: [
         [0x012000, 0x01FFFF, { fr: "Non attribué", en: "Unallocated" }],
-        [0x101000, 0x14BFFF, { fr: "Non attribué par F4HWN", en: "Unallocated by F4HWN" }],
+        [0x101000, 0x101FFF, { fr: "Non attribué (avant la région Apps)", en: "Unallocated (before the Apps region)" }],
+        [0x122000, 0x14BFFF, { fr: "Non attribué par F4HWN", en: "Unallocated by F4HWN" }],
         [0x1E8000, 0x1FFFFF, { fr: "Non attribué", en: "Unallocated" }],
       ],
       note: { fr: "« Non attribué » décrit le code F4HWN actuel ; un autre firmware peut employer ces adresses.", en: "“Unallocated” describes the current F4HWN code; another firmware may use these addresses." },
@@ -176,7 +190,7 @@ const I18N = {
     header: "Secteur header",
     image: "Image",
     spare: "Réserve",
-    legend: { shared: "Données partagées", profile: "Config par profil", slot: "Images multiboot", voice: "Données vocales", log: "Journal RX/TX", free: "Non attribué / réservé" },
+    legend: { shared: "Données partagées", profile: "Config par profil", slot: "Images multiboot", apps: "Apps overlay", voice: "Données vocales", log: "Journal RX/TX", free: "Non attribué / réservé" },
   },
   en: {
     eyebrow: "F4HWN · Developer reference",
@@ -196,7 +210,7 @@ const I18N = {
     header: "Header sector",
     image: "Image",
     spare: "Spare",
-    legend: { shared: "Shared data", profile: "Per-profile config", slot: "Multiboot images", voice: "Voice data", log: "RX/TX log", free: "Unallocated / reserved" },
+    legend: { shared: "Shared data", profile: "Per-profile config", slot: "Multiboot images", apps: "Overlay apps", voice: "Voice data", log: "RX/TX log", free: "Unallocated / reserved" },
   },
 };
 
@@ -264,7 +278,7 @@ function renderOverview(language) {
 
   const legend = $("#map-legend");
   legend.replaceChildren();
-  for (const kind of ["shared", "profile", "slot", "voice", "log", "free"]) {
+  for (const kind of ["shared", "profile", "slot", "apps", "voice", "log", "free"]) {
     const item = make("span", "legend-item");
     item.append(make("i", `legend-swatch kind-${kind}`), document.createTextNode(I18N[language].legend[kind]));
     legend.append(item);

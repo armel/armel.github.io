@@ -112,6 +112,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 <span class="nav-item-label" data-i18n="studio_nav_slots">Firmware Slots</span>
             </button>
+            <button class="nav-item" data-route="apps" data-app="tools" data-tool-view="apps" data-name="Apps" data-section-i18n="studio_nav_apps">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_apps">Apps</span>
+            </button>
             <button class="nav-item" data-route="dump-calib" data-app="tools" data-tool-view="dump" data-name="Dump Calibration" data-section-i18n="studio_nav_dump_calib">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
                 <span class="nav-item-label" data-i18n="studio_nav_dump_calib">Dump Calib</span>
@@ -435,6 +439,46 @@
                         <label for="slotName" data-i18n="slotNameLabel">Display name</label>
                         <input type="text" id="slotName" maxlength="15" autocomplete="off" spellcheck="false" disabled />
                         <button id="slotWriteBtn" disabled aria-live="polite"><span data-i18n="slotWriteBtn">Write to slot</span></button>
+                    </div>
+                </section>
+            </div>
+
+            <div class="tool-view" id="apps-content" role="region" hidden>
+                <section class="section">
+                    <p class="tab-description" data-i18n="appsDescription">Install small overlay apps (.app) into the radio's external flash and launch them from the F key + 7 menu. Writing only touches the external flash, so the radio stays usable.</p>
+                </section>
+                <section class="section">
+                    <div class="slots-table-wrap">
+                        <table class="slots-table" id="appsTable">
+                            <thead>
+                                <tr>
+                                    <th class="slot-col-idx" data-i18n="slotColIdx">#</th>
+                                    <th data-i18n="appColName">Name</th>
+                                    <th data-i18n="slotColVersion">Version</th>
+                                    <th data-i18n="appColSize">Size</th>
+                                    <th data-i18n="slotColState">Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="appsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <button id="appsRefreshBtn" class="slots-refresh"><span data-i18n="appsRefresh">Refresh apps</span></button>
+                </section>
+                <section class="section" aria-labelledby="labelAppFile">
+                    <label id="labelAppFile" for="appFile" data-i18n="appFileLabel">App file (.app)</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="appFile" accept=".app" />
+                        <div class="file-input-label" id="appFileLabel">
+                            <span class="file-name" id="appFileName" data-i18n="fileNoFile">No file selected</span>
+                            <span class="file-button" id="appFileButton" data-i18n="fileChoose">Choose file</span>
+                        </div>
+                    </div>
+                    <p class="slot-meta" id="appMeta" aria-live="polite"></p>
+                    <div class="slots-write-row">
+                        <label for="appTarget" data-i18n="appTargetLabel">Target slot</label>
+                        <select id="appTarget"></select>
+                        <button id="appInstallBtn" disabled aria-live="polite"><span data-i18n="appInstallBtn">Install app</span></button>
                     </div>
                 </section>
             </div>
