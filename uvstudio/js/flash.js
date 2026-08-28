@@ -299,9 +299,11 @@ window.addEventListener('uvstudio:toolviewchange', event => {
   const leavingSlots = activeToolsView === 'slots' && nextView !== 'slots';
   activeToolsView = nextView;
   updateInfoBox();
-  if (leavingSlots && !activeOperationToken && toolsSerial.isOwner()) {
-    void toolsSerial.release('navigation');
-  }
+  // Leaving Slots: stop its hardware auto-reconnect loop, but KEEP the port open
+  // so the next normal-mode view (Apps, Dump/Restore, Logo) inherits the live
+  // connection without a reconnect + port re-pick. Switching to a different owner
+  // (e.g. K5Viewer) still releases through the shared controller's releaseFor().
+  if (leavingSlots) stopSlotAutoReconnect();
 });
 
 // Initial i18n sync
