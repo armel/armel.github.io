@@ -1300,10 +1300,10 @@ async function requestDeviceInfo() {
     log(t('messageReceived', resp.msgType.toString(16).padStart(4, '0')), 'info');
     
     if (resp.msgType === MSG_DEV_INFO_RESP) {
-      // Log raw device info data
-      logDeviceInfo(resp.data);
+      // Log raw device info data (and keep the firmware string to name it later)
+      const name = logDeviceInfo(resp.data);
       log(t('deviceDetected'), 'success');
-      return { timestamp: ts };
+      return { timestamp: ts, name };
     }
   }
   throw new Error(t('timeoutNoDevice'));
@@ -1348,6 +1348,7 @@ function logDeviceInfo(data) {
     }
     log(hexStr, 'info');
   }
+  return deviceInfoStr;   // parsed firmware string ('' if none), used to name the radio
 }
 
 // ========== LOGO: IMAGE -> BITMAP CONVERSION ==========
@@ -2345,6 +2346,56 @@ const appMetaEl      = document.getElementById('appMeta');
 let appImage = null;   // full .app bytes (header + code)
 let appMeta  = { name: '', version: '', codeSize: 0 };
 
+// --- overlay-apps capability modal --------------------------------------
+// Shown when the booted firmware has no overlay-app support (it never answers
+// 0x0730). Reuses the shared .modal styling; no "flash" button on purpose - it
+// just tells the user which firmware they are on and that Labs is required.
+const appUnsupportedModal = document.getElementById('appUnsupportedModal');
+const appUnsupportedClose = document.getElementById('appUnsupportedClose');
+const appUnsupportedBody  = document.getElementById('appUnsupportedBody');
+
+function showAppUnsupportedModal() {
+  if (!appUnsupportedModal) return;
+  if (appUnsupportedBody) appUnsupportedBody.innerHTML = t('appUnsupportedBody');  // trusted static locale string (<strong> around Labs)
+  appUnsupportedModal.classList.add('show');
+  appUnsupportedModal.setAttribute('aria-hidden', 'false');
+  if (appUnsupportedClose) requestAnimationFrame(() => appUnsupportedClose.focus());
+}
+function hideAppUnsupportedModal() {
+  if (!appUnsupportedModal) return;
+  appUnsupportedModal.classList.remove('show');
+  appUnsupportedModal.setAttribute('aria-hidden', 'true');
+}
+if (appUnsupportedClose) appUnsupportedClose.addEventListener('click', hideAppUnsupportedModal);
+if (appUnsupportedModal) {
+  appUnsupportedModal.addEventListener('click', (e) => { if (e.target === appUnsupportedModal) hideAppUnsupportedModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && appUnsupportedModal.classList.contains('show')) hideAppUnsupportedModal();
+  });
+}
+
+// Shared capability gate for every app action (scan, install, delete). A firmware
+// without overlay-app support never answers 0x0730, so rather than let a later
+// erase/write hang on a 30 s timeout we probe one slot up front. Returns the
+// slot-0 info when supported; on an unsupported firmware it shows the modal and
+// returns null so the caller aborts. `fw` is the device-info result (for naming).
+async function appsProbe(fw) {
+  try {
+    try { return await appInfo(APP_SLOT_FIRST); }
+    catch (e1) {
+      if (e1?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e1;
+      await sleep(150);
+      return await appInfo(APP_SLOT_FIRST);   // one retry avoids a false negative
+    }
+  } catch (e) {
+    if (e?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e;
+    const name = (fw && fw.name) || t('appUnknownFirmware');
+    log(t('appUnsupportedLog', name), 'error');   // firmware still named in the log for diagnostics
+    showAppUnsupportedModal();
+    return null;
+  }
+}
+
 function appParseHeader(b) {
   const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
   const readStr = (off, len) => { let s = ''; for (let i = 0; i < len; i++) { const c = b[off + i]; if (!c) break; s += String.fromCharCode(c); } return s; };
@@ -2441,8 +2492,29 @@ async function appRefreshFlow() {
   if (!op) return;
   try {
     if (!port) await connect();
+
+    // Capability gate. A firmware without overlay-app support (Fusion, Transfer,
+    // stock…) never answers 0x0730, so scanning all 8 slots would hang on eight
+    // timeouts and then show cryptic errors - the exact confusion we want to
+    // avoid. Instead: confirm the radio answers device-info (so we can name it),
+    // then probe a single slot. A timeout there means "no overlay apps" -> a
+    // clear modal, and we stop before the scan.
+    let fw;
+    try {
+      readBuffer = []; await sleep(300);
+      fw = await requestDeviceInfo();
+    } catch (e) {
+      // Radio not answering at all: a plain connection error, not a capability issue.
+      log(t('appsError', e?.message ?? String(e)), 'error');
+      return;
+    }
+
+    const firstInfo = await appsProbe(fw);
+    if (!firstInfo) return;                    // unsupported firmware -> modal shown
+
     log(t('appsScanning'), 'info');
-    for (let s = APP_SLOT_FIRST; s <= APP_SLOT_LAST; s++) {
+    appRenderRow(APP_SLOT_FIRST, firstInfo);   // already read by the probe
+    for (let s = APP_SLOT_FIRST + 1; s <= APP_SLOT_LAST; s++) {
       try { appRenderRow(s, await appInfo(s)); }
       catch (e) {
         if (e?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e;
@@ -2464,6 +2536,7 @@ async function appDeleteFlow(slot) {
     if (!port) await connect();
     readBuffer = []; await sleep(500);
     const dev = await requestDeviceInfo();
+    if (!(await appsProbe(dev))) return;   // unsupported firmware -> modal, no 30 s erase hang
     log(t('appErasing', appSlotLabel(slot)), 'info');
     const st = await appErase(slot, dev.timestamp);
     if (st !== 0) throw new Error(appStatusText(st));
@@ -2492,6 +2565,10 @@ async function appInstallFlow() {
     if (!port) await connect();
     readBuffer = []; await sleep(500);
     const dev = await requestDeviceInfo();
+    if (!(await appsProbe(dev))) {           // unsupported firmware -> modal, abort before erase
+      if (progressContainer) progressContainer.style.display = 'none';
+      return;
+    }
     const ts = dev.timestamp;
 
     log(t('appErasing', appSlotLabel(slot)), 'info');
