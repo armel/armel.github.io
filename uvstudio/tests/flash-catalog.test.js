@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const test = require('node:test');
 
 const catalog = require('../js/flash-catalog.js');
@@ -24,6 +25,7 @@ const SAMPLE = [
   { name: 'f4hwn.fusion.v5.10.0.bin', size: 86000, download_url: 'https://x/f4hwn.fusion.v5.10.0.bin' },
   { name: 'f4hwn.fieldops.v6.0.0.bin', size: 85000, download_url: 'https://x/f4hwn.fieldops.v6.0.0.bin' },
   { name: 'f4hwn.transfer.v6.0.0.bin', size: 85000, download_url: 'https://x/f4hwn.transfer.v6.0.0.bin' },
+  { name: 'f4hwn.labs.v6.0.0.bin', size: 85000, download_url: 'https://x/f4hwn.labs.v6.0.0.bin' },
   { name: 'f4hwn.max.v6.0.0.bin', size: 85000, download_url: 'https://x/f4hwn.max.v6.0.0.bin' },
   { name: 'f4hwn.k1.fusion.v4.3.2.bin', size: 84000, download_url: 'https://x/f4hwn.k1.fusion.v4.3.2.bin' },
   { name: 'f4hwn.k5v3.fusion.v4.3.bin', size: 84000, download_url: 'https://x/f4hwn.k5v3.fusion.v4.3.bin' },
@@ -65,7 +67,7 @@ test('takes the rolling build only from the development branch response', () => 
   const currentDevelopment = {
     name: 'f4hwn.fusion.development.bin',
     size: 104000,
-    download_url: 'https://x/feature_update_v5/development.bin'
+    download_url: 'https://x/feature_update_v6/development.bin'
   };
   const stable = SAMPLE.filter(item => item.name !== staleMain.name);
   const merged = mergeCatalogFiles([...stable, staleMain], currentDevelopment);
@@ -73,6 +75,12 @@ test('takes the rolling build only from the development branch response', () => 
 
   assert.equal(development.length, 1);
   assert.equal(development[0].download_url, currentDevelopment.download_url);
+});
+
+test('loads the rolling development build from feature_update_v6', () => {
+  const source = fs.readFileSync(require.resolve('../js/flash-catalog.js'), 'utf8');
+  assert.match(source, /const DEVELOPMENT_BRANCH = 'feature_update_v6';/);
+  assert.doesNotMatch(source, /feature_update_v5/);
 });
 
 test('routes model-specific and stock firmwares to their groups', () => {
@@ -89,6 +97,7 @@ test('routes each stable F4HWN edition to its own catalog section', () => {
   assert.equal(parseFirmwareName('f4hwn.fusion.v5.8.0.bin').group, 'fusion');
   assert.equal(parseFirmwareName('f4hwn.fieldops.v6.0.0.bin').group, 'fieldops');
   assert.equal(parseFirmwareName('f4hwn.transfer.v6.0.0.bin').group, 'transfer');
+  assert.equal(parseFirmwareName('f4hwn.labs.v6.0.0.bin').group, 'labs');
   assert.equal(parseFirmwareName('f4hwn.max.v6.0.0.bin').group, 'max');
 });
 
@@ -111,15 +120,15 @@ test('offers every stable F4HWN edition in the multiboot slot picker', () => {
   assert.equal(isSlotOffered(parseFirmwareName('f4hwn.fusion.v6.0.0.bin')), true);
   assert.equal(isSlotOffered(parseFirmwareName('f4hwn.fieldops.v6.0.0.bin')), true);
   assert.equal(isSlotOffered(parseFirmwareName('f4hwn.transfer.v6.0.0.bin')), true);
-  assert.equal(isSlotOffered(parseFirmwareName('f4hwn.max.v6.0.0.bin')), true);
+  assert.equal(isSlotOffered(parseFirmwareName('f4hwn.labs.v6.0.0.bin')), true);
   assert.equal(isSlotOffered(parseFirmwareName('f4hwn.fusion.v5.9.0.bin')), false);
   assert.equal(isSlotOffered(parseFirmwareName('f4hwn.fusion.development.bin')), false);
   assert.equal(isSlotOffered(parseFirmwareName('quansheng.k1.stock.firmware.v7.03.01.bin')), false);
   assert.equal(isSlotOffered(parseFirmwareName('quansheng.k5v3.stock.firmware.v7.00.11.bin')), false);
 });
 
-test('shares one versioned CHIRP driver across every stable F4HWN edition', () => {
-  for (const edition of ['fusion', 'fieldops', 'transfer', 'max']) {
+test('shares one versioned CHIRP driver across every offered stable F4HWN edition', () => {
+  for (const edition of ['fusion', 'fieldops', 'transfer', 'labs']) {
     assert.equal(hasSharedChirpDriver(parseFirmwareName(`f4hwn.${edition}.v6.0.0.bin`)), true);
   }
   assert.equal(hasSharedChirpDriver(parseFirmwareName('f4hwn.fusion.development.bin')), false);
@@ -130,7 +139,7 @@ test('shares one versioned CHIRP driver across every stable F4HWN edition', () =
 test('groups offered entries newest-first and drops everything else', () => {
   const groups = categorize(SAMPLE);
   assert.deepEqual([...groups.keys()], [
-    'fusion', 'fieldops', 'transfer', 'max',
+    'fusion', 'fieldops', 'transfer', 'labs',
     'development', 'fusion_k1', 'fusion_k5v3', 'stock'
   ]);
 
@@ -142,7 +151,8 @@ test('groups offered entries newest-first and drops everything else', () => {
   assert.deepEqual(fusion.map(e => e.version), ['5.10.0', '5.7.0']);
   assert.deepEqual(groups.get('fieldops').map(e => e.version), ['6.0.0']);
   assert.deepEqual(groups.get('transfer').map(e => e.version), ['6.0.0']);
-  assert.deepEqual(groups.get('max').map(e => e.version), ['6.0.0']);
+  assert.deepEqual(groups.get('labs').map(e => e.version), ['6.0.0']);
+  assert.equal(groups.has('max'), false);
   // Legacy v4.3 model-specific lines are filtered out entirely.
   assert.equal(groups.get('fusion_k1').length, 0);
   assert.equal(groups.get('fusion_k5v3').length, 0);
