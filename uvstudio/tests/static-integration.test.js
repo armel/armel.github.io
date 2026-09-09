@@ -9,11 +9,100 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const studioVersionSource = fs.readFileSync(path.join(root, 'js', 'studio-version.js'), 'utf8');
+const flashSource = fs.readFileSync(path.join(root, 'js', 'flash.js'), 'utf8');
+
+test('derives any multiboot edition from the canonical firmware filename', () => {
+  const start = flashSource.indexOf('function slotEditionFromFilename');
+  const end = flashSource.indexOf('\n\nfunction slotVersionFromFilename', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {};
+  vm.runInNewContext(
+    `${flashSource.slice(start, end)}; this.extractEdition = slotEditionFromFilename;`,
+    context
+  );
+
+  assert.equal(context.extractEdition('f4hwn.fusion.bin'), 'Fusion');
+  assert.equal(context.extractEdition('f4hwn.expedition.bin'), 'Expedition');
+  assert.equal(context.extractEdition('f4hwn.fieldops.bin'), 'FieldOps');
+  assert.equal(context.extractEdition('f4hwn.future-profile.bin'), 'Future Profile');
+  assert.equal(context.extractEdition('f4hwn.k1.fusion.v5.9.0.bin'), 'Fusion');
+  assert.equal(context.extractEdition('f4hwn.compact.usb.v50.bin'), 'Compact');
+  assert.equal(context.extractEdition('unrelated-firmware.bin'), '');
+});
+
+test('accepts compact and dotted versions in multiboot firmware metadata', () => {
+  const start = flashSource.indexOf('function slotEditionFromFilename');
+  const end = flashSource.indexOf('\n\nfunction slotBuildHeader', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {};
+  vm.runInNewContext(
+    `${flashSource.slice(start, end)}; this.extractMeta = slotExtractMeta;`,
+    context
+  );
+
+  const compact = context.extractMeta(
+    Array.from(Buffer.from('\0RADIO v50\0', 'ascii')),
+    'f4hwn.compact.usb.v50.bin'
+  );
+  assert.equal(compact.name, 'Compact');
+  assert.equal(compact.fwVersion, 'v50');
+
+  const dotted = context.extractMeta(
+    Array.from(Buffer.from('\0F4HWN v5.9.0\0', 'ascii')),
+    'f4hwn.fusion.v5.9.0.bin'
+  );
+  assert.equal(dotted.name, 'Fusion');
+  assert.equal(dotted.fwVersion, 'v5.9.0');
+
+  const legacy = context.extractMeta(
+    Array.from(Buffer.from('\0F4HWN v5.9.0\0', 'ascii')),
+    'f4hwn.fusion.bin'
+  );
+  assert.equal(legacy.name, 'Fusion');
+  assert.equal(legacy.fwVersion, 'F4HWN v5.9.0');
+});
+
+test('stores a custom display name in the multiboot header', () => {
+  const start = flashSource.indexOf('function slotNormalizeName');
+  const end = flashSource.indexOf('\n\nfunction slotParseHeader', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {};
+  vm.runInNewContext(
+    `const SLOT_HDR_SIZE = 64;
+     const SLOT_MAGIC = 0x31424D46;
+     const SLOT_HDR_VERSION = 1;
+     const SLOT_FLAG_COMMITTED = 1;
+     ${flashSource.slice(start, end)};
+     this.normalizeName = slotNormalizeName;
+     this.buildHeader = slotBuildHeader;`,
+    context
+  );
+
+  assert.equal(context.normalizeName('  Été   France  '), 'Ete France');
+  assert.equal(context.normalizeName('12345678901234567890'), '123456789012345');
+  const header = context.buildHeader(1234, 0xAABBCCDD, { name: 'France', fwVersion: 'v5.9.0' });
+  const name = Buffer.from(header.slice(16, 32)).toString('ascii').replace(/\0.*$/, '');
+  assert.equal(name, 'France');
+});
+
+test('offers the custom slot name before writing', () => {
+  assert.match(html, /id="slotName"[^>]*maxlength="15"[^>]*disabled/);
+  assert.ok(html.indexOf('id="slotName"') < html.indexOf('id="slotWriteBtn"'));
+});
 
 test('keeps the public version and its cache key aligned', () => {
   const version = studioVersionSource.match(/UVSTUDIO_VERSION = "([^"]+)"/)?.[1];
   assert.ok(version);
   assert.match(html, new RegExp(`js/studio-version\\.js\\?v=${version.replaceAll('.', '\\.')}`));
+});
+
+test('reconnects Firmware Slots and refreshes them after the serial port returns', () => {
+  assert.ok(flashSource.includes("navigator.serial.addEventListener('disconnect'"));
+  assert.ok(flashSource.includes("navigator.serial.addEventListener('connect'"));
+  assert.ok(flashSource.includes('navigator.serial.getPorts()'));
+  assert.ok(flashSource.includes("toolsSerial.setState('reconnecting'"));
+  assert.ok(flashSource.includes('slotRefreshPending = true'));
+  assert.ok(flashSource.includes('void slotRefreshFlow()'));
 });
 
 test('loads the shared RF Log protocol before both consumers', () => {
@@ -47,7 +136,7 @@ test('exposes the responsive sidebar toggle to assistive technologies', () => {
 
 test('maps every maintenance route directly to an existing tool view', () => {
   const views = [...html.matchAll(/data-tool-view="([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(views, ['flash', 'dump', 'restore', 'logo-upload', 'logo-dump', 'rf-log']);
+  assert.deepEqual(views, ['flash', 'slots', 'apps', 'dump', 'restore', 'logo-upload', 'logo-dump', 'rf-log']);
   views.forEach(view => assert.match(html, new RegExp(`id="${view}-content"`)));
   assert.doesNotMatch(html, /class="tabs"|class="tab btn"/);
 });

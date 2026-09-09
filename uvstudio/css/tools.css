@@ -121,7 +121,7 @@
   margin-bottom: 14px;
 }
 
-#pane-tools #firmwareCatalogSelect {
+#pane-tools .firmware-catalog-select {
   width: 100%;
   /* Override the compact, fixed-height core.css select so the field grows to a
      full-width form control that matches the local-file picker below it. */
@@ -143,15 +143,15 @@
   background-position: right 12px center;
 }
 
-#pane-tools #firmwareCatalogSelect:hover:not(:disabled) {
+#pane-tools .firmware-catalog-select:hover:not(:disabled) {
   border-color: var(--accent);
 }
 
-#pane-tools #firmwareCatalogSelect:focus {
+#pane-tools .firmware-catalog-select:focus {
   border-color: var(--accent);
 }
 
-#pane-tools #firmwareCatalogSelect:disabled {
+#pane-tools .firmware-catalog-select:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -449,4 +449,138 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ---------- Firmware Slots (multiboot) ---------- */
+#pane-tools .slots-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+}
+#pane-tools .slots-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+#pane-tools .slots-table th,
+#pane-tools .slots-table td {
+  text-align: left;
+  padding: 10px 12px;
+  white-space: nowrap;
+}
+#pane-tools .slots-table thead th {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 13px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+#pane-tools .slots-table tbody tr + tr td {
+  border-top: 1px solid var(--border);
+}
+#pane-tools .slots-table .slot-col-idx,
+#pane-tools .slots-table .slot-idx {
+  width: 36px;
+  color: var(--text-muted);
+}
+#pane-tools .slots-table .slot-version {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+#pane-tools .slots-table .slot-actions {
+  text-align: right;
+  width: 1%;
+}
+#pane-tools .slot-state {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+#pane-tools .slot-state.ok {
+  color: var(--success);
+  border-color: color-mix(in oklab, var(--success) 40%, var(--border));
+  background: color-mix(in oklab, var(--success) 12%, transparent);
+}
+#pane-tools .slot-state.bad {
+  color: var(--error);
+  border-color: color-mix(in oklab, var(--error) 40%, var(--border));
+  background: color-mix(in oklab, var(--error) 12%, transparent);
+}
+#pane-tools .slot-state.empty {
+  color: var(--text-muted);
+}
+/* Compact per-row erase button (override the big default tool button). */
+#pane-tools .slots-table .slot-actions button.slot-act-erase {
+  display: inline-block;
+  min-width: 0;
+  margin: 0;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--error);
+  background: transparent;
+  border: 1px solid color-mix(in oklab, var(--error) 55%, var(--border));
+  box-shadow: none;
+}
+#pane-tools .slots-table .slot-actions button.slot-act-erase:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--error) 12%, transparent);
+  border-color: var(--error);
+  transform: none;
+  box-shadow: none;
+}
+/* Compact per-row "reset config" button, next to erase but neutral: it wipes
+   the slot's config profile (channels/settings), not the firmware image. */
+#pane-tools .slots-table .slot-actions button.slot-act-reset {
+  display: inline-block;
+  min-width: 0;
+  margin: 0 0 0 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+#pane-tools .slots-table .slot-actions button.slot-act-reset:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--text-muted) 12%, transparent);
+  border-color: var(--text-muted);
+  transform: none;
+  box-shadow: none;
+}
+#pane-tools #slotsRefreshBtn {
+  min-width: 0;
+}
+#pane-tools .slot-meta {
+  margin: 10px 0 0;
+  min-height: 18px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+#pane-tools .slots-write-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+#pane-tools .slots-write-row label {
+  margin-bottom: 0;
+}
+#pane-tools .slots-write-row select {
+  width: auto;
+  min-width: 72px;
+}
+#pane-tools .slots-write-row input#slotName {
+  flex: 0 1 180px;
+  width: 180px;
+  min-width: 120px;
+  margin: 0;
+}
+#pane-tools .slots-write-row button#slotWriteBtn {
+  margin: 0;
+  min-width: 0;
 }

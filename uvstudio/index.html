@@ -4,11 +4,11 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>UV Studio by F4HWN</title>
-<script src="js/studio-version.js?v=1.2.0"></script>
+<script src="js/studio-version.js?v=1.3.0"></script>
 <link rel="icon" type="image/svg+xml" href="assets/uv-studio-radio.svg">
 <link href="css/core.css?v=3" rel="stylesheet">
 <link href="css/viewer.css?v=13" rel="stylesheet">
-<link href="css/tools.css?v=8" rel="stylesheet">
+<link href="css/tools.css?v=10" rel="stylesheet">
 <link href="css/studio.css?v=19" rel="stylesheet">
 </head>
 <body data-theme="light">
@@ -107,6 +107,14 @@
             <button class="nav-item" data-route="flash" data-app="tools" data-tool-view="flash" data-name="Flash Firmware" data-section-i18n="studio_nav_flash">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>
                 <span class="nav-item-label" data-i18n="studio_nav_flash">Flash Firmware</span>
+            </button>
+            <button class="nav-item" data-route="firmware-slots" data-app="tools" data-tool-view="slots" data-name="Firmware Slots" data-section-i18n="studio_nav_slots">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_slots">Firmware Slots</span>
+            </button>
+            <button class="nav-item" data-route="apps" data-app="tools" data-tool-view="apps" data-name="Apps" data-section-i18n="studio_nav_apps">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_apps">Apps (Labs)</span>
             </button>
             <button class="nav-item" data-route="dump-calib" data-app="tools" data-tool-view="dump" data-name="Dump Calibration" data-section-i18n="studio_nav_dump_calib">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
@@ -283,8 +291,8 @@
           <div class="container">
             <div class="tool-view active" id="flash-content" role="region">
                 <section class="section firmware-catalog" id="firmwareCatalogSection" aria-labelledby="firmwareCatalogLabel" hidden>
-                    <label id="firmwareCatalogLabel" for="firmwareCatalogSelect" data-i18n="flash_catalog_label">Official F4HWN Fusion firmware</label>
-                    <select id="firmwareCatalogSelect">
+                    <label id="firmwareCatalogLabel" for="firmwareCatalogSelect" data-i18n="flash_catalog_label">Official F4HWN firmware</label>
+                    <select id="firmwareCatalogSelect" class="firmware-catalog-select">
                         <option value="" disabled selected data-i18n="flash_catalog_placeholder">— Select a version —</option>
                     </select>
                 </section>
@@ -377,6 +385,100 @@
                     </div>
                     <div class="download-link" id="logoDumpDownload" style="display:block;">
                         <a href="#" id="logoDumpLink" download="logo.png"><svg class="dl-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="logoDumpDownloadText">Download logo.png</span></a>
+                    </div>
+                </section>
+            </div>
+
+            <div class="tool-view" id="slots-content" role="region" hidden>
+                <section class="section">
+                    <p class="tab-description" data-i18n="slotsDescription">Store several compatible F4HWN firmwares on the radio and pick one at boot (hold MENU). Writing only touches the external flash, so the radio stays usable.</p>
+                </section>
+                <section class="section">
+                    <div class="slots-table-wrap">
+                        <table class="slots-table" id="slotsTable">
+                            <thead>
+                                <tr>
+                                    <th class="slot-col-idx" data-i18n="slotColIdx">#</th>
+                                    <th data-i18n="slotColEdition">Edition</th>
+                                    <th data-i18n="slotColVersion">Version</th>
+                                    <th data-i18n="slotColSize">Size</th>
+                                    <th data-i18n="slotColState">Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="slotsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <button id="slotsRefreshBtn" class="slots-refresh"><span data-i18n="slotsRefresh">Refresh slots</span></button>
+                </section>
+                <section class="section firmware-catalog" id="slotFirmwareCatalogSection" aria-labelledby="slotFirmwareCatalogLabel" hidden>
+                    <label id="slotFirmwareCatalogLabel" for="slotFirmwareCatalogSelect" data-i18n="slot_catalog_label">Multiboot-compatible F4HWN firmware</label>
+                    <select id="slotFirmwareCatalogSelect" class="firmware-catalog-select">
+                        <option value="" disabled selected data-i18n="flash_catalog_placeholder">— Select a version —</option>
+                    </select>
+                </section>
+                <p class="catalog-or" id="slotFirmwareCatalogOr" data-i18n="flash_catalog_or" hidden>or load a local file</p>
+                <section class="section" aria-labelledby="labelSlotFile">
+                    <label id="labelSlotFile" for="slotFile" data-i18n="slotFileLabel">Firmware file (.bin)</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="slotFile" accept=".bin" />
+                        <div class="file-input-label" id="slotFileLabel">
+                            <span class="file-name" id="slotFileName" data-i18n="fileNoFile">No file selected</span>
+                            <span class="file-button" id="slotFileButton" data-i18n="fileChoose">Choose file</span>
+                        </div>
+                    </div>
+                    <p class="slot-meta" id="slotMeta" aria-live="polite"></p>
+                    <div class="slots-write-row">
+                        <label for="slotTarget" data-i18n="slotTargetLabel">Target slot</label>
+                        <select id="slotTarget">
+                            <option value="1" selected>1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                        <label for="slotName" data-i18n="slotNameLabel">Display name</label>
+                        <input type="text" id="slotName" maxlength="15" autocomplete="off" spellcheck="false" disabled />
+                        <button id="slotWriteBtn" disabled aria-live="polite"><span data-i18n="slotWriteBtn">Write to slot</span></button>
+                    </div>
+                </section>
+            </div>
+
+            <div class="tool-view" id="apps-content" role="region" hidden>
+                <section class="section">
+                    <p class="tab-description" data-i18n="appsDescription">Install small overlay apps (.app) into the radio's external flash and launch them from the F key + 7 menu. Writing only touches the external flash, so the radio stays usable.</p>
+                </section>
+                <section class="section">
+                    <div class="slots-table-wrap">
+                        <table class="slots-table" id="appsTable">
+                            <thead>
+                                <tr>
+                                    <th class="slot-col-idx" data-i18n="slotColIdx">#</th>
+                                    <th data-i18n="appColName">Name</th>
+                                    <th data-i18n="slotColVersion">Version</th>
+                                    <th data-i18n="appColSize">Size</th>
+                                    <th data-i18n="slotColState">Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="appsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <button id="appsRefreshBtn" class="slots-refresh"><span data-i18n="appsRefresh">Refresh apps</span></button>
+                </section>
+                <section class="section" aria-labelledby="labelAppFile">
+                    <label id="labelAppFile" for="appFile" data-i18n="appFileLabel">App file (.app)</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="appFile" accept=".app" />
+                        <div class="file-input-label" id="appFileLabel">
+                            <span class="file-name" id="appFileName" data-i18n="fileNoFile">No file selected</span>
+                            <span class="file-button" id="appFileButton" data-i18n="fileChoose">Choose file</span>
+                        </div>
+                    </div>
+                    <p class="slot-meta" id="appMeta" aria-live="polite"></p>
+                    <div class="slots-write-row">
+                        <label for="appTarget" data-i18n="appTargetLabel">Target slot</label>
+                        <select id="appTarget"></select>
+                        <button id="appInstallBtn" disabled aria-live="polite"><span data-i18n="appInstallBtn">Install app</span></button>
                     </div>
                 </section>
             </div>
@@ -519,25 +621,41 @@
     </div>
 </div>
 
+<!-- Overlay-apps capability notice: shown when the booted firmware has no 0x073x support -->
+<div class="modal" id="appUnsupportedModal" role="dialog" aria-modal="true"
+     aria-labelledby="appUnsupportedTitle" aria-hidden="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="appUnsupportedTitle" data-i18n="appUnsupportedTitle">Overlay apps not supported</h2>
+            <button class="modal-close" id="appUnsupportedClose" type="button"
+                    data-i18n-title="appClose" data-i18n-aria-label="appClose"
+                    title="Close" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="appUnsupportedBody"></p>
+        </div>
+    </div>
+</div>
+
 <!-- ═══════════ Scripts (all local, file://-friendly) ═══════════ -->
-<script src="locales/en.js?v=26"></script>
-<script src="locales/fr.js?v=26"></script>
-<script src="locales/it.js?v=26"></script>
-<script src="locales/es.js?v=26"></script>
-<script src="locales/de.js?v=26"></script>
-<script src="locales/pt.js?v=26"></script>
-<script src="locales/ru.js?v=26"></script>
-<script src="locales/pl.js?v=26"></script>
-<script src="locales/zh.js?v=26"></script>
-<script src="locales/nl.js?v=26"></script>
+<script src="locales/en.js?v=31"></script>
+<script src="locales/fr.js?v=31"></script>
+<script src="locales/it.js?v=31"></script>
+<script src="locales/es.js?v=31"></script>
+<script src="locales/de.js?v=31"></script>
+<script src="locales/pt.js?v=31"></script>
+<script src="locales/ru.js?v=31"></script>
+<script src="locales/pl.js?v=31"></script>
+<script src="locales/zh.js?v=31"></script>
+<script src="locales/nl.js?v=31"></script>
 <script src="js/studio-preferences.js?v=1"></script>
 <script src="js/studio-i18n.js?v=4"></script>
 <script src="js/studio-serial.js?v=2"></script>
 <script src="js/rf-log.js?v=4"></script>
     <script src="js/k5viewer.js?v=31"></script>
 <script src="js/keypad-detach.js?v=1"></script>
-<script src="js/flash.js?v=9"></script>
-<script src="js/flash-catalog.js?v=9"></script>
+<script src="js/flash.js?v=20"></script>
+<script src="js/flash-catalog.js?v=16"></script>
 <script src="js/studio.js?v=12"></script>
 <script src="js/studio-flash-counter.js?v=2"></script>
 </body>

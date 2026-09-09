@@ -1,8 +1,8 @@
 // Firmware catalog: lists stable archive/ files from the main branch and the
 // optional rolling development build from feature_update_v5 through the GitHub
-// Contents API. Selected builds feed into the existing flash pipeline
-// (window.UVStudioFlash.loadFirmwareFromURL). Pure helpers are exported for Node
-// tests; the browser runtime is guarded and self-boots.
+// Contents API. Selected builds feed into either the main flash pipeline or the
+// multiboot-slot pipeline through window.UVStudioFlash. Pure helpers are exported
+// for Node tests; the browser runtime is guarded and self-boots.
 (function (root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
@@ -29,14 +29,21 @@
   const DEVELOPMENT_API_URL =
     `https://api.github.com/repos/${REPO}/contents/${ARCHIVE_PATH}/${DEVELOPMENT_FILENAME}` +
     `?ref=${encodeURIComponent(DEVELOPMENT_BRANCH)}`;
-
   // Only current firmwares are offered: v5.0 and newer, no beta or SA818 builds.
   const MIN_MAJOR_VERSION = 5;
+  // Multiboot first ships with v6; older images cannot return to the slot menu.
+  const MIN_SLOT_MAJOR_VERSION = 6;
 
   // Group labels are technical terms shared across every language.
-  const GROUP_ORDER = ['fusion', 'development', 'fusion_k1', 'fusion_k5v3', 'stock'];
+  const GROUP_ORDER = [
+    'fusion', 'fieldops', 'transfer', 'max',
+    'development', 'fusion_k1', 'fusion_k5v3', 'stock'
+  ];
   const GROUP_LABELS = {
     fusion: 'F4HWN Fusion (stable)',
+    fieldops: 'F4HWN FieldOps',
+    transfer: 'F4HWN Transfer',
+    max: 'F4HWN Max',
     development: 'F4HWN Fusion (dev, unstable)',
     fusion_k1: 'F4HWN Fusion · K1',
     fusion_k5v3: 'F4HWN Fusion · K5v3',
@@ -55,7 +62,7 @@
     const isBeta = /\.beta\b/.test(lower);
     const isSa818 = /\.sa818\b/.test(lower);
     const isDevelopment = lower === DEVELOPMENT_FILENAME;
-    const versionMatch = lower.match(/v(\d+(?:\.\d+)+)/);
+    const versionMatch = lower.match(/[._-]v(\d+(?:\.\d+)*)/);
     const version = versionMatch ? versionMatch[1] : '';
 
     let brand;
@@ -72,9 +79,15 @@
       else if (lower.includes('.k5v3.')) model = 'K5v3';
     } else {
       brand = 'f4hwn';
-      if (lower.includes('.k1.')) { group = 'fusion_k1'; model = 'K1'; }
-      else if (lower.includes('.k5v3.')) { group = 'fusion_k5v3'; model = 'K5v3'; }
-      else { group = 'fusion'; model = ''; }
+      const editionMatch = lower.match(
+        /^f4hwn[._-](?:(k1|k5v3)[._-])?([a-z][a-z0-9-]*)(?:[._-].*)?\.bin$/
+      );
+      if (!editionMatch) return null;
+      const modelToken = editionMatch[1] || '';
+      const editionToken = editionMatch[2];
+      if (modelToken === 'k1' && editionToken === 'fusion') { group = 'fusion_k1'; model = 'K1'; }
+      else if (modelToken === 'k5v3' && editionToken === 'fusion') { group = 'fusion_k5v3'; model = 'K5v3'; }
+      else { group = editionToken; model = modelToken === 'k1' ? 'K1' : (modelToken === 'k5v3' ? 'K5v3' : ''); }
     }
 
     return { name, brand, group, model, version, isBeta, isSa818, isDevelopment };
@@ -102,6 +115,20 @@
   function isOffered(entry) {
     return entry.isDevelopment ||
       (!entry.isBeta && !entry.isSa818 && majorVersion(entry.version) >= MIN_MAJOR_VERSION);
+  }
+
+  // Multiboot slots offer stable v6+ F4HWN editions. Older images, the rolling
+  // development build and Quansheng stock images do not embed multiboot.
+  function isSlotOffered(entry) {
+    return Boolean(entry) && isOffered(entry) && entry.brand === 'f4hwn' &&
+      !entry.isDevelopment && majorVersion(entry.version) >= MIN_SLOT_MAJOR_VERSION;
+  }
+
+  // Every stable, versioned F4HWN edition shares the CHIRP driver published for
+  // that firmware version. Development and stock Quansheng builds do not.
+  function hasSharedChirpDriver(entry) {
+    return Boolean(entry) && isOffered(entry) && entry.brand === 'f4hwn' &&
+      !entry.isDevelopment && Boolean(entry.version);
   }
 
   function normalizeFile(file) {
@@ -160,7 +187,9 @@
     compareVersionDesc,
     categorize,
     formatOptionLabel,
+    hasSharedChirpDriver,
     isOffered,
+    isSlotOffered,
     mergeCatalogFiles
   };
 
@@ -170,7 +199,11 @@
     const select = document.getElementById('firmwareCatalogSelect');
     const section = document.getElementById('firmwareCatalogSection');
     const divider = document.getElementById('firmwareCatalogOr');
-    if (!select) return; // Not the flash view / markup absent.
+    const slotSelect = document.getElementById('slotFirmwareCatalogSelect');
+    const slotSection = document.getElementById('slotFirmwareCatalogSection');
+    const slotDivider = document.getElementById('slotFirmwareCatalogOr');
+    const selects = [select, slotSelect].filter(Boolean);
+    if (!selects.length) return; // Catalog markup absent.
 
     // Purge the obsolete persistent listing cache written by earlier versions.
     if (window.UVStudioPreferences) {
@@ -189,9 +222,11 @@
       return window.uvStudioI18n ? window.uvStudioI18n.t(key) : key;
     }
 
-    function showCatalog(visible) {
-      if (section) section.hidden = !visible;
-      if (divider) divider.hidden = !visible;
+    function showCatalog(flashVisible, slotVisible = flashVisible) {
+      if (section) section.hidden = !flashVisible;
+      if (divider) divider.hidden = !flashVisible;
+      if (slotSection) slotSection.hidden = !slotVisible;
+      if (slotDivider) slotDivider.hidden = !slotVisible;
     }
 
     async function fetchDevelopmentFile() {
@@ -210,21 +245,20 @@
     }
 
     // Build the menu and return how many firmware options it holds.
-    function render() {
-      if (!groups) return;
-      const previous = select.value;
-      select.textContent = '';
+    function renderSelect(targetSelect, entryFilter = () => true) {
+      const previous = targetSelect.value;
+      targetSelect.textContent = '';
 
       const placeholder = document.createElement('option');
       placeholder.value = '';
       placeholder.textContent = t('flash_catalog_placeholder');
       placeholder.disabled = true;
       placeholder.selected = true;
-      select.appendChild(placeholder);
+      targetSelect.appendChild(placeholder);
 
       let optionCount = 0;
       GROUP_ORDER.forEach(id => {
-        const entries = groups.get(id) || [];
+        const entries = (groups.get(id) || []).filter(entryFilter);
         if (!entries.length) return;
 
         const optgroup = document.createElement('optgroup');
@@ -236,14 +270,22 @@
           optgroup.appendChild(option);
           optionCount += 1;
         });
-        select.appendChild(optgroup);
+        targetSelect.appendChild(optgroup);
       });
 
       // Preserve the current choice across a re-render (e.g. language change).
-      if (previous && select.querySelector(`option[value="${CSS.escape(previous)}"]`)) {
-        select.value = previous;
+      if (previous && targetSelect.querySelector(`option[value="${CSS.escape(previous)}"]`)) {
+        targetSelect.value = previous;
       }
       return optionCount;
+    }
+
+    function render() {
+      if (!groups) return { flash: 0, slots: 0 };
+      return {
+        flash: select ? renderSelect(select) : 0,
+        slots: slotSelect ? renderSelect(slotSelect, isSlotOffered) : 0
+      };
     }
 
     async function load() {
@@ -265,29 +307,42 @@
         const developmentFile = await fetchDevelopmentFile();
         const files = mergeCatalogFiles(stableFiles, developmentFile);
         groups = categorize(files);
-        const count = render();
-        showCatalog(count > 0);
-        loaded = count > 0;
+        const counts = render();
+        showCatalog(counts.flash > 0, counts.slots > 0);
+        loaded = counts.flash > 0 || counts.slots > 0;
       } catch (error) {
         // No connection, or the API is unreachable / rate limited: keep the whole
         // picker hidden so only the local-file input remains — same as offline.
         // loaded stays false, so reopening the view (or coming back online, once
         // any rate-limit window has passed) retries the fetch.
         groups = null;
-        showCatalog(false);
+        showCatalog(false, false);
       } finally {
         loading = false;
       }
     }
 
-    select.addEventListener('change', () => {
-      const url = select.value;
-      if (!url) return;
-      const flash = window.UVStudioFlash;
-      if (flash && typeof flash.loadFirmwareFromURL === 'function') {
-        flash.loadFirmwareFromURL(url);
-      }
-    });
+    if (select) {
+      select.addEventListener('change', () => {
+        const url = select.value;
+        if (!url) return;
+        const flash = window.UVStudioFlash;
+        if (flash && typeof flash.loadFirmwareFromURL === 'function') {
+          flash.loadFirmwareFromURL(url);
+        }
+      });
+    }
+
+    if (slotSelect) {
+      slotSelect.addEventListener('change', () => {
+        const url = slotSelect.value;
+        if (!url) return;
+        const flash = window.UVStudioFlash;
+        if (flash && typeof flash.loadSlotFirmwareFromURL === 'function') {
+          flash.loadSlotFirmwareFromURL(url);
+        }
+      });
+    }
 
     // Re-localize the placeholder and option groups when the language changes.
     window.addEventListener('uvstudio:languagechange', () => {
@@ -297,27 +352,35 @@
     // Mutual exclusivity: when a local file is picked, drop the catalog selection
     // back to its placeholder so only one firmware source ever looks selected.
     window.addEventListener('uvstudio:firmwareselect', event => {
-      if (event.detail && event.detail.source === 'local' && select.options.length) {
+      if (select && event.detail && event.detail.source === 'local' && select.options.length) {
         select.selectedIndex = 0;
       }
     });
 
-    // Lazily fetch the catalog the first time the Flash view is opened, so users
-    // who never flash do not spend a GitHub API call.
+    window.addEventListener('uvstudio:slotfirmwareselect', event => {
+      if (slotSelect && event.detail && event.detail.source === 'local' && slotSelect.options.length) {
+        slotSelect.selectedIndex = 0;
+      }
+    });
+
+    // Lazily fetch the shared catalog the first time either firmware view is
+    // opened, so users who never manage firmware do not spend a GitHub API call.
     window.addEventListener('uvstudio:toolviewchange', event => {
-      if (event.detail && event.detail.view === 'flash') load();
+      if (event.detail && (event.detail.view === 'flash' || event.detail.view === 'slots')) load();
     });
 
     // Retry once connectivity comes back after a failed load.
     window.addEventListener('online', () => { if (!loaded) load(); });
 
-    // Load immediately only when Flash is the view actually shown on arrival
-    // (flash-content is "active" by default, so also require the tools pane to be
-    // the visible one — otherwise Live Viewer users would trigger a needless call).
+    // Load immediately only when one of the firmware views is actually shown on
+    // arrival (flash-content is "active" by default, so also require the tools pane
+    // to be visible — otherwise Live Viewer users would trigger a needless call).
     const paneTools = document.getElementById('pane-tools');
     const flashView = document.getElementById('flash-content');
+    const slotsView = document.getElementById('slots-content');
     if (paneTools && paneTools.classList.contains('active') &&
-        flashView && flashView.classList.contains('active')) {
+        ((flashView && flashView.classList.contains('active')) ||
+         (slotsView && slotsView.classList.contains('active')))) {
       load();
     }
   }
