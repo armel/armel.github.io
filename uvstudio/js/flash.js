@@ -373,7 +373,7 @@ function setFirmwareBuffer(buf, name = 'firmware.bin') {
 // ---------- CHIRP driver offer ----------
 // All stable F4HWN editions share the matching CHIRP driver release asset named
 // f4hwn.fusion.chirp.v<version>.py (one driver covers Fusion, FieldOps, Transfer,
-// Max, UV-K1 and UV-K5 V3). After a successful flash, resolve the driver
+// Labs, UV-K1 and UV-K5 V3). After a successful flash, resolve the driver
 // for the flashed version and offer it.
 const CHIRP_DRIVER_REPO = 'armel/uv-k1-k5v3-firmware-custom';
 

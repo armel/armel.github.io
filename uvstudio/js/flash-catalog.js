@@ -1,5 +1,5 @@
 // Firmware catalog: lists stable archive/ files from the main branch and the
-// optional rolling development build from feature_update_v5 through the GitHub
+// optional rolling development build from feature_update_v6 through the GitHub
 // Contents API. Selected builds feed into either the main flash pipeline or the
 // multiboot-slot pipeline through window.UVStudioFlash. Pure helpers are exported
 // for Node tests; the browser runtime is guarded and self-boots.
@@ -24,7 +24,7 @@
   const API_URL =
     `https://api.github.com/repos/${REPO}/contents/${ARCHIVE_PATH}` +
     `?ref=${encodeURIComponent(STABLE_BRANCH)}`;
-  const DEVELOPMENT_BRANCH = 'feature_update_v5';
+  const DEVELOPMENT_BRANCH = 'feature_update_v6';
   const DEVELOPMENT_FILENAME = 'f4hwn.fusion.development.bin';
   const DEVELOPMENT_API_URL =
     `https://api.github.com/repos/${REPO}/contents/${ARCHIVE_PATH}/${DEVELOPMENT_FILENAME}` +
@@ -36,14 +36,14 @@
 
   // Group labels are technical terms shared across every language.
   const GROUP_ORDER = [
-    'fusion', 'fieldops', 'transfer', 'max',
+    'fusion', 'fieldops', 'transfer', 'labs',
     'development', 'fusion_k1', 'fusion_k5v3', 'stock'
   ];
   const GROUP_LABELS = {
     fusion: 'F4HWN Fusion (stable)',
     fieldops: 'F4HWN FieldOps',
     transfer: 'F4HWN Transfer',
-    max: 'F4HWN Max',
+    labs: 'F4HWN Labs',
     development: 'F4HWN Fusion (dev, unstable)',
     fusion_k1: 'F4HWN Fusion · K1',
     fusion_k5v3: 'F4HWN Fusion · K5v3',
