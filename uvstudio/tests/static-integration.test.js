@@ -112,6 +112,56 @@ test('loads the shared RF Log protocol before both consumers', () => {
   assert.ok(rf > 0 && rf < viewer && viewer < tools);
 });
 
+test('loads the app catalog after the installer API and exposes both selectors', () => {
+  const flash = html.indexOf('js/flash.js');
+  const catalog = html.indexOf('js/app-catalog.js');
+  assert.ok(flash > 0 && catalog > flash);
+  assert.match(html, /id="appCatalogVersionSelect"/);
+  assert.match(html, /id="appCatalogSelect"/);
+  assert.match(flashSource, /loadAppFromURL,/);
+  assert.match(flashSource, /uvstudio:appselect/);
+});
+
+test('downloads a catalog app and forwards its filename to the installer', async () => {
+  const start = flashSource.indexOf('async function loadAppFromURL');
+  const end = flashSource.indexOf('\n\nif (appFileInput)', start);
+  assert.ok(start >= 0 && end > start);
+  const expected = Uint8Array.from([0x46, 0x41, 0x50, 0x31]);
+  const loaded = {};
+  const context = {
+    AbortController,
+    URL,
+    fetch: async url => {
+      assert.equal(String(url), 'https://example.test/archive/apps/v6.0.0/Beacon.app');
+      return { ok: true, arrayBuffer: async () => expected.buffer };
+    },
+    beginAppImageLoad: source => {
+      assert.equal(source, 'catalog');
+      return 1;
+    },
+    appImageLoadSeq: 1,
+    appImageLoadAbort: null,
+    setAppImageBuffer: (buf, name) => {
+      loaded.bytes = new Uint8Array(buf);
+      loaded.name = name;
+    },
+    clearAppImage() {},
+    log() {},
+    t: key => key
+  };
+  vm.runInNewContext(
+    `${flashSource.slice(start, end)}; this.load = loadAppFromURL;`,
+    context
+  );
+
+  await context.load(
+    'https://example.test/archive/apps/v6.0.0/Beacon.app',
+    'Beacon.app'
+  );
+  assert.deepEqual(Array.from(loaded.bytes), Array.from(expected));
+  assert.equal(loaded.name, 'Beacon.app');
+});
+
 test('loads resilient preferences before i18n and application consumers', () => {
   const preferences = html.indexOf('js/studio-preferences.js');
   const i18n = html.indexOf('js/studio-i18n.js');

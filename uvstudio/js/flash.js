@@ -494,6 +494,8 @@ async function maybeLoadFirmwareFromQuery() {
 window.UVStudioFlash = Object.freeze({
   loadFirmwareFromURL,
   loadSlotFirmwareFromURL,
+  loadAppFromURL,
+  clearAppFromCatalog: () => beginAppImageLoad('catalog'),
   hasFirmware: () => Boolean(firmwareData)
 });
 
@@ -2345,6 +2347,8 @@ const appMetaEl      = document.getElementById('appMeta');
 
 let appImage = null;   // full .app bytes (header + code)
 let appMeta  = { name: '', version: '', codeSize: 0 };
+let appImageLoadSeq = 0;
+let appImageLoadAbort = null;
 
 // --- overlay-apps capability modal --------------------------------------
 // Shown when the booted firmware has no overlay-app support (it never answers
@@ -2618,6 +2622,18 @@ function clearAppImage() {
   updateAppButtons();
 }
 
+function beginAppImageLoad(source) {
+  const seq = ++appImageLoadSeq;
+  if (appImageLoadAbort) {
+    try { appImageLoadAbort.abort(); } catch (e) {}
+    appImageLoadAbort = null;
+  }
+  clearAppImage();
+  if (source === 'catalog' && appFileInput) appFileInput.value = '';
+  window.dispatchEvent(new CustomEvent('uvstudio:appselect', { detail: { source } }));
+  return seq;
+}
+
 function setAppImageBuffer(buf, name) {
   const bytes = new Uint8Array(buf);
   if (bytes.length <= APP_HDR_SIZE) { log(t('appBadFile'), 'error'); clearAppImage(); return; }
@@ -2631,12 +2647,41 @@ function setAppImageBuffer(buf, name) {
   updateAppButtons();
 }
 
+async function loadAppFromURL(url, catalogName = 'application.app') {
+  const seq = beginAppImageLoad('catalog');
+  const controller = new AbortController();
+  appImageLoadAbort = controller;
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.protocol !== 'https:') throw new Error('HTTPS required');
+    const response = await fetch(urlObj.toString(), {
+      cache: 'no-cache',
+      mode: 'cors',
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const buf = await response.arrayBuffer();
+    if (seq !== appImageLoadSeq) return;
+    const filename = catalogName || urlObj.pathname.split('/').pop() || 'application.app';
+    setAppImageBuffer(buf, filename);
+  } catch (error) {
+    if (error && error.name === 'AbortError') return;
+    log(t('appsError', error?.message ?? String(error)), 'error');
+    if (seq === appImageLoadSeq) clearAppImage();
+  } finally {
+    if (appImageLoadAbort === controller) appImageLoadAbort = null;
+  }
+}
+
 if (appFileInput) {
   appFileInput.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const seq = beginAppImageLoad('local');
     const fr = new FileReader();
-    fr.onload = (ev) => setAppImageBuffer(ev.target.result, file.name);
+    fr.onload = (ev) => {
+      if (seq === appImageLoadSeq) setAppImageBuffer(ev.target.result, file.name);
+    };
     fr.readAsArrayBuffer(file);
   });
 }
