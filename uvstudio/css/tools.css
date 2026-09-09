@@ -156,6 +156,27 @@
   cursor: not-allowed;
 }
 
+#pane-tools .app-catalog-grid {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.45fr) minmax(220px, 1fr);
+  gap: 12px;
+  margin-top: 8px;
+}
+
+#pane-tools .app-catalog-grid label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  #pane-tools .app-catalog-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* The hidden attribute must beat the display rules below (class selectors would
    otherwise override the UA [hidden] { display: none } and keep them visible). */
 #pane-tools .firmware-catalog[hidden],
