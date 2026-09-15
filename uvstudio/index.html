@@ -4,12 +4,12 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>UV Studio by F4HWN</title>
-<script src="js/studio-version.js?v=1.5.0"></script>
+<script src="js/studio-version.js?v=1.6.0"></script>
 <link rel="icon" type="image/svg+xml" href="assets/uv-studio-radio.svg">
-<link href="css/core.css?v=3" rel="stylesheet">
+<link href="css/core.css?v=4" rel="stylesheet">
 <link href="css/viewer.css?v=13" rel="stylesheet">
-<link href="css/tools.css?v=11" rel="stylesheet">
-<link href="css/studio.css?v=19" rel="stylesheet">
+<link href="css/tools.css?v=17" rel="stylesheet">
+<link href="css/studio.css?v=24" rel="stylesheet">
 </head>
 <body data-theme="light">
 
@@ -112,25 +112,28 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 <span class="nav-item-label" data-i18n="studio_nav_slots">Firmware Slots</span>
             </button>
-            <button class="nav-item" data-route="apps" data-app="tools" data-tool-view="apps" data-name="Apps" data-section-i18n="studio_nav_apps">
+            <button class="nav-item nav-item-labs" data-route="apps" data-app="tools" data-tool-view="apps" data-name="Apps (Labs only)" data-section-i18n="studio_nav_apps">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-                <span class="nav-item-label" data-i18n="studio_nav_apps">Apps (Labs)</span>
+                <span class="nav-item-label" data-i18n="studio_nav_apps">Apps</span>
+                <span class="tag" data-i18n="studio_nav_labs_only">Labs only</span>
             </button>
-            <button class="nav-item" data-route="dump-calib" data-app="tools" data-tool-view="dump" data-name="Dump Calibration" data-section-i18n="studio_nav_dump_calib">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
-                <span class="nav-item-label" data-i18n="studio_nav_dump_calib">Dump Calib</span>
+            <button class="nav-item nav-item-labs" data-route="external-flash" data-app="tools" data-tool-view="external-flash" data-default-action="dump" data-name="External Flash (Labs only)" data-section-i18n="studio_nav_external_flash">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v6M9 12l3 3 3-3"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_external_flash">External Flash</span>
+                <span class="tag" data-i18n="studio_nav_labs_only">Labs only</span>
             </button>
-            <button class="nav-item" data-route="restore-calib" data-app="tools" data-tool-view="restore" data-name="Restore Calibration" data-section-i18n="studio_nav_restore_calib">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg>
-                <span class="nav-item-label" data-i18n="studio_nav_restore_calib">Restore Calib</span>
+            <button class="nav-item nav-item-labs" data-route="factory-reset" data-app="tools" data-tool-view="factory-reset" data-name="Factory Reset (Labs only)" data-section-i18n="studio_nav_factory_reset">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_factory_reset">Factory reset</span>
+                <span class="tag" data-i18n="studio_nav_labs_only">Labs only</span>
             </button>
-            <button class="nav-item" data-route="upload-logo" data-app="tools" data-tool-view="logo-upload" data-name="Upload Logo" data-section-i18n="studio_nav_upload_logo">
+            <button class="nav-item" data-route="calibration" data-app="tools" data-tool-view="calibration" data-default-action="dump" data-name="Calibration" data-section-i18n="studio_nav_calibration">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg>
+                <span class="nav-item-label" data-i18n="studio_nav_calibration">Calibration</span>
+            </button>
+            <button class="nav-item" data-route="boot-logo" data-app="tools" data-tool-view="logo" data-default-action="download" data-name="Boot Logo" data-section-i18n="studio_nav_logo">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                <span class="nav-item-label" data-i18n="studio_nav_upload_logo">Upload Logo</span>
-            </button>
-            <button class="nav-item" data-route="download-logo" data-app="tools" data-tool-view="logo-dump" data-name="Download Logo" data-section-i18n="studio_nav_download_logo">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
-                <span class="nav-item-label" data-i18n="studio_nav_download_logo">Download Logo</span>
+                <span class="nav-item-label" data-i18n="studio_nav_logo">Boot Logo</span>
             </button>
             <button class="nav-item" data-route="export-rf-log" data-app="tools" data-tool-view="rf-log" data-name="Export RF Log" data-section-i18n="studio_nav_export_rf_log">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
@@ -313,19 +316,26 @@
                 </div>
             </div>
 
-            <div class="tool-view" id="dump-content" role="region" hidden>
+            <div class="tool-view action-tool" id="calibration-content" role="region" hidden>
+              <div class="action-tabs" role="tablist" aria-orientation="horizontal" data-i18n-aria-label="studio_nav_calibration" aria-label="Calibration">
+                <button type="button" id="calibration-dump-tab" class="btn action-tab active" role="tab" aria-selected="true" aria-controls="dump-content" data-action="dump" data-route="dump-calib" data-i18n="tabDump">Back up</button>
+                <button type="button" id="calibration-restore-tab" class="btn action-tab" role="tab" aria-selected="false" aria-controls="restore-content" tabindex="-1" data-action="restore" data-route="restore-calib" data-i18n="tabRestore">Restore</button>
+              </div>
+              <div class="action-view active" id="dump-content" role="tabpanel" aria-labelledby="calibration-dump-tab" data-action-panel="dump">
                 <section class="section">
-                    <p class="tab-description" id="dumpDescription">Extract calibration data from your UV-K5 V3 or UV-K1 device.</p>
-                    <button id="dumpBtn">Dump Calibration Data</button>
+                    <p class="tab-description" id="dumpDescription">Read the calibration data from your UV-K5 V3 or UV-K1 radio, then download it as a file.</p>
+                    <div class="output-actions">
+                        <button id="dumpBtn">Read calibration data</button>
+                        <div class="download-link" id="dumpDownload">
+                            <a href="#" id="dumpLink" download="calibration.dat"><svg class="dl-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="downloadText">Download calibration.dat</span></a>
+                        </div>
+                    </div>
                 </section>
-                <div class="download-link" id="dumpDownload">
-                    <a href="#" id="dumpLink" download="calibration.dat"><svg class="dl-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="downloadText">Download calibration.dat</span></a>
-                </div>
             </div>
 
-            <div class="tool-view" id="restore-content" role="region" hidden>
+              <div class="action-view" id="restore-content" role="tabpanel" aria-labelledby="calibration-restore-tab" data-action-panel="restore" hidden>
                 <section class="section" aria-labelledby="labelCalibFile">
-                    <label id="labelCalibFile" for="calibFile">Calibration Dump File (.dat)</label>
+                    <label id="labelCalibFile" for="calibFile">Calibration Backup (.dat)</label>
                     <div class="file-input-wrapper">
                         <input type="file" id="calibFile" accept=".dat" />
                         <div class="file-input-label" id="calibFileLabel">
@@ -334,7 +344,8 @@
                         </div>
                     </div>
                 </section>
-                <button id="restoreBtn" disabled aria-live="polite">Restore Calibration Data</button>
+                <button id="restoreBtn" disabled aria-live="polite">Restore calibration data</button>
+              </div>
             </div>
 
             <div class="tool-view" id="rf-log-content" role="region" hidden>
@@ -347,7 +358,12 @@
                 </div>
             </div>
 
-            <div class="tool-view" id="logo-upload-content" role="region" hidden>
+            <div class="tool-view action-tool" id="logo-content" role="region" hidden>
+              <div class="action-tabs" role="tablist" aria-orientation="horizontal" data-i18n-aria-label="studio_nav_logo" aria-label="Boot Logo">
+                <button type="button" id="logo-download-tab" class="btn action-tab active" role="tab" aria-selected="true" aria-controls="logo-dump-content" data-action="download" data-route="download-logo" data-i18n="tabLogoDump">Download</button>
+                <button type="button" id="logo-upload-tab" class="btn action-tab" role="tab" aria-selected="false" aria-controls="logo-upload-content" tabindex="-1" data-action="upload" data-route="upload-logo" data-i18n="tabLogoUpload">Upload</button>
+              </div>
+              <div class="action-view" id="logo-upload-content" role="tabpanel" aria-labelledby="logo-upload-tab" data-action-panel="upload" hidden>
                 <section class="section">
                     <p class="tab-description" id="logoUploadDescription">Upload a custom 128x64 boot logo to your device. Any image format is accepted (PNG, JPG, BMP, etc.).</p>
                 </section>
@@ -370,23 +386,71 @@
                         <canvas id="logoPreviewCanvas" width="128" height="64" class="logo-canvas" role="img" aria-labelledby="labelLogoPreview"></canvas>
                     </div>
                 </section>
-                <button id="logoUploadBtn" disabled aria-live="polite">Upload Logo to Radio</button>
-            </div>
+                <button id="logoUploadBtn" disabled aria-live="polite">Upload logo to radio</button>
+              </div>
 
-            <div class="tool-view" id="logo-dump-content" role="region" hidden>
+              <div class="action-view active" id="logo-dump-content" role="tabpanel" aria-labelledby="logo-download-tab" data-action-panel="download">
                 <section class="section">
-                    <p class="tab-description" id="logoDumpDescription">Read the current boot logo from your device and download it as a PNG.</p>
-                    <button id="logoDumpBtn">Download Logo from Radio</button>
+                    <p class="tab-description" id="logoDumpDescription">Read the current boot logo from your radio, then download it as a PNG.</p>
+                    <div class="output-actions">
+                        <button id="logoDumpBtn">Read logo from radio</button>
+                        <div class="download-link" id="logoDumpDownload">
+                            <a href="#" id="logoDumpLink" download="logo.png"><svg class="dl-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="logoDumpDownloadText">Download logo.png</span></a>
+                        </div>
+                    </div>
                 </section>
                 <section class="section logo-dump-result" id="logoDumpResult" hidden>
                     <div class="logo-preview-wrapper">
-                        <span class="logo-preview-label" id="logoDumpedLabel">Downloaded logo (128x64):</span>
+                        <span class="logo-preview-label" id="logoDumpedLabel">Logo read from radio (128x64):</span>
                         <canvas id="logoDumpedCanvas" width="128" height="64" class="logo-canvas" role="img" aria-labelledby="logoDumpedLabel"></canvas>
                     </div>
-                    <div class="download-link" id="logoDumpDownload" style="display:block;">
-                        <a href="#" id="logoDumpLink" download="logo.png"><svg class="dl-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="logoDumpDownloadText">Download logo.png</span></a>
+                </section>
+              </div>
+            </div>
+
+            <div class="tool-view action-tool" id="external-flash-content" role="region" hidden>
+              <div class="action-tabs" role="tablist" aria-orientation="horizontal" data-i18n-aria-label="studio_nav_external_flash" aria-label="External Flash">
+                <button type="button" id="flash-dump-tab" class="btn action-tab active" role="tab" aria-selected="true" aria-controls="flash-dump-content" data-action="dump" data-route="dump-flash" data-i18n="studio_nav_dump_flash">Back up</button>
+                <button type="button" id="flash-restore-tab" class="btn action-tab" role="tab" aria-selected="false" aria-controls="flash-restore-content" tabindex="-1" data-action="restore" data-route="restore-flash" data-i18n="studio_nav_restore_flash">Restore</button>
+              </div>
+              <div class="action-view active" id="flash-dump-content" role="tabpanel" aria-labelledby="flash-dump-tab" data-action-panel="dump">
+                <section class="section">
+                    <p class="tab-description" id="flashDumpDescription">Read the entire 2 MiB external SPI flash by physical address. Reading can take several minutes over serial; when it is complete, download the raw binary image.</p>
+                    <div class="output-actions">
+                        <button id="flashDumpBtn">Read external flash</button>
+                        <div class="download-link" id="flashDumpDownload">
+                            <a href="#" id="flashDumpLink" download="external-flash.bin"><svg class="dl-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="flashDumpDownloadText">Download external-flash.bin</span></a>
+                        </div>
                     </div>
                 </section>
+              </div>
+
+              <div class="action-view" id="flash-restore-content" role="tabpanel" aria-labelledby="flash-restore-tab" data-action-panel="restore" hidden>
+                <section class="section">
+                    <p class="tab-description" id="flashRestoreDescription">Restore a full 2 MiB external flash image (.bin) previously backed up. The device-specific calibration sector is preserved; the rest of the chip, including the logo and firmware slots, is erased, rewritten and verified.</p>
+                </section>
+                <section class="section" aria-labelledby="labelFlashFile">
+                    <label id="labelFlashFile" for="flashFile">External Flash Backup (.bin)</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="flashFile" accept=".bin" />
+                        <div class="file-input-label" id="flashFileLabel">
+                            <span class="file-name" id="flashFileName">No file selected</span>
+                            <span class="file-button" id="flashFileButton">Choose file</span>
+                        </div>
+                    </div>
+                </section>
+                <button id="flashRestoreBtn" disabled aria-live="polite">Restore external flash</button>
+              </div>
+            </div>
+
+            <div class="tool-view" id="factory-reset-content" role="region" hidden>
+                <section class="section">
+                    <p class="tab-description" id="factoryResetDescription">Restore the reconstructed factory external flash and stock firmware matching your radio. Device-specific calibration is preserved. Select your model.</p>
+                </section>
+                <div class="factory-reset-actions">
+                    <button id="factoryResetK1Btn" class="btn danger" type="button" data-factory-reset-target="k1" aria-live="polite">Restore UV-K1</button>
+                    <button id="factoryResetK5V3Btn" class="btn danger" type="button" data-factory-reset-target="k5v3" aria-live="polite">Restore UV-K5 V3</button>
+                </div>
             </div>
 
             <div class="tool-view" id="slots-content" role="region" hidden>
@@ -655,27 +719,69 @@
     </div>
 </div>
 
+<!-- External-flash restore confirmation -->
+<div class="modal" id="flashRestoreConfirmModal" role="dialog" aria-modal="true"
+     aria-labelledby="flashRestoreConfirmTitle" aria-describedby="flashRestoreConfirmBody"
+     aria-hidden="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="flashRestoreConfirmTitle" data-i18n="flashRestoreBtn">Restore external flash</h2>
+            <button class="modal-close" id="flashRestoreConfirmClose" type="button"
+                    data-i18n-title="appClose" data-i18n-aria-label="appClose"
+                    title="Close" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="flashRestoreConfirmBody" data-i18n="flashRestoreConfirm">This will erase and overwrite the external flash. Continue?</p>
+            <div class="modal-actions">
+                <button class="btn" id="flashRestoreCancelBtn" type="button" data-i18n="flashRestoreCancel">Cancel</button>
+                <button class="btn danger" id="flashRestoreConfirmBtn" type="button" data-i18n="flashRestoreBtn">Restore external flash</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Guided factory software restoration -->
+<div class="modal" id="factoryResetModal" role="dialog" aria-modal="true"
+     aria-labelledby="factoryResetTitle" aria-describedby="factoryResetBody"
+     aria-hidden="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="factoryResetTitle">Restore factory software</h2>
+            <button class="modal-close" id="factoryResetClose" type="button"
+                    data-i18n-title="appClose" data-i18n-aria-label="appClose"
+                    title="Close" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="factoryResetBody"></p>
+            <div class="modal-actions">
+                <button class="btn" id="factoryResetCancelBtn" type="button" data-i18n="flashRestoreCancel">Cancel</button>
+                <button class="btn danger" id="factoryResetConfirmBtn" type="button">Continue</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ═══════════ Scripts (all local, file://-friendly) ═══════════ -->
-<script src="locales/en.js?v=32"></script>
-<script src="locales/fr.js?v=32"></script>
-<script src="locales/it.js?v=32"></script>
-<script src="locales/es.js?v=32"></script>
-<script src="locales/de.js?v=32"></script>
-<script src="locales/pt.js?v=32"></script>
-<script src="locales/ru.js?v=32"></script>
-<script src="locales/pl.js?v=32"></script>
-<script src="locales/zh.js?v=32"></script>
-<script src="locales/nl.js?v=32"></script>
+<script src="locales/en.js?v=45"></script>
+<script src="locales/fr.js?v=45"></script>
+<script src="locales/it.js?v=45"></script>
+<script src="locales/es.js?v=45"></script>
+<script src="locales/de.js?v=45"></script>
+<script src="locales/pt.js?v=45"></script>
+<script src="locales/ru.js?v=45"></script>
+<script src="locales/pl.js?v=45"></script>
+<script src="locales/zh.js?v=45"></script>
+<script src="locales/nl.js?v=45"></script>
 <script src="js/studio-preferences.js?v=1"></script>
 <script src="js/studio-i18n.js?v=4"></script>
 <script src="js/studio-serial.js?v=2"></script>
 <script src="js/rf-log.js?v=4"></script>
     <script src="js/k5viewer.js?v=31"></script>
 <script src="js/keypad-detach.js?v=1"></script>
-<script src="js/flash.js?v=21"></script>
+<script src="js/flash.js?v=34"></script>
 <script src="js/flash-catalog.js?v=17"></script>
 <script src="js/app-catalog.js?v=1"></script>
-<script src="js/studio.js?v=12"></script>
+<script src="js/studio.js?v=16"></script>
 <script src="js/studio-flash-counter.js?v=2"></script>
 </body>
 </html>

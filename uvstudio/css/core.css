@@ -237,6 +237,20 @@ select:focus { border-color: #2563eb; }
 
 .modal-close:hover { color: var(--text); }
 .modal-body { padding: 24px; }
+.modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+}
+.modal-actions .btn { min-width: 120px; }
+.btn.danger:hover:not(:disabled) {
+    background: linear-gradient(160deg, #ef4444 0%, #dc2626 100%);
+    border-color: #b91c1c;
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(239,68,68,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+}
 #helpModal .section { margin-bottom: 24px; }
 #helpModal .section:last-child { margin-bottom: 0; }
 

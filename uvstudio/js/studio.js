@@ -14,6 +14,7 @@
     const viewRflog = document.getElementById("view-rflog");
     const hamburgerBtn = document.getElementById("hamburgerMenu");
     const toolViews = Array.from(document.querySelectorAll("#pane-tools .tool-view"));
+    const actionTabs = Array.from(document.querySelectorAll("#pane-tools .action-tab"));
     const stage = document.querySelector(".stage");
     const version = window.UVSTUDIO_VERSION || "dev";
     const serialController = window.UVStudioSerial;
@@ -29,7 +30,19 @@
         "restore-calibration": "studio_operation_restore_calibration",
         "upload-logo": "studio_operation_upload_logo",
         "dump-logo": "studio_operation_dump_logo",
+        "dump-flash": "studio_operation_dump_flash",
+        "restore-flash": "studio_operation_restore_flash",
+        "factory-reset": "studio_operation_factory_reset",
         "export-rf-log": "studio_operation_export_rf_log"
+    };
+
+    const routeAliases = {
+        "dump-calib": { route: "calibration", action: "dump" },
+        "restore-calib": { route: "calibration", action: "restore" },
+        "upload-logo": { route: "boot-logo", action: "upload" },
+        "download-logo": { route: "boot-logo", action: "download" },
+        "dump-flash": { route: "external-flash", action: "dump" },
+        "restore-flash": { route: "external-flash", action: "restore" }
     };
 
     function translate(key) {
@@ -77,8 +90,12 @@
         try { return decodeURIComponent(window.location.hash.slice(1)).trim(); } catch (e) { return ""; }
     }
 
-    function findRoute(route) {
-        return route ? items.find(item => item.dataset.route === route) : null;
+    function resolveRoute(route) {
+        if (!route) return null;
+        const alias = routeAliases[route];
+        const canonicalRoute = alias ? alias.route : route;
+        const item = items.find(candidate => candidate.dataset.route === canonicalRoute);
+        return item ? { item, action: alias?.action || null, requestedRoute: route } : null;
     }
 
     function readLegacyModeRoute() {
@@ -108,6 +125,28 @@
         } catch (e) {
             window.location.hash = route;
         }
+    }
+
+    function activateToolAction(toolView, action) {
+        if (!toolView?.classList.contains("action-tool")) return;
+        const tabs = Array.from(toolView.querySelectorAll(".action-tab"));
+        const panels = Array.from(toolView.querySelectorAll(".action-view"));
+        const selected = tabs.find(tab => tab.dataset.action === action)
+            || tabs.find(tab => tab.classList.contains("active"))
+            || tabs[0];
+        if (!selected) return;
+
+        tabs.forEach(tab => {
+            const active = tab === selected;
+            tab.classList.toggle("active", active);
+            tab.setAttribute("aria-selected", String(active));
+            tab.tabIndex = active ? 0 : -1;
+        });
+        panels.forEach(panel => {
+            const active = panel.dataset.actionPanel === selected.dataset.action;
+            panel.classList.toggle("active", active);
+            panel.hidden = !active;
+        });
     }
 
     async function activate(item, options) {
@@ -152,6 +191,7 @@
                 const active = panel.id === `${toolView}-content`;
                 panel.classList.toggle("active", active);
                 panel.hidden = !active;
+                if (active) activateToolAction(panel, settings.action || item.dataset.defaultAction);
             });
             window.dispatchEvent(new CustomEvent("uvstudio:toolviewchange", {
                 detail: { view: toolView }
@@ -166,13 +206,39 @@
         }
         if (stage) stage.scrollTop = 0;
 
-        const route = item.dataset.route;
+        const route = settings.route || item.dataset.route;
         currentItem = item;
         rememberRoute(route);
         if (settings.updateHash) replaceHash(route);
     }
 
     items.forEach(item => item.addEventListener("click", () => { void activate(item); }));
+
+    actionTabs.forEach(tab => tab.addEventListener("click", () => {
+        if (serialController?.isNavigationBlocked()) return;
+        const toolView = tab.closest(".tool-view");
+        activateToolAction(toolView, tab.dataset.action);
+        const route = tab.dataset.route;
+        if (route) {
+            rememberRoute(route);
+            replaceHash(route);
+        }
+    }));
+
+    actionTabs.forEach(tab => tab.addEventListener("keydown", event => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        const tabs = Array.from(tab.closest(".action-tabs").querySelectorAll(".action-tab:not(:disabled)"));
+        const index = tabs.indexOf(tab);
+        if (index < 0 || tabs.length < 2) return;
+        event.preventDefault();
+        const next = event.key === "Home"
+            ? tabs[0]
+            : event.key === "End"
+                ? tabs[tabs.length - 1]
+                : tabs[(index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length];
+        next.click();
+        next.focus();
+    }));
 
     window.addEventListener("uvstudio:serialstatechange", event => {
         renderSerialStatus(event.detail);
@@ -182,6 +248,11 @@
             if (item.disabled) item.setAttribute("aria-disabled", "true");
             else item.removeAttribute("aria-disabled");
         });
+        actionTabs.forEach(tab => {
+            tab.disabled = blocked && !tab.classList.contains("active");
+            if (tab.disabled) tab.setAttribute("aria-disabled", "true");
+            else tab.removeAttribute("aria-disabled");
+        });
     });
 
     window.addEventListener("uvstudio:languagechange", () => {
@@ -189,8 +260,12 @@
     });
 
     window.addEventListener("hashchange", () => {
-        const item = findRoute(readHashRoute());
-        if (item) void activate(item, { updateHash: false });
+        const target = resolveRoute(readHashRoute());
+        if (target) void activate(target.item, {
+            updateHash: false,
+            action: target.action,
+            route: target.requestedRoute
+        });
     });
 
     hamburgerBtn.addEventListener("click", () => {
@@ -198,13 +273,16 @@
         hamburgerBtn.setAttribute("aria-expanded", String(!collapsed));
     });
 
-    const initial = findRoute(readHashRoute())
-        || findRoute(readLegacyModeRoute())
-        || findRoute(readStoredRoute())
-        || items.find(item => item.classList.contains("active"))
-        || items[0];
+    const initial = resolveRoute(readHashRoute())
+        || resolveRoute(readLegacyModeRoute())
+        || resolveRoute(readStoredRoute())
+        || {
+            item: items.find(item => item.classList.contains("active")) || items[0],
+            action: null,
+            requestedRoute: null
+        };
 
     applyBranding();
     renderSerialStatus(lastSerialSnapshot);
-    void activate(initial);
+    void activate(initial.item, { action: initial.action, route: initial.requestedRoute });
 })();

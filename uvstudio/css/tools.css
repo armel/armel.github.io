@@ -18,6 +18,55 @@
   display: block;
 }
 
+#pane-tools .action-tabs {
+  display: flex;
+  width: min(100%, 520px);
+  gap: 4px;
+  margin-bottom: 28px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 2px);
+  background: var(--bg);
+}
+
+#external-flash-content .action-tabs {
+  width: min(100%, 680px);
+}
+
+#pane-tools .action-tab.btn {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  min-height: 36px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-secondary);
+  line-height: 1.25;
+  white-space: normal;
+}
+
+#pane-tools .action-tab.btn:hover:not(:disabled) {
+  transform: none;
+}
+
+#pane-tools .action-tab.btn.active {
+  border-color: #2563eb;
+  background: linear-gradient(160deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 2px 6px rgba(37,99,235,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+  color: #fff;
+}
+
+#pane-tools .action-view[hidden] {
+  display: none;
+}
+
+[data-theme="dark"] #pane-tools .action-tab.btn.active {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: #fff;
+}
+
 #pane-tools .tab-description {
   color: var(--text-secondary);
   margin-bottom: 20px;
@@ -289,6 +338,13 @@
 
 /* ---------- Download link ---------- */
 /* Compact success chip, centered — not a full-width bar */
+#pane-tools .output-actions {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 #pane-tools .download-link {
   display: none;
   width: fit-content;
@@ -299,6 +355,30 @@
   border: 1px solid var(--accent);
   border-radius: var(--radius);
   text-align: center;
+}
+
+#pane-tools .output-actions > button:not(.log-toggle):not(.btn),
+#pane-tools .output-actions > .download-link {
+  min-height: 49px;
+  margin-top: 10px;
+}
+
+#pane-tools .output-actions > .download-link {
+  align-items: center;
+  justify-content: center;
+  padding-block: 12px;
+}
+
+#pane-tools .factory-reset-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+#pane-tools .factory-reset-actions > .btn {
+  flex: 1 1 0;
+  min-height: 49px;
 }
 
 #pane-tools .download-link a {
@@ -317,6 +397,22 @@
 
 #pane-tools .download-link a .dl-icon {
   flex: 0 0 auto;
+}
+
+@media (max-width: 640px) {
+  #pane-tools .output-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  #pane-tools .output-actions > button:not(.log-toggle):not(.btn),
+  #pane-tools .output-actions > .download-link {
+    width: 100%;
+  }
+
+  #pane-tools .factory-reset-actions {
+    flex-direction: column;
+  }
 }
 
 /* ---------- Log / console ---------- */

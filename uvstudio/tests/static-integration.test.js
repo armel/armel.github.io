@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
@@ -10,6 +11,7 @@ const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const studioVersionSource = fs.readFileSync(path.join(root, 'js', 'studio-version.js'), 'utf8');
 const flashSource = fs.readFileSync(path.join(root, 'js', 'flash.js'), 'utf8');
+const studioCss = fs.readFileSync(path.join(root, 'css', 'studio.css'), 'utf8');
 
 test('derives any multiboot edition from the canonical firmware filename', () => {
   const start = flashSource.indexOf('function slotEditionFromFilename');
@@ -184,11 +186,191 @@ test('exposes the responsive sidebar toggle to assistive technologies', () => {
   assert.match(html, /<aside class="sidebar" id="studioSidebar">/);
 });
 
-test('maps every maintenance route directly to an existing tool view', () => {
+test('groups paired maintenance actions into resource views', () => {
   const views = [...html.matchAll(/data-tool-view="([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(views, ['flash', 'slots', 'apps', 'dump', 'restore', 'logo-upload', 'logo-dump', 'rf-log']);
+  assert.deepEqual(views, ['flash', 'slots', 'apps', 'external-flash', 'factory-reset', 'calibration', 'logo', 'rf-log']);
   views.forEach(view => assert.match(html, new RegExp(`id="${view}-content"`)));
-  assert.doesNotMatch(html, /class="tabs"|class="tab btn"/);
+  ['dump', 'restore', 'logo-upload', 'logo-dump', 'flash-dump', 'flash-restore'].forEach(action => {
+    assert.match(html, new RegExp(`id="${action}-content"[^>]+data-action-panel=`));
+  });
+});
+
+test('keeps Labs-only tools together in the sidebar', () => {
+  const apps = html.indexOf('data-route="apps"');
+  const externalFlash = html.indexOf('data-route="external-flash"');
+  const factoryReset = html.indexOf('data-route="factory-reset"');
+  const calibration = html.indexOf('data-route="calibration"');
+  assert.ok(apps >= 0 && externalFlash > apps && factoryReset > externalFlash && calibration > factoryReset);
+  assert.match(html, /class="nav-item nav-item-labs" data-route="apps"[^>]+data-name="Apps \(Labs only\)"/);
+  assert.match(html, /class="nav-item nav-item-labs" data-route="external-flash"[^>]+data-name="External Flash \(Labs only\)"/);
+  assert.match(html, /class="nav-item nav-item-labs" data-route="factory-reset"[^>]+data-name="Factory Reset \(Labs only\)"/);
+  assert.equal((html.match(/class="tag" data-i18n="studio_nav_labs_only"/g) || []).length, 3);
+  assert.match(studioCss, /\.nav-item-labs\s*\{[^}]*gap:\s*8px/);
+  assert.match(studioCss, /\.nav-item-labs \.tag\s*\{[^}]*margin-left:\s*auto/);
+  assert.match(studioCss, /\.nav-item-labs \.tag\s*\{[^}]*margin-right:\s*0/);
+});
+
+test('orders logo actions from radio read to radio write', () => {
+  assert.match(html, /data-tool-view="logo" data-default-action="download"/);
+  const start = html.indexOf('id="logo-content"');
+  const end = html.indexOf('id="external-flash-content"', start);
+  const routes = [...html.slice(start, end).matchAll(/class="btn action-tab[^"]*"[^>]*data-route="([^"]+)"/g)]
+    .map(match => match[1]);
+  assert.deepEqual(routes, ['download-logo', 'upload-logo']);
+});
+
+test('keeps generated-file downloads beside their read actions', () => {
+  [
+    ['dumpBtn', 'dumpDownload'],
+    ['logoDumpBtn', 'logoDumpDownload'],
+    ['flashDumpBtn', 'flashDumpDownload']
+  ].forEach(([buttonId, downloadId]) => {
+    assert.match(html, new RegExp(
+      `<div class="output-actions">\\s*<button id="${buttonId}"[^>]*>[\\s\\S]*?</button>\\s*<div class="download-link" id="${downloadId}"`
+    ));
+  });
+});
+
+test('keeps full external flash transfers responsive and retryable', () => {
+  const start = flashSource.indexOf('async function waitForExternalFlashResponse');
+  const end = flashSource.indexOf('\n\nasync function requireExternalFlashSupport', start);
+  assert.ok(start >= 0 && end > start);
+  const helpers = flashSource.slice(start, end);
+  assert.match(helpers, /await waitForSerialRead\(/);
+  assert.doesNotMatch(helpers, /await sleep\(5\)/);
+  assert.match(helpers, /attempt <= FLASH_COMMAND_RETRIES/);
+  assert.match(flashSource, /activeOperationName === 'dump-flash'/);
+  assert.match(flashSource, /activeOperationName === 'restore-flash'/);
+});
+
+test('uses the shared modal UI to confirm external flash restoration', () => {
+  assert.match(html, /id="flashRestoreConfirmModal"[^>]+role="dialog"[^>]+aria-modal="true"/);
+  assert.match(html, /id="flashRestoreCancelBtn"[^>]+data-i18n="flashRestoreCancel"/);
+  assert.match(html, /class="btn danger" id="flashRestoreConfirmBtn"/);
+  assert.match(flashSource, /await confirmExternalFlashRestore\(\)/);
+  assert.doesNotMatch(flashSource, /window\.confirm\(t\('flashRestoreConfirm'\)\)/);
+});
+
+test('provides verified two-stage factory restore workflows for UV-K1 and UV-K5 V3', () => {
+  assert.match(html, /class="nav-item nav-item-labs"[^>]+data-route="factory-reset"[^>]+data-tool-view="factory-reset"/);
+  assert.match(html, /data-section-i18n="studio_nav_factory_reset"[\s\S]+data-i18n="studio_nav_labs_only"/);
+  assert.match(html, /id="factory-reset-content"[^>]+role="region"/);
+  assert.doesNotMatch(html, /id="factory-reset-tab"/);
+  assert.match(html, /class="factory-reset-actions"/);
+  assert.match(html, /id="factoryResetK1Btn"[^>]+data-factory-reset-target="k1"/);
+  assert.match(html, /id="factoryResetK5V3Btn"[^>]+data-factory-reset-target="k5v3"/);
+  assert.match(html, /id="factoryResetModal"[^>]+role="dialog"[^>]+aria-modal="true"/);
+  assert.match(flashSource, /factoryResetButtons\.forEach\(button => \{ button\.disabled = busy; \}\)/);
+  assert.match(flashSource, /showFactoryResetModal\('unsupported', target\)/);
+  assert.match(flashSource, /const FACTORY_STATE_A = 0x100000/);
+  assert.match(flashSource, /const FACTORY_STATE_B = 0x101000/);
+  assert.match(flashSource, /label: 'UV-K1'[\s\S]+K1_External_Flash_Factory_Reconstructed\.bin[\s\S]+quansheng\.k1\.stock\.firmware\.v7\.03\.01\.bin/);
+  assert.match(flashSource, /label: 'UV-K5 V3'[\s\S]+K5V3_External_Flash_Factory_Reconstructed\.bin[\s\S]+quansheng\.k5v3\.stock\.firmware\.v7\.00\.11\.bin/);
+  assert.match(flashSource, /for \(let address = 0; address < FLASH_TOTAL_SIZE; address \+= FLASH_SECTOR_SIZE\)/);
+  assert.match(flashSource, /address === FLASH_CALIBRATION_SECTOR/);
+  assert.match(flashSource, /regularSectors\.concat\(\[FACTORY_STATE_A, FACTORY_STATE_B\]\)/);
+  assert.match(flashSource, /await restoreFactoryExternalFlash\(factoryFlash, devInfo\.timestamp\)/);
+  assert.match(flashSource, /fetchVerifiedBinary\(target\.flashUrl, FACTORY_FLASH_SIZE, target\.flashSha256\)/);
+  assert.match(flashSource, /fetchVerifiedBinary\(target\.firmwareUrl, target\.firmwareSize, target\.firmwareSha256\)/);
+  assert.match(flashSource, /await showFactoryResetModal\('dfu'\)/);
+  assert.match(flashSource, /await flashFirmware\(stockFirmware, \{ count: false, offerChirpDriver: false \}\)/);
+  const factoryWorkflow = flashSource.slice(
+    flashSource.indexOf('// ========== GUIDED FACTORY SOFTWARE RESTORE'),
+    flashSource.indexOf('// ========== DUMP FULL EXTERNAL FLASH')
+  );
+  assert.doesNotMatch(factoryWorkflow, /MSG_REBOOT/);
+});
+
+test('ships the verified UV-K1 and UV-K5 V3 factory recovery images', () => {
+  const factoryFlash = fs.readFileSync(path.join(root, 'assets', 'factory', 'K1_External_Flash_Factory_Reconstructed.bin'));
+  const factoryK5V3Flash = fs.readFileSync(path.join(root, 'assets', 'factory', 'K5V3_External_Flash_Factory_Reconstructed.bin'));
+  const factoryLogo = fs.readFileSync(path.join(root, 'assets', 'factory', 'quansheng.stock.logo.png'));
+  const stockFirmware = fs.readFileSync(path.join(root, 'assets', 'factory', 'quansheng.k1.stock.firmware.v7.03.01.bin'));
+  const stockK5V3Firmware = fs.readFileSync(path.join(root, 'assets', 'factory', 'quansheng.k5v3.stock.firmware.v7.00.11.bin'));
+  const sha256 = data => crypto.createHash('sha256').update(data).digest('hex');
+
+  assert.equal(factoryFlash.length, 0x200000);
+  assert.equal(sha256(factoryFlash), 'a2383aa050dc0963fee7b7c99692b8330d9455a6bbb2bb7498b2bba4174c9d55');
+  assert.equal(sha256(factoryFlash.subarray(0, 0x10000)), '43b9b51e73bc793cfa921806d2a9d68cab3c4d7fafb1f3e555ee2d0bf92f6e43');
+  assert.equal(sha256(factoryFlash.subarray(0x100000, 0x197000)), '415ea5e819c718db34d163751a10c6eaaabc498facf7dd48f9d342ed9948c017');
+  assert.ok(factoryFlash.subarray(0x010000, 0x011000).every(byte => byte === 0xff));
+  assert.equal(factoryFlash.readUInt32LE(0x011000), 0x9abc5a5a);
+  assert.equal(factoryFlash.readUInt16LE(0x011004), 1024);
+  assert.equal(factoryFlash.readUInt16LE(0x011006), 0);
+  assert.equal(sha256(factoryFlash.subarray(0x011008, 0x011408)), '333fa3713f45bdcc5d375795dceeebf561e8a4ee8729fef7fe898fcfa5b8cbf7');
+  assert.ok(factoryFlash.subarray(0x011408, 0x100000).every(byte => byte === 0xff));
+  assert.ok(factoryFlash.subarray(0x197000).every(byte => byte === 0xff));
+
+  assert.equal(factoryK5V3Flash.length, 0x200000);
+  assert.equal(sha256(factoryK5V3Flash), 'b85c8066a1b0885d1cf3e430533f45c9c8ea91c8b936a94aba99221fd1bff79b');
+  assert.equal(sha256(factoryLogo), 'a5b4277efb5f78986bcdb22e4132b62b68aee5f4637a1798164ecc230a935848');
+  assert.equal(factoryFlash.subarray(0x7030, 0x7040).toString('ascii').replace(/\0+$/, ''), 'UV-K1');
+  assert.equal(factoryK5V3Flash.subarray(0x7030, 0x7040).toString('ascii').replace(/\0+$/, ''), 'UV-K5');
+  const k1WithoutModel = Buffer.from(factoryFlash);
+  const k5WithoutModel = Buffer.from(factoryK5V3Flash);
+  k1WithoutModel.fill(0, 0x7030, 0x7040);
+  k5WithoutModel.fill(0, 0x7030, 0x7040);
+  assert.deepEqual(k5WithoutModel, k1WithoutModel);
+
+  assert.equal(stockFirmware.length, 71268);
+  assert.equal(sha256(stockFirmware), '55ec0daffc5668bdb41dcc118475d7e6e23ad953d70f57a9bca64a6202734ba0');
+  assert.equal(stockK5V3Firmware.length, 71712);
+  assert.equal(sha256(stockK5V3Firmware), 'f4e5264a6f9a5436a6c75f7b217c60ba002cec04928f247392b9968c5c9458cb');
+});
+
+test('provides an equivalent on-demand file protocol fallback', () => {
+  const source = fs.readFileSync(path.join(root, 'assets', 'factory', 'factory-assets.js'), 'utf8');
+  const context = { window: {} };
+  vm.runInNewContext(source, context);
+
+  for (const [url, filename] of [
+    ['assets/factory/K1_External_Flash_Factory_Reconstructed.bin', 'K1_External_Flash_Factory_Reconstructed.bin'],
+    ['assets/factory/K5V3_External_Flash_Factory_Reconstructed.bin', 'K5V3_External_Flash_Factory_Reconstructed.bin'],
+    ['assets/factory/quansheng.k1.stock.firmware.v7.03.01.bin', 'quansheng.k1.stock.firmware.v7.03.01.bin'],
+    ['assets/factory/quansheng.k5v3.stock.firmware.v7.00.11.bin', 'quansheng.k5v3.stock.firmware.v7.00.11.bin']
+  ]) {
+    const expected = fs.readFileSync(path.join(root, 'assets', 'factory', filename));
+    const decoded = Buffer.from(context.window.UVStudioFactoryAssets[url], 'base64');
+    assert.deepEqual(decoded, expected);
+  }
+
+  assert.match(flashSource, /window\.location\.protocol === 'file:'/);
+  assert.match(flashSource, /script\.src = 'assets\/factory\/factory-assets\.js'/);
+});
+
+test('retries an external flash command after transient response timeouts', async () => {
+  const start = flashSource.indexOf('async function waitForExternalFlashResponse');
+  const end = flashSource.indexOf('\n\nasync function readExternalFlashChunk', start);
+  assert.ok(start >= 0 && end > start);
+  const context = { Uint8Array, DataView, performance: { now: () => 0 } };
+  vm.runInNewContext(
+    `const FLASH_COMMAND_RETRIES = 3;
+     let toolsSerialSession = 1;
+     let serialReadRevision = 0;
+     let readBuffer = [];
+     let sends = 0;
+     const t = key => key;
+     async function sendMessage() {
+       sends++;
+       if (sends === 3) {
+         const data = new Uint8Array(4);
+         new DataView(data.buffer).setUint32(0, 0x1234, true);
+         readBuffer.push({ msgType: 0x0739, data });
+       }
+     }
+     function fetchMessage(buffer) { return buffer.length ? buffer.shift() : null; }
+     async function waitForSerialRead() { return false; }
+     ${flashSource.slice(start, end)};
+     this.exchange = () => exchangeExternalFlashMessage(
+       new Uint8Array(), 0x0739, 0x1234, 2000
+     );
+     this.sendCount = () => sends;`,
+    context
+  );
+
+  const response = await context.exchange();
+  assert.equal(response.msgType, 0x0739);
+  assert.equal(context.sendCount(), 3);
 });
 
 test('keeps all local script and stylesheet resources resolvable', () => {
@@ -214,6 +396,61 @@ test('keeps locale dictionaries on the same key set', () => {
   });
 });
 
+test('uses one consistent vocabulary for maintenance actions in every locale', () => {
+  const localeDir = path.join(root, 'locales');
+  const files = fs.readdirSync(localeDir).filter(file => /^[a-z]{2}\.js$/.test(file));
+  const legacyDumpKeys = [
+    'tabDump',
+    'labelCalibFile',
+    'dumpBtn',
+    'dumpDescription',
+    'dumpingData',
+    'dumpProgress',
+    'dumpComplete',
+    'studio_nav_dump_calib',
+    'studio_nav_dump_flash',
+    'flashDumpDescription',
+    'flashDumpBtn',
+    'dumpingFlash',
+    'flashDumpComplete'
+  ];
+
+  files.forEach(file => {
+    const context = { window: {} };
+    vm.runInNewContext(fs.readFileSync(path.join(localeDir, file), 'utf8'), context);
+    const dictionary = context.window.UVSTUDIO_LOCALES[file.slice(0, 2)];
+
+    assert.equal(dictionary.tabDump, dictionary.studio_nav_dump_flash, `${file}: backup action`);
+    assert.equal(dictionary.tabRestore, dictionary.studio_nav_restore_flash, `${file}: restore action`);
+    assert.equal(dictionary.tabLogoDump, dictionary.studio_nav_download_logo, `${file}: logo download action`);
+    assert.equal(dictionary.tabLogoUpload, dictionary.studio_nav_upload_logo, `${file}: logo upload action`);
+    assert.notEqual(dictionary.dumpBtn, dictionary.downloadText, `${file}: calibration read vs download`);
+    assert.notEqual(dictionary.logoDumpBtn, dictionary.logoDumpDownloadText, `${file}: logo read vs download`);
+    assert.notEqual(dictionary.flashDumpBtn, dictionary.flashDumpDownloadText, `${file}: flash read vs download`);
+    assert.doesNotMatch(dictionary.studio_nav_apps, /Labs/, `${file}: compact Apps label`);
+    assert.doesNotMatch(dictionary.studio_nav_external_flash, /Labs/, `${file}: compact flash label`);
+    assert.match(dictionary.studio_nav_labs_only, /Labs/, `${file}: Labs-only badge`);
+    assert.notEqual(dictionary.studio_nav_labs_only, 'Labs', `${file}: explicit Labs restriction`);
+    assert.equal('factoryResetBtn' in dictionary, false, `${file}: obsolete single-model action`);
+    assert.ok(dictionary.factoryResetK1Btn, `${file}: UV-K1 factory action`);
+    assert.ok(dictionary.factoryResetK5V3Btn, `${file}: UV-K5 V3 factory action`);
+    [
+      'factoryResetTitle',
+      'factoryResetConfirm',
+      'factoryResetDfuTitle',
+      'factoryResetDfuBody',
+      'factoryResetDownloading',
+      'factoryResetRestoringExternal',
+      'factoryResetExternalComplete',
+      'factoryResetWaitingDfu',
+      'factoryResetComplete'
+    ].forEach(key => assert.match(dictionary[key], /\{0\}/, `${file}:${key} model placeholder`));
+    legacyDumpKeys.forEach(key => {
+      assert.doesNotMatch(dictionary[key], /\bdump(?:ed|ing)?\b/i, `${file}:${key}`);
+    });
+  });
+});
+
 test('translates radio help and exposes every global serial status label', () => {
   const localeDir = path.join(root, 'locales');
   const files = fs.readdirSync(localeDir).filter(file => /^[a-z]{2}\.js$/.test(file));
@@ -226,7 +463,14 @@ test('translates radio help and exposes every global serial status label', () =>
     'studio_serial_disconnected',
     'studio_serial_connected_viewer',
     'studio_operation_flash',
-    'studio_operation_restore_calibration'
+    'studio_operation_restore_calibration',
+    'studio_operation_dump_flash',
+    'studio_operation_restore_flash',
+    'studio_operation_factory_reset',
+    'studio_nav_factory_reset',
+    'factoryResetConfirm',
+    'factoryResetDfuBody',
+    'factoryResetUnsupported'
   ];
   files.forEach(file => {
     const context = { window: {} };

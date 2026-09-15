@@ -48,8 +48,10 @@ write operation is complete.
 
 ### Firmware and maintenance tools
 
-Use the navigation sidebar to flash firmware, dump or restore calibration data,
-upload or download a boot logo, or export the RF Log. Follow the instructions
+Use the navigation sidebar to flash firmware, manage calibration data,
+manage the boot logo or external flash, restore a UV-K1 or UV-K5 V3 to its
+reconstructed factory state while preserving calibration, or export the RF Log.
+Follow the instructions
 shown for the selected operation. Keep the radio in normal mode for maintenance
 operations and use DFU mode only when flashing firmware.
 
