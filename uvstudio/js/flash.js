@@ -35,6 +35,8 @@ const MSG_ERASE_FLASH = 0x073A;
 const MSG_ERASE_FLASH_RESP = 0x073B;
 const MSG_WRITE_FLASH = 0x073C;
 const MSG_WRITE_FLASH_RESP = 0x073D;
+const MSG_CRC_FLASH = 0x073E;
+const MSG_CRC_FLASH_RESP = 0x073F;
 
 const OBFUS_TBL = new Uint8Array([
   0x16, 0x6c, 0x14, 0xe6, 0x2e, 0x91, 0x0d, 0x40,
@@ -56,6 +58,7 @@ const FLASH_SECTOR_SIZE = 0x1000;
 const FLASH_WRITE_CHUNK = 128;
 const FLASH_COMMAND_TIMEOUT_MS = 2000;
 const FLASH_ERASE_TIMEOUT_MS = 3000;
+const FLASH_CRC_PROBE_TIMEOUT_MS = 1000;
 const FLASH_COMMAND_RETRIES = 3;
 // Calibration is device-specific. Restore deliberately leaves its entire erase
 // sector untouched; the boot logo begins in the following sector at 0x011000.
@@ -1389,9 +1392,11 @@ async function waitForExternalFlashResponse(responseType, address, timeoutMs, se
   }
 }
 
-async function exchangeExternalFlashMessage(msg, responseType, address, timeoutMs) {
+async function exchangeExternalFlashMessage(
+  msg, responseType, address, timeoutMs, retries = FLASH_COMMAND_RETRIES
+) {
   const session = toolsSerialSession;
-  for (let attempt = 0; attempt <= FLASH_COMMAND_RETRIES; attempt++) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
     if (session !== toolsSerialSession) {
       throw Object.assign(new Error(t('tools_disconnected')), {
         code: 'UVSTUDIO_SERIAL_SESSION_CHANGED'
@@ -1461,6 +1466,63 @@ async function writeExternalFlashChunk(address, data, timestamp) {
   }
 }
 
+async function readExternalFlashCrc32(
+  address, length, timestamp, timeoutMs = FLASH_COMMAND_TIMEOUT_MS,
+  retries = FLASH_COMMAND_RETRIES
+) {
+  const msg = createMessage(MSG_CRC_FLASH, 12);
+  const view = new DataView(msg.buffer);
+  view.setUint32(4, address, true);
+  view.setUint32(8, length, true);
+  view.setUint32(12, timestamp, true);
+
+  const resp = await exchangeExternalFlashMessage(
+    msg, MSG_CRC_FLASH_RESP, address, timeoutMs, retries
+  );
+  if (!resp || resp.data.length < 13) {
+    throw new Error(t('flashReadError', flashAddress(address)));
+  }
+  const dv = new DataView(resp.data.buffer, resp.data.byteOffset, resp.data.byteLength);
+  if (resp.data[12] !== 0 || dv.getUint32(4, true) !== length) {
+    throw new Error(t('flashReadError', flashAddress(address)));
+  }
+  return dv.getUint32(8, true);
+}
+
+async function detectExternalFlashCrcSupport(timestamp) {
+  try {
+    await readExternalFlashCrc32(0, 1, timestamp, FLASH_CRC_PROBE_TIMEOUT_MS, 0);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function externalFlashSectorMatches(data, sector, sectorEnd, timestamp) {
+  const expectedCrc = crc32Bytes(data.subarray(sector, sectorEnd));
+  const actualCrc = await readExternalFlashCrc32(
+    sector, sectorEnd - sector, timestamp
+  );
+  return actualCrc === expectedCrc;
+}
+
+async function verifyExternalFlashSector(data, sector, sectorEnd, timestamp, crcSupported) {
+  if (crcSupported &&
+      await externalFlashSectorMatches(data, sector, sectorEnd, timestamp)) return;
+
+  // Fall back to a byte comparison for older Labs firmware, or to locate the
+  // exact failing address when a sector CRC does not match.
+  for (let address = sector; address < sectorEnd; address += FLASH_DUMP_CHUNK) {
+    const expected = data.subarray(address, Math.min(address + FLASH_DUMP_CHUNK, sectorEnd));
+    const actual = await readExternalFlashChunk(address, expected.length, timestamp);
+    for (let i = 0; i < expected.length; i++) {
+      if (actual[i] !== expected[i]) {
+        throw new Error(t('flashVerifyError', flashAddress(address + i)));
+      }
+    }
+  }
+}
+
 async function requireExternalFlashSupport(timestamp) {
   try {
     await readExternalFlashChunk(0, 1, timestamp);
@@ -1519,7 +1581,7 @@ async function fetchVerifiedBinary(url, expectedSize, expectedHash) {
   return data;
 }
 
-async function restoreFactoryExternalFlash(data, timestamp) {
+async function restoreFactoryExternalFlash(data, timestamp, crcSupported) {
   const regularSectors = [];
   for (let address = 0; address < FLASH_TOTAL_SIZE; address += FLASH_SECTOR_SIZE) {
     if (address === FLASH_CALIBRATION_SECTOR ||
@@ -1535,24 +1597,18 @@ async function restoreFactoryExternalFlash(data, timestamp) {
   for (let sectorIndex = 0; sectorIndex < sectors.length; sectorIndex++) {
     const sector = sectors[sectorIndex];
     updateProgress(Math.round((sectorIndex / sectors.length) * 100));
-    await eraseExternalFlashSector(sector, timestamp);
-
     const sectorEnd = sector + FLASH_SECTOR_SIZE;
+    if (crcSupported &&
+        await externalFlashSectorMatches(data, sector, sectorEnd, timestamp)) continue;
+
+    await eraseExternalFlashSector(sector, timestamp);
     for (let address = sector; address < sectorEnd; address += FLASH_WRITE_CHUNK) {
       const chunk = data.subarray(address, address + FLASH_WRITE_CHUNK);
       if (chunk.every(value => value === 0xff)) continue;
       await writeExternalFlashChunk(address, chunk, timestamp);
     }
 
-    for (let address = sector; address < sectorEnd; address += FLASH_DUMP_CHUNK) {
-      const expected = data.subarray(address, address + FLASH_DUMP_CHUNK);
-      const actual = await readExternalFlashChunk(address, expected.length, timestamp);
-      for (let i = 0; i < expected.length; i++) {
-        if (actual[i] !== expected[i]) {
-          throw new Error(t('flashVerifyError', flashAddress(address + i)));
-        }
-      }
-    }
+    await verifyExternalFlashSector(data, sector, sectorEnd, timestamp, crcSupported);
   }
   updateProgress(100);
 }
@@ -1693,8 +1749,9 @@ async function runFactoryReset(targetKey) {
     await sleep(1000);
     const devInfo = await requestDeviceInfo();
     await requireExternalFlashSupport(devInfo.timestamp);
+    const crcSupported = await detectExternalFlashCrcSupport(devInfo.timestamp);
     log(t('factoryResetRestoringExternal', target.label), 'info');
-    await restoreFactoryExternalFlash(factoryFlash, devInfo.timestamp);
+    await restoreFactoryExternalFlash(factoryFlash, devInfo.timestamp, crcSupported);
     log(t('factoryResetExternalComplete', target.label), 'success');
 
     if (port) await disconnect();
@@ -1785,6 +1842,7 @@ if (flashRestoreBtn) flashRestoreBtn.addEventListener('click', async () => {
 
     const devInfo = await requestDeviceInfo();
     await requireExternalFlashSupport(devInfo.timestamp);
+    const crcSupported = await detectExternalFlashCrcSupport(devInfo.timestamp);
     log(t('restoringFlash'), 'info');
 
     const data = flashRestoreData;
@@ -1798,10 +1856,12 @@ if (flashRestoreBtn) flashRestoreBtn.addEventListener('click', async () => {
         continue;
       }
 
-      await eraseExternalFlashSector(sector, devInfo.timestamp);
-
-      // 0x073C write: program the (now erased) sector in chunks
       const sectorEnd = Math.min(sector + FLASH_SECTOR_SIZE, total);
+      if (crcSupported &&
+          await externalFlashSectorMatches(data, sector, sectorEnd, devInfo.timestamp)) continue;
+
+      await eraseExternalFlashSector(sector, devInfo.timestamp);
+      // 0x073C write: program the now-erased sector in chunks.
       for (let addr = sector; addr < sectorEnd; addr += FLASH_WRITE_CHUNK) {
         const chunk = data.subarray(addr, Math.min(addr + FLASH_WRITE_CHUNK, sectorEnd));
         // Erase already produces 0xFF. Avoid needless page-program cycles for
@@ -1811,17 +1871,10 @@ if (flashRestoreBtn) flashRestoreBtn.addEventListener('click', async () => {
       }
 
       // A command acknowledgement only proves that the transaction completed.
-      // Read the sector back before moving on so a silent SPI/program failure is
-      // never reported as a successful full-chip restore.
-      for (let addr = sector; addr < sectorEnd; addr += FLASH_DUMP_CHUNK) {
-        const expected = data.subarray(addr, Math.min(addr + FLASH_DUMP_CHUNK, sectorEnd));
-        const actual = await readExternalFlashChunk(addr, expected.length, devInfo.timestamp);
-        for (let i = 0; i < expected.length; i++) {
-          if (actual[i] !== expected[i]) {
-            throw new Error(t('flashVerifyError', flashAddress(addr + i)));
-          }
-        }
-      }
+      // Verify each complete sector before moving on.
+      await verifyExternalFlashSector(
+        data, sector, sectorEnd, devInfo.timestamp, crcSupported
+      );
     }
 
     updateProgress(100);
@@ -2491,7 +2544,7 @@ const SLOT_STATUS_KEY = ['slotStateValid', 'slotStateEmpty', 'slotStateNewHdr',
 function slotStatusText(code) { return t(SLOT_STATUS_KEY[code] || 'slotStateError'); }
 
 // CRC-32 (zlib/PNG, poly 0xEDB88320) — must match the firmware mb_crc32_update.
-function slotCrc32(bytes) {
+function crc32Bytes(bytes) {
   let crc = 0xFFFFFFFF;
   for (let i = 0; i < bytes.length; i++) {
     crc ^= bytes[i];
@@ -2821,7 +2874,7 @@ async function slotWriteFlow() {
     const dev = await requestDeviceInfo();
     const ts = dev.timestamp;
     const image = slotImage;
-    const crc = slotCrc32(image);
+    const crc = crc32Bytes(image);
 
     log(t('slotErasing', slot), 'info');
     let st = await slotErase(slot, ts);

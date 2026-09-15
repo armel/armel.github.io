@@ -238,9 +238,28 @@ test('keeps full external flash transfers responsive and retryable', () => {
   const helpers = flashSource.slice(start, end);
   assert.match(helpers, /await waitForSerialRead\(/);
   assert.doesNotMatch(helpers, /await sleep\(5\)/);
-  assert.match(helpers, /attempt <= FLASH_COMMAND_RETRIES/);
+  assert.match(helpers, /retries = FLASH_COMMAND_RETRIES/);
+  assert.match(helpers, /attempt <= retries/);
   assert.match(flashSource, /activeOperationName === 'dump-flash'/);
   assert.match(flashSource, /activeOperationName === 'restore-flash'/);
+});
+
+test('uses sector CRC32 to skip matching flash and accelerate verification', () => {
+  assert.match(flashSource, /const MSG_CRC_FLASH = 0x073E/);
+  assert.match(flashSource, /const MSG_CRC_FLASH_RESP = 0x073F/);
+  assert.match(flashSource, /await detectExternalFlashCrcSupport\(devInfo\.timestamp\)/);
+  assert.match(flashSource, /await externalFlashSectorMatches\(data, sector, sectorEnd/);
+  assert.match(flashSource, /await verifyExternalFlashSector\(/);
+
+  const start = flashSource.indexOf('function crc32Bytes');
+  const end = flashSource.indexOf('\n}', start) + 2;
+  assert.ok(start >= 0 && end > start);
+  const context = { Uint8Array };
+  vm.runInNewContext(
+    `${flashSource.slice(start, end)}; this.crc32 = crc32Bytes;`,
+    context
+  );
+  assert.equal(context.crc32(new Uint8Array(Buffer.from('123456789'))), 0xCBF43926);
 });
 
 test('uses the shared modal UI to confirm external flash restoration', () => {
@@ -269,7 +288,7 @@ test('provides verified two-stage factory restore workflows for UV-K1 and UV-K5 
   assert.match(flashSource, /for \(let address = 0; address < FLASH_TOTAL_SIZE; address \+= FLASH_SECTOR_SIZE\)/);
   assert.match(flashSource, /address === FLASH_CALIBRATION_SECTOR/);
   assert.match(flashSource, /regularSectors\.concat\(\[FACTORY_STATE_A, FACTORY_STATE_B\]\)/);
-  assert.match(flashSource, /await restoreFactoryExternalFlash\(factoryFlash, devInfo\.timestamp\)/);
+  assert.match(flashSource, /await restoreFactoryExternalFlash\(factoryFlash, devInfo\.timestamp, crcSupported\)/);
   assert.match(flashSource, /fetchVerifiedBinary\(target\.flashUrl, FACTORY_FLASH_SIZE, target\.flashSha256\)/);
   assert.match(flashSource, /fetchVerifiedBinary\(target\.firmwareUrl, target\.firmwareSize, target\.firmwareSha256\)/);
   assert.match(flashSource, /await showFactoryResetModal\('dfu'\)/);
