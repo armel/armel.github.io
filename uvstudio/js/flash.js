@@ -2587,10 +2587,10 @@ function slotExtractMeta(bytes, filename) {
     text += (c >= 32 && c < 127) ? String.fromCharCode(c) : '\n';
   }
   let fwVersion = slotVersionFromFilename(filename);
-  // Author token (no '+') + a canonical numeric version. This accepts compact
-  // versions such as "RADIO v50" as well as "F4HWN v5.9.0".
-  const vm = text.match(/[A-Za-z0-9]+ v\d+(?:\.\d+)*/i);
-  if (!fwVersion && vm) fwVersion = vm[0];
+  // Match an author token (without '+') followed by a canonical numeric
+  // version, but store only the normalized v... component.
+  const vm = text.match(/[A-Za-z0-9]+ (v\d+(?:\.\d+)*)/i);
+  if (!fwVersion && vm) fwVersion = vm[1];
   const name = slotEditionFromFilename(filename);
   return { name, fwVersion: fwVersion.slice(0, 15) };
 }

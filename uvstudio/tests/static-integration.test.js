@@ -61,7 +61,13 @@ test('accepts compact and dotted versions in multiboot firmware metadata', () =>
     'f4hwn.fusion.bin'
   );
   assert.equal(legacy.name, 'Fusion');
-  assert.equal(legacy.fwVersion, 'F4HWN v5.9.0');
+  assert.equal(legacy.fwVersion, 'v5.9.0');
+
+  const compactFallback = context.extractMeta(
+    Array.from(Buffer.from('\0RADIO v50\0', 'ascii')),
+    'f4hwn.compact.bin'
+  );
+  assert.equal(compactFallback.fwVersion, 'v50');
 });
 
 test('stores a custom display name in the multiboot header', () => {
