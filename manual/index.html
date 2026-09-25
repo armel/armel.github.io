@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Complete manual for the F4HWN custom firmware v6.1 for Quansheng UV-K1 and UV-K5 V3 radios.">
+  <meta name="theme-color" content="#ffffff">
+  <title>UV Manual · F4HWN firmware v6.1</title>
+  <link rel="icon" type="image/svg+xml" href="assets/uv-studio-radio.svg">
+  <link rel="stylesheet" href="css/manual.css?v=1.0.0">
+  <script defer src="vendor/marked.min.js?v=15.0.7"></script>
+  <script defer src="js/content.js?v=1.0.0"></script>
+  <script defer src="js/content-fr.js?v=1.0.0"></script>
+  <script defer src="js/content-it.js?v=1.0.0"></script>
+  <script defer src="js/content-es.js?v=1.0.0"></script>
+  <script defer src="js/content-de.js?v=1.0.0"></script>
+  <script defer src="js/content-pt.js?v=1.0.0"></script>
+  <script defer src="js/content-ru.js?v=1.0.0"></script>
+  <script defer src="js/content-pl.js?v=1.0.0"></script>
+  <script defer src="js/content-zh.js?v=1.0.0"></script>
+  <script defer src="js/content-nl.js?v=1.0.0"></script>
+  <script defer src="js/manual.js?v=1.0.0"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <button class="button icon menu-button" id="menuButton" type="button" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <a class="brand-link" href="index.html" aria-label="UV Manual home">
+        <span class="logo-mark"><img src="assets/uv-studio-radio.svg" alt=""></span>
+        <span class="brand-title"><span>UV <b>Manual</b></span><small>by F4HWN</small></span>
+      </a>
+      <span class="topbar-divider"></span>
+      <span class="section-name" id="sectionName">Overview</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="search-trigger" id="searchButton" type="button" aria-label="Search documentation">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span class="search-label">Search</span><kbd>⌘ K</kbd>
+      </button>
+      <span class="version-pill"><i></i><span>Stable · v6.1.0</span></span>
+      <button class="button icon" id="themeButton" type="button" aria-label="Toggle light and dark theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></svg></button>
+      <select class="button language" id="languageSelect" aria-label="Language">
+        <option value="en">🇬🇧 English</option>
+        <option value="fr">🇫🇷 Français</option>
+        <option value="it">🇮🇹 Italiano</option>
+        <option value="es">🇪🇸 Español</option>
+        <option value="de">🇩🇪 Deutsch</option>
+        <option value="pt">🇵🇹 Português</option>
+        <option value="ru">🇷🇺 Русский</option>
+        <option value="pl">🇵🇱 Polski</option>
+        <option value="zh">🇨🇳 中文</option>
+        <option value="nl">🇳🇱 Nederlands</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar" id="sidebar" aria-label="Manual navigation">
+      <nav id="mainNavigation"></nav>
+      <footer>UV Manual · v6.1 documentation</footer>
+    </aside>
+
+    <div class="backdrop" id="backdrop"></div>
+
+    <main class="stage" id="mainContent" tabindex="-1">
+      <div class="article-column">
+        <nav class="breadcrumbs" id="breadcrumbs" aria-label="Breadcrumb"></nav>
+        <article class="article" id="article" aria-live="polite">
+          <div class="loading"><span></span><p>Loading documentation…</p></div>
+        </article>
+        <nav class="page-navigation" id="pageNavigation" aria-label="Previous and next pages"></nav>
+        <footer class="article-footer">
+          <span>F4HWN custom firmware documentation</span>
+          <a href="https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki" target="_blank" rel="noopener">View the Wiki ↗</a>
+        </footer>
+      </div>
+      <aside class="toc" id="tableOfContents" aria-label="On this page"></aside>
+    </main>
+  </div>
+
+  <dialog class="search-dialog" id="searchDialog" aria-labelledby="searchTitle">
+    <div class="search-head">
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search the manual…" autocomplete="off" aria-label="Search the manual">
+      <button id="closeSearch" type="button" aria-label="Close search">Esc</button>
+    </div>
+    <h2 id="searchTitle" class="sr-only">Search documentation</h2>
+    <div class="search-results" id="searchResults">
+      <p class="search-hint">Search commands, features, applications or troubleshooting topics.</p>
+    </div>
+    <footer><span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>↵</kbd> open</span></footer>
+  </dialog>
+
+  <noscript>This manual requires JavaScript to render its Markdown documentation.</noscript>
+</body>
+</html>
