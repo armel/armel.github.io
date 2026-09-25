@@ -3010,11 +3010,13 @@ slotBuildTable();
 // region via the 0x073x command family. A .app file already carries its 64-byte
 // header (built by pack_app.py), so we just split header/code and write both.
 const APP_SLOT_COUNT = 16;        // firmware capacity (0..15)
-const APP_SLOT_FIRST = 0;         // physical slot indices used here: 0..7
-const APP_SLOT_LAST = 7;          // shown to the user as 1..8 (label = index + 1)
+const APP_SLOT_FIRST = 0;         // first physical slot index
+const APP_SLOT_LAST = APP_SLOT_COUNT - 1; // expose the full capacity (shown as 1..16)
 const appSlotLabel = (s) => String(s + 1);   // physical slot -> user-facing number
 const APP_IMG_OFFSET = 0x1000;    // code starts after the header sector
 const APP_HDR_SIZE = 64;
+const APP_ASSET_OFFSET = 0x100;   // read-only assets live in the header sector (API level 2)
+const APP_ASSET_MAX = 0xF00;      // up to the end of the header sector
 const APP_MAGIC = 0x31504146;     // "FAP1"
 const APP_FLAG_COMMITTED = 1;
 const APP_WRITE_CHUNK = 128;      // keep the whole command under the 256 B VCP ring
@@ -3039,7 +3041,7 @@ const appsTableBody  = document.getElementById('appsTableBody');
 const appMetaEl      = document.getElementById('appMeta');
 
 let appImage = null;   // full .app bytes (header + code)
-let appMeta  = { name: '', version: '', codeSize: 0 };
+let appMeta  = { name: '', version: '', codeSize: 0, assetSize: 0 };
 let appImageLoadSeq = 0;
 let appImageLoadAbort = null;
 
@@ -3097,7 +3099,7 @@ function appParseHeader(b) {
   const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
   const readStr = (off, len) => { let s = ''; for (let i = 0; i < len; i++) { const c = b[off + i]; if (!c) break; s += String.fromCharCode(c); } return s; };
   // app_header_t: magic@0 hdr@4 abi@6 codeSize@8 crc@12 entry@16 flags@18
-  //               name@20 version@36 linkVma@52 (differs from the firmware header).
+  //               name@20 version@36 linkVma@52 caps@56 assetSize@60 assetCrc@62.
   return {
     magic: dv.getUint32(0, true),
     abiVersion: dv.getUint16(6, true),
@@ -3105,7 +3107,8 @@ function appParseHeader(b) {
     codeCrc32: dv.getUint32(12, true),
     name: readStr(20, 16),
     version: readStr(36, 16),
-    linkVma: dv.getUint32(52, true) >>> 0
+    linkVma: dv.getUint32(52, true) >>> 0,
+    assetSize: dv.getUint16(60, true)
   };
 }
 
@@ -3191,7 +3194,7 @@ async function appRefreshFlow() {
     if (!port) await connect();
 
     // Capability gate. A firmware without overlay-app support (Fusion, Transfer,
-    // stock…) never answers 0x0730, so scanning all 8 slots would hang on eight
+    // stock…) never answers 0x0730, so scanning all 16 slots would hang on sixteen
     // timeouts and then show cryptic errors - the exact confusion we want to
     // avoid. Instead: confirm the radio answers device-info (so we can name it),
     // then probe a single slot. A timeout there means "no overlay apps" -> a
@@ -3250,9 +3253,16 @@ async function appInstallFlow() {
   if (!appImage) return;
   const slot = appTargetSelect ? parseInt(appTargetSelect.value, 10) : APP_SLOT_FIRST;
   if (!(slot >= APP_SLOT_FIRST && slot <= APP_SLOT_LAST)) return;
-  const code = appImage.subarray(APP_HDR_SIZE);
+  // .app = header + code (codeSize bytes) + optional read-only assets. The code
+  // goes to the code sector, the assets to the header sector at APP_ASSET_OFFSET.
   const header = appImage.subarray(0, APP_HDR_SIZE);
-  if (code.length > 0x1000) { log(t('appTooBig'), 'error'); return; }
+  const codeEnd = APP_HDR_SIZE + appMeta.codeSize;
+  const code = appImage.subarray(APP_HDR_SIZE, codeEnd);
+  const assets = appImage.subarray(codeEnd);
+  if (appMeta.codeSize === 0 || codeEnd > appImage.length ||
+      assets.length !== appMeta.assetSize) { log(t('appBadFile'), 'error'); return; }
+  if (code.length > 0x1000 || assets.length > APP_ASSET_MAX) { log(t('appTooBig'), 'error'); return; }
+  const total = code.length + assets.length;
 
   const op = beginToolsOperation('apps-install', true);
   if (!op) return;
@@ -3273,12 +3283,16 @@ async function appInstallFlow() {
     if (st !== 0) throw new Error('erase: ' + appStatusText(st));
 
     log(t('appInstalling', appSlotLabel(slot)), 'info');
-    for (let off = 0; off < code.length; off += APP_WRITE_CHUNK) {
-      const chunk = code.subarray(off, Math.min(off + APP_WRITE_CHUNK, code.length));
-      st = await appWriteChunkRetry(slot, APP_IMG_OFFSET + off, ts, chunk);
-      if (st !== 0) throw new Error('write @' + off + ': ' + appStatusText(st));
-      const changed = updateProgress(((off + chunk.length) / code.length) * 95);
-      if (changed) await waitForProgressPaint();
+    let done = 0;
+    for (const [part, base] of [[code, APP_IMG_OFFSET], [assets, APP_ASSET_OFFSET]]) {
+      for (let off = 0; off < part.length; off += APP_WRITE_CHUNK) {
+        const chunk = part.subarray(off, Math.min(off + APP_WRITE_CHUNK, part.length));
+        st = await appWriteChunkRetry(slot, base + off, ts, chunk);
+        if (st !== 0) throw new Error('write @' + (base + off) + ': ' + appStatusText(st));
+        done += chunk.length;
+        const changed = updateProgress((done / total) * 95);
+        if (changed) await waitForProgressPaint();
+      }
     }
     // header last: it carries the committed flag, so a partial write never validates
     st = await appWriteChunkRetry(slot, 0, ts, header);
@@ -3308,7 +3322,7 @@ function updateAppButtons() {
 
 function clearAppImage() {
   appImage = null;
-  appMeta = { name: '', version: '', codeSize: 0 };
+  appMeta = { name: '', version: '', codeSize: 0, assetSize: 0 };
   if (appFileName) { appFileName.setAttribute('data-i18n', 'fileNoFile'); appFileName.textContent = t('fileNoFile'); appFileName.classList.remove('has-file'); }
   if (appFileLabel) appFileLabel.classList.remove('has-file');
   if (appMetaEl) appMetaEl.textContent = '';
@@ -3333,7 +3347,7 @@ function setAppImageBuffer(buf, name) {
   const hdr = appParseHeader(bytes);
   if (hdr.magic !== APP_MAGIC) { log(t('appBadFile'), 'error'); clearAppImage(); return; }
   appImage = bytes;
-  appMeta = { name: hdr.name, version: hdr.version, codeSize: hdr.codeSize };
+  appMeta = { name: hdr.name, version: hdr.version, codeSize: hdr.codeSize, assetSize: hdr.assetSize };
   if (appFileName) { appFileName.removeAttribute('data-i18n'); appFileName.textContent = name; appFileName.classList.add('has-file'); }
   if (appFileLabel) appFileLabel.classList.add('has-file');
   if (appMetaEl) appMetaEl.textContent = t('appDetected', hdr.name || '?', hdr.version || '?', (hdr.codeSize / 1024).toFixed(1));

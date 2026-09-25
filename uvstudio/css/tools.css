@@ -575,6 +575,24 @@
   border-radius: var(--radius);
   margin-bottom: 14px;
 }
+#pane-tools .apps-table-wrap {
+  /* 40 px header + four standard 50 px slot rows + the wrapper's 2 px border. */
+  height: 242px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+#pane-tools .apps-table-wrap .slots-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+#pane-tools .apps-table-wrap .slots-table thead tr {
+  height: 40px;
+}
+#pane-tools .apps-table-wrap .slots-table tbody tr {
+  height: 50px;
+}
 #pane-tools .slots-table {
   width: 100%;
   border-collapse: collapse;
@@ -632,7 +650,8 @@
   color: var(--text-muted);
 }
 /* Compact per-row erase button (override the big default tool button). */
-#pane-tools .slots-table .slot-actions button.slot-act-erase {
+#pane-tools .slots-table .slot-actions button.slot-act-erase,
+#pane-tools .slots-table .slot-actions button.app-act-delete {
   display: inline-block;
   min-width: 0;
   margin: 0;
@@ -643,7 +662,8 @@
   border: 1px solid color-mix(in oklab, var(--error) 55%, var(--border));
   box-shadow: none;
 }
-#pane-tools .slots-table .slot-actions button.slot-act-erase:hover:not(:disabled) {
+#pane-tools .slots-table .slot-actions button.slot-act-erase:hover:not(:disabled),
+#pane-tools .slots-table .slot-actions button.app-act-delete:hover:not(:disabled) {
   background: color-mix(in oklab, var(--error) 12%, transparent);
   border-color: var(--error);
   transform: none;

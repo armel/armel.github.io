@@ -12,6 +12,7 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const studioVersionSource = fs.readFileSync(path.join(root, 'js', 'studio-version.js'), 'utf8');
 const flashSource = fs.readFileSync(path.join(root, 'js', 'flash.js'), 'utf8');
 const studioCss = fs.readFileSync(path.join(root, 'css', 'studio.css'), 'utf8');
+const toolsCss = fs.readFileSync(path.join(root, 'css', 'tools.css'), 'utf8');
 
 test('derives any multiboot edition from the canonical firmware filename', () => {
   const start = flashSource.indexOf('function slotEditionFromFilename');
@@ -128,6 +129,15 @@ test('loads the app catalog after the installer API and exposes both selectors',
   assert.match(html, /id="appCatalogSelect"/);
   assert.match(flashSource, /loadAppFromURL,/);
   assert.match(flashSource, /uvstudio:appselect/);
+});
+
+test('exposes all 16 app slots in a bounded, scrollable table', () => {
+  assert.match(flashSource, /const APP_SLOT_COUNT = 16/);
+  assert.match(flashSource, /const APP_SLOT_LAST = APP_SLOT_COUNT - 1/);
+  assert.match(html, /class="slots-table-wrap apps-table-wrap">\s*<table class="slots-table" id="appsTable"/);
+  assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*height:\s*242px[^}]*overflow:\s*auto/s);
+  assert.match(toolsCss, /\.apps-table-wrap \.slots-table thead th\s*\{[^}]*position:\s*sticky/s);
+  assert.match(toolsCss, /\.apps-table-wrap \.slots-table tbody tr\s*\{[^}]*height:\s*50px/s);
 });
 
 test('downloads a catalog app and forwards its filename to the installer', async () => {
