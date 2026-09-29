@@ -836,7 +836,7 @@ async function readLoop() {
     }
   }
   log(t('readComplete'), 'info');
-  if (unexpectedlyClosed) void handleSlotHardwareDisconnect();
+  if (unexpectedlyClosed) void handleToolsHardwareDisconnect();
 }
 
 // ========== FIRMWARE SLOTS AUTO-RECONNECT ==========
@@ -875,6 +875,28 @@ async function handleSlotHardwareDisconnect() {
     await slotHardwareDisconnectPromise;
   } finally {
     slotHardwareDisconnectPromise = null;
+  }
+}
+
+// Outside Firmware Slots (e.g. the port inherited from Slots or Apps), a lost
+// device must not leave a dead `port` behind: the next action would reuse it
+// instead of reconnecting, typically when the radio is switched to DFU mode
+// before flashing. Release it so the next action starts a fresh connection.
+// A running operation is left alone: it fails and releases the port itself.
+let toolsHardwareDisconnectPromise = null;
+async function handleToolsHardwareDisconnect() {
+  if (activeToolsView === 'slots') return handleSlotHardwareDisconnect();
+  if (toolsHardwareDisconnectPromise) return toolsHardwareDisconnectPromise;
+  if (!port || !toolsSerial.isOwner() || activeOperationToken) return;
+
+  toolsHardwareDisconnectPromise = (async () => {
+    await toolsSerial.release('hardware-disconnect');
+    log(t('tools_disconnected'), 'info');
+  })();
+  try {
+    await toolsHardwareDisconnectPromise;
+  } finally {
+    toolsHardwareDisconnectPromise = null;
   }
 }
 
@@ -947,7 +969,7 @@ function runPendingSlotRefresh() {
 
 if (serialSupported) {
   navigator.serial.addEventListener('disconnect', event => {
-    if (port && event.target === port) void handleSlotHardwareDisconnect();
+    if (port && event.target === port) void handleToolsHardwareDisconnect();
   });
   navigator.serial.addEventListener('connect', event => {
     void reconnectSlotPort(event.target);
@@ -1523,11 +1545,18 @@ async function verifyExternalFlashSector(data, sector, sectorEnd, timestamp, crc
   }
 }
 
-async function requireExternalFlashSupport(timestamp) {
+// Labs-only gate for External Flash and Factory reset: a firmware without
+// external-flash access never answers 0x0738. Returns false after logging and
+// showing the Labs modal, so the caller simply stops.
+async function hasExternalFlashSupport(timestamp, featureKey) {
   try {
     await readExternalFlashChunk(0, 1, timestamp);
-  } catch (_) {
-    throw new Error(t('flashUnsupported'));
+    return true;
+  } catch (e) {
+    if (e?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e;
+    log(t('flashUnsupported'), 'error');
+    showLabsRequiredModal(featureKey);
+    return false;
   }
 }
 
@@ -1730,13 +1759,21 @@ async function runFactoryReset(targetKey) {
     await showFactoryResetModal('unsupported', target);
     return;
   }
-  if (!(await showFactoryResetModal('confirm', target))) return;
   const operation = beginToolsOperation('factory-reset', true);
   if (!operation) return;
-  progressContainer.style.display = 'block';
-  updateProgress(0);
 
   try {
+    // Check the Labs-only external-flash service before asking to confirm a
+    // destructive restore that could not run anyway.
+    if (!port) await connect();
+    readBuffer = [];
+    await sleep(1000);
+    const devInfo = await requestDeviceInfo();
+    if (!(await hasExternalFlashSupport(devInfo.timestamp, 'studio_nav_factory_reset'))) return;
+    if (!(await showFactoryResetModal('confirm', target))) return;
+
+    progressContainer.style.display = 'block';
+    updateProgress(0);
     log(t('factoryResetDownloading', target.label), 'info');
     const [factoryFlash, stockFirmware] = await Promise.all([
       fetchVerifiedBinary(target.flashUrl, FACTORY_FLASH_SIZE, target.flashSha256),
@@ -1744,11 +1781,6 @@ async function runFactoryReset(targetKey) {
     ]);
     log(t('factoryResetAssetsReady'), 'success');
 
-    if (!port) await connect();
-    readBuffer = [];
-    await sleep(1000);
-    const devInfo = await requestDeviceInfo();
-    await requireExternalFlashSupport(devInfo.timestamp);
     const crcSupported = await detectExternalFlashCrcSupport(devInfo.timestamp);
     log(t('factoryResetRestoringExternal', target.label), 'info');
     await restoreFactoryExternalFlash(factoryFlash, devInfo.timestamp, crcSupported);
@@ -1778,8 +1810,6 @@ factoryResetButtons.forEach(button => {
 if (flashDumpBtn) flashDumpBtn.addEventListener('click', async () => {
   const operation = beginToolsOperation('dump-flash', false);
   if (!operation) return;
-  progressContainer.style.display = 'block';
-  updateProgress(0);
   if (flashDumpDownload) flashDumpDownload.style.display = 'none';
 
   try {
@@ -1788,7 +1818,9 @@ if (flashDumpBtn) flashDumpBtn.addEventListener('click', async () => {
     await sleep(1000);
 
     const devInfo = await requestDeviceInfo();
-    await requireExternalFlashSupport(devInfo.timestamp);
+    if (!(await hasExternalFlashSupport(devInfo.timestamp, 'studio_nav_external_flash'))) return;
+    progressContainer.style.display = 'block';
+    updateProgress(0);
     log(t('dumpingFlash'), 'info');
 
     const dumpedData = new Uint8Array(FLASH_TOTAL_SIZE);
@@ -1826,14 +1858,9 @@ if (flashDumpBtn) flashDumpBtn.addEventListener('click', async () => {
 // ========== RESTORE EXTERNAL FLASH ==========
 if (flashRestoreBtn) flashRestoreBtn.addEventListener('click', async () => {
   if (!flashRestoreData) return;
-  // Destructive: rewriting the external flash replaces the logo, settings,
-  // firmware slots and multiboot state. Device-specific calibration is skipped.
-  if (!(await confirmExternalFlashRestore())) return;
 
   const operation = beginToolsOperation('restore-flash', true);
   if (!operation) return;
-  progressContainer.style.display = 'block';
-  updateProgress(0);
 
   try {
     if (!port) await connect();
@@ -1841,7 +1868,14 @@ if (flashRestoreBtn) flashRestoreBtn.addEventListener('click', async () => {
     await sleep(1000);
 
     const devInfo = await requestDeviceInfo();
-    await requireExternalFlashSupport(devInfo.timestamp);
+    if (!(await hasExternalFlashSupport(devInfo.timestamp, 'studio_nav_external_flash'))) return;
+    // Destructive: rewriting the external flash replaces the logo, settings,
+    // firmware slots and multiboot state. Device-specific calibration is skipped.
+    // Asked only once the firmware is known to support the restore.
+    if (!(await confirmExternalFlashRestore())) return;
+
+    progressContainer.style.display = 'block';
+    updateProgress(0);
     const crcSupported = await detectExternalFlashCrcSupport(devInfo.timestamp);
     log(t('restoringFlash'), 'info');
 
@@ -3045,31 +3079,40 @@ let appMeta  = { name: '', version: '', codeSize: 0, assetSize: 0 };
 let appImageLoadSeq = 0;
 let appImageLoadAbort = null;
 
-// --- overlay-apps capability modal --------------------------------------
-// Shown when the booted firmware has no overlay-app support (it never answers
-// 0x0730). Reuses the shared .modal styling; no "flash" button on purpose - it
-// just tells the user which firmware they are on and that Labs is required.
-const appUnsupportedModal = document.getElementById('appUnsupportedModal');
-const appUnsupportedClose = document.getElementById('appUnsupportedClose');
-const appUnsupportedBody  = document.getElementById('appUnsupportedBody');
+// --- Labs-only feature modal ------------------------------------------------
+// Shown when the booted firmware lacks a Labs-only service: overlay apps (it
+// never answers 0x0730) or external-flash access (0x0738, used by External Flash
+// and Factory reset). Reuses the shared .modal styling; no "flash" button on
+// purpose - it names the feature and says that Labs is required.
+const labsRequiredModal = document.getElementById('labsRequiredModal');
+const labsRequiredClose = document.getElementById('labsRequiredClose');
+const labsRequiredBody  = document.getElementById('labsRequiredBody');
 
-function showAppUnsupportedModal() {
-  if (!appUnsupportedModal) return;
-  if (appUnsupportedBody) appUnsupportedBody.innerHTML = t('appUnsupportedBody');  // trusted static locale string (<strong> around Labs)
-  appUnsupportedModal.classList.add('show');
-  appUnsupportedModal.setAttribute('aria-hidden', 'false');
-  if (appUnsupportedClose) requestAnimationFrame(() => appUnsupportedClose.focus());
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
 }
-function hideAppUnsupportedModal() {
-  if (!appUnsupportedModal) return;
-  appUnsupportedModal.classList.remove('show');
-  appUnsupportedModal.setAttribute('aria-hidden', 'true');
+
+// featureKey: the feature's navigation label (studio_nav_*).
+function showLabsRequiredModal(featureKey) {
+  if (!labsRequiredModal) return;
+  // Trusted static locale string (<strong> markup), the feature name escaped.
+  if (labsRequiredBody) labsRequiredBody.innerHTML = t('labsRequiredBody', escapeHtml(t(featureKey)));
+  labsRequiredModal.classList.add('show');
+  labsRequiredModal.setAttribute('aria-hidden', 'false');
+  if (labsRequiredClose) requestAnimationFrame(() => labsRequiredClose.focus());
 }
-if (appUnsupportedClose) appUnsupportedClose.addEventListener('click', hideAppUnsupportedModal);
-if (appUnsupportedModal) {
-  appUnsupportedModal.addEventListener('click', (e) => { if (e.target === appUnsupportedModal) hideAppUnsupportedModal(); });
+function hideLabsRequiredModal() {
+  if (!labsRequiredModal) return;
+  labsRequiredModal.classList.remove('show');
+  labsRequiredModal.setAttribute('aria-hidden', 'true');
+}
+if (labsRequiredClose) labsRequiredClose.addEventListener('click', hideLabsRequiredModal);
+if (labsRequiredModal) {
+  labsRequiredModal.addEventListener('click', (e) => { if (e.target === labsRequiredModal) hideLabsRequiredModal(); });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && appUnsupportedModal.classList.contains('show')) hideAppUnsupportedModal();
+    if (e.key === 'Escape' && labsRequiredModal.classList.contains('show')) hideLabsRequiredModal();
   });
 }
 
@@ -3090,7 +3133,7 @@ async function appsProbe(fw) {
     if (e?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e;
     const name = (fw && fw.name) || t('appUnknownFirmware');
     log(t('appUnsupportedLog', name), 'error');   // firmware still named in the log for diagnostics
-    showAppUnsupportedModal();
+    showLabsRequiredModal('studio_nav_apps');
     return null;
   }
 }

@@ -9,7 +9,7 @@
 <link href="css/core.css?v=4" rel="stylesheet">
 <link href="css/viewer.css?v=13" rel="stylesheet">
 <link href="css/tools.css?v=18" rel="stylesheet">
-<link href="css/studio.css?v=24" rel="stylesheet">
+<link href="css/studio.css?v=25" rel="stylesheet">
 </head>
 <body data-theme="light">
 
@@ -62,6 +62,16 @@
             <span class="studio-serial-dot" aria-hidden="true"></span>
             <span class="studio-serial-text" id="studioSerialText">Disconnected</span>
         </div>
+        <button class="btn icon studio-serial-disconnect" id="studioSerialDisconnect" type="button" hidden
+                data-i18n-title="disconnect" data-i18n-aria-label="disconnect"
+                title="Disconnect" aria-label="Disconnect">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m19 5 3-3M2 22l3-3"></path>
+                <path d="M6.3 20.3a2.4 2.4 0 0 0 3.4 0L12 18l-6-6-2.3 2.3a2.4 2.4 0 0 0 0 3.4Z"></path>
+                <path d="M7.5 13.5 10 11M10.5 16.5 13 14"></path>
+                <path d="m12 6 6 6 2.3-2.3a2.4 2.4 0 0 0 0-3.4l-2.6-2.6a2.4 2.4 0 0 0-3.4 0Z"></path>
+            </svg>
+        </button>
         <button class="btn icon theme-toggle" id="themeToggle" type="button"
                 data-i18n-title="toggle_theme" data-i18n-aria-label="toggle_theme"
                 title="Toggle theme" aria-label="Toggle theme">
@@ -92,7 +102,7 @@
     <!-- ═══════════ Sidebar ═══════════ -->
     <aside class="sidebar" id="studioSidebar">
         <div class="nav-group">
-            <div class="nav-label">K5Viewer</div>
+            <div class="nav-label">UV Viewer</div>
             <button class="nav-item active" aria-current="page" data-route="live" data-app="viewer" data-view="live" data-name="Live Viewer" data-section-i18n="studio_nav_live">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
                 <span class="nav-item-label" data-i18n="studio_nav_live">Live Viewer</span>
@@ -103,7 +113,7 @@
             </button>
         </div>
         <div class="nav-group">
-            <div class="nav-label">UVTools</div>
+            <div class="nav-label">UV Tools</div>
             <button class="nav-item" data-route="flash" data-app="tools" data-tool-view="flash" data-name="Flash Firmware" data-section-i18n="studio_nav_flash">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>
                 <span class="nav-item-label" data-i18n="studio_nav_flash">Flash Firmware</span>
@@ -704,17 +714,17 @@
 </div>
 
 <!-- Overlay-apps capability notice: shown when the booted firmware has no 0x073x support -->
-<div class="modal" id="appUnsupportedModal" role="dialog" aria-modal="true"
-     aria-labelledby="appUnsupportedTitle" aria-hidden="true">
+<div class="modal" id="labsRequiredModal" role="dialog" aria-modal="true"
+     aria-labelledby="labsRequiredTitle" aria-hidden="true">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 class="modal-title" id="appUnsupportedTitle" data-i18n="appUnsupportedTitle">Overlay apps not supported</h2>
-            <button class="modal-close" id="appUnsupportedClose" type="button"
+            <h2 class="modal-title" id="labsRequiredTitle" data-i18n="labsRequiredTitle">Labs Edition required</h2>
+            <button class="modal-close" id="labsRequiredClose" type="button"
                     data-i18n-title="appClose" data-i18n-aria-label="appClose"
                     title="Close" aria-label="Close">&times;</button>
         </div>
         <div class="modal-body">
-            <p id="appUnsupportedBody"></p>
+            <p id="labsRequiredBody"></p>
         </div>
     </div>
 </div>
@@ -762,26 +772,26 @@
 </div>
 
 <!-- ═══════════ Scripts (all local, file://-friendly) ═══════════ -->
-<script src="locales/en.js?v=45"></script>
-<script src="locales/fr.js?v=45"></script>
-<script src="locales/it.js?v=45"></script>
-<script src="locales/es.js?v=45"></script>
-<script src="locales/de.js?v=45"></script>
-<script src="locales/pt.js?v=45"></script>
-<script src="locales/ru.js?v=45"></script>
-<script src="locales/pl.js?v=45"></script>
-<script src="locales/zh.js?v=45"></script>
-<script src="locales/nl.js?v=45"></script>
+<script src="locales/en.js?v=47"></script>
+<script src="locales/fr.js?v=47"></script>
+<script src="locales/it.js?v=47"></script>
+<script src="locales/es.js?v=47"></script>
+<script src="locales/de.js?v=47"></script>
+<script src="locales/pt.js?v=47"></script>
+<script src="locales/ru.js?v=47"></script>
+<script src="locales/pl.js?v=47"></script>
+<script src="locales/zh.js?v=47"></script>
+<script src="locales/nl.js?v=47"></script>
 <script src="js/studio-preferences.js?v=1"></script>
 <script src="js/studio-i18n.js?v=4"></script>
 <script src="js/studio-serial.js?v=2"></script>
 <script src="js/rf-log.js?v=4"></script>
     <script src="js/k5viewer.js?v=31"></script>
 <script src="js/keypad-detach.js?v=1"></script>
-<script src="js/flash.js?v=36"></script>
+<script src="js/flash.js?v=38"></script>
 <script src="js/flash-catalog.js?v=17"></script>
 <script src="js/app-catalog.js?v=1"></script>
-<script src="js/studio.js?v=16"></script>
+<script src="js/studio.js?v=18"></script>
 <script src="js/studio-flash-counter.js?v=2"></script>
 </body>
 </html>

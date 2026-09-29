@@ -249,7 +249,7 @@ test('keeps generated-file downloads beside their read actions', () => {
 
 test('keeps full external flash transfers responsive and retryable', () => {
   const start = flashSource.indexOf('async function waitForExternalFlashResponse');
-  const end = flashSource.indexOf('\n\nasync function requireExternalFlashSupport', start);
+  const end = flashSource.indexOf('\n\n// Labs-only gate for External Flash', start);
   assert.ok(start >= 0 && end > start);
   const helpers = flashSource.slice(start, end);
   assert.match(helpers, /await waitForSerialRead\(/);
@@ -496,7 +496,7 @@ test('translates radio help and exposes every global serial status label', () =>
     'radio_led_state',
     'radio_ptt_unavailable',
     'studio_serial_disconnected',
-    'studio_serial_connected_viewer',
+    'studio_serial_connected',
     'studio_operation_flash',
     'studio_operation_restore_calibration',
     'studio_operation_dump_flash',
@@ -518,5 +518,72 @@ test('translates radio help and exposes every global serial status label', () =>
     }
   });
   assert.match(html, /id="studioSerialStatus"/);
+  assert.match(html, /id="studioSerialDisconnect"[^>]*\bhidden\b[^>]*data-i18n-title="disconnect"/);
   assert.match(html, /data-i18n-aria-label="radio_led_state"/);
+});
+
+function loadToolsHardwareDisconnect(state) {
+  const start = flashSource.indexOf('let toolsHardwareDisconnectPromise');
+  const end = flashSource.indexOf('\n\nfunction scheduleSlotReconnectProbe', start);
+  assert.ok(start >= 0 && end > start);
+  const calls = [];
+  const context = Object.assign({
+    activeToolsView: 'flash',
+    port: {},
+    activeOperationToken: null,
+    log() {},
+    t(key) { return key; },
+    async handleSlotHardwareDisconnect() { calls.push('slots'); }
+  }, state);
+  context.toolsSerial = {
+    isOwner: () => true,
+    async release(reason) { calls.push(reason); context.port = null; }
+  };
+  vm.runInNewContext(
+    `${flashSource.slice(start, end)}; this.run = handleToolsHardwareDisconnect;`,
+    context
+  );
+  return { run: context.run, calls };
+}
+
+test('releases a port lost outside Firmware Slots so the next action reconnects', async () => {
+  const { run, calls } = loadToolsHardwareDisconnect();
+  await Promise.all([run(), run()]);   // disconnect event + read loop ending
+  assert.deepEqual(calls, ['hardware-disconnect']);
+});
+
+test('leaves a lost port to the running operation and to Firmware Slots', async () => {
+  const busy = loadToolsHardwareDisconnect({ activeOperationToken: {} });
+  await busy.run();
+  assert.deepEqual(busy.calls, []);
+
+  const slots = loadToolsHardwareDisconnect({ activeToolsView: 'slots' });
+  await slots.run();
+  assert.deepEqual(slots.calls, ['slots']);
+});
+
+test('gates every Labs-only feature on one Labs modal, before any confirmation', () => {
+  const localeDir = path.join(root, 'locales');
+  fs.readdirSync(localeDir).filter(file => /^[a-z]{2}\.js$/.test(file)).forEach(file => {
+    const context = { window: {} };
+    vm.runInNewContext(fs.readFileSync(path.join(localeDir, file), 'utf8'), context);
+    const dictionary = context.window.UVSTUDIO_LOCALES[file.slice(0, 2)];
+    assert.ok(dictionary.labsRequiredTitle, `${file}:labsRequiredTitle`);
+    assert.match(dictionary.labsRequiredBody, /\{0\}/, `${file}:labsRequiredBody`);
+    assert.match(dictionary.flashUnsupported, /Labs/, `${file}:flashUnsupported`);
+    assert.doesNotMatch(dictionary.flashUnsupported, /Fusion/, `${file}:flashUnsupported`);
+  });
+  assert.match(html, /id="labsRequiredModal"/);
+  assert.doesNotMatch(flashSource, /requireExternalFlashSupport|showAppUnsupportedModal/);
+
+  // Destructive restores ask for confirmation only once Labs support is known.
+  const gateThen = (from, confirm) => {
+    const start = flashSource.indexOf(from);
+    assert.ok(start >= 0, from);
+    const gate = flashSource.indexOf('hasExternalFlashSupport(', start);
+    const ask = flashSource.indexOf(confirm, start);
+    assert.ok(gate > start && ask > gate, `${from}: gate before ${confirm}`);
+  };
+  gateThen('async function runFactoryReset', "showFactoryResetModal('confirm'");
+  gateThen("beginToolsOperation('restore-flash'", 'confirmExternalFlashRestore()');
 });

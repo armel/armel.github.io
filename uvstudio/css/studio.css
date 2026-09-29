@@ -95,6 +95,12 @@ body {
 }
 .studio-serial-status[data-critical="true"] .studio-serial-dot { background: #f59e0b; }
 @keyframes serialPulse { 50% { opacity: 0.45; transform: scale(0.78); } }
+/* Global disconnect: a standard topbar icon button, shown while a port is held. */
+.studio-serial-disconnect[hidden] { display: none; }
+.studio-serial-disconnect svg {
+    width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round;
+}
 [data-theme="dark"] .studio-serial-status[data-state="connecting"],
 [data-theme="dark"] .studio-serial-status[data-state="reconnecting"],
 [data-theme="dark"] .studio-serial-status[data-critical="true"] { color: #fbbf24; }

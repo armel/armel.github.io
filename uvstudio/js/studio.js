@@ -5,6 +5,7 @@
     const sectionName = document.getElementById("sectionName");
     const serialStatus = document.getElementById("studioSerialStatus");
     const serialStatusText = document.getElementById("studioSerialText");
+    const serialDisconnect = document.getElementById("studioSerialDisconnect");
     const versionLabel = document.getElementById("studioVersion");
     const aboutVersion = document.getElementById("aboutVersion");
     const paneViewer = document.getElementById("pane-viewer");
@@ -58,11 +59,7 @@
         if (operation) {
             key = operationTranslationKeys[operation.name] || "studio_operation_active";
         } else if (lastSerialSnapshot.state === "connected") {
-            key = lastSerialSnapshot.owner === "viewer"
-                ? "studio_serial_connected_viewer"
-                : lastSerialSnapshot.owner === "tools"
-                    ? "studio_serial_connected_tools"
-                    : "studio_serial_connected";
+            key = "studio_serial_connected";   /* one label, whichever space owns the port */
         } else {
             key = `studio_serial_${lastSerialSnapshot.state || "disconnected"}`;
         }
@@ -74,6 +71,14 @@
         serialStatusText.textContent = label;
         serialStatus.setAttribute("aria-label", label);
         serialStatus.title = label;
+
+        /* Offer a global disconnect while a port is held, whichever space owns
+           it; hidden during an operation, which releaseCurrent() refuses anyway. */
+        if (serialDisconnect) {
+            const held = lastSerialSnapshot.state === "connected" ||
+                lastSerialSnapshot.state === "reconnecting";
+            serialDisconnect.hidden = !held || Boolean(operation);
+        }
     }
 
     function applyBranding() {
@@ -258,6 +263,19 @@
     window.addEventListener("uvstudio:languagechange", () => {
         renderSerialStatus(lastSerialSnapshot);
     });
+
+    if (serialDisconnect && serialController) {
+        serialDisconnect.addEventListener("click", async () => {
+            serialDisconnect.disabled = true;
+            try {
+                await serialController.releaseCurrent("user");
+            } catch (error) {
+                console.warn("Serial disconnect failed:", error);
+            } finally {
+                serialDisconnect.disabled = false;
+            }
+        });
+    }
 
     window.addEventListener("hashchange", () => {
         const target = resolveRoute(readHashRoute());
