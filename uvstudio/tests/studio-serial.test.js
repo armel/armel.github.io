@@ -90,6 +90,39 @@ test('does not hand the port to another client while an operation is active', as
   tools.endOperation(token);
 });
 
+test('global disconnect releases whichever client holds the port', async () => {
+  const { controller } = loadController();
+  const calls = [];
+  const tools = controller.register('tools', {
+    async disconnect({ reason }) { calls.push(`tools:${reason}`); }
+  });
+
+  await tools.acquire();
+  tools.setState('connected');
+  await controller.releaseCurrent('user');
+
+  assert.deepEqual(calls, ['tools:user']);
+  assert.equal(controller.getSnapshot().owner, null);
+  assert.equal(controller.getSnapshot().state, 'disconnected');
+});
+
+test('global disconnect is refused while an operation is active', async () => {
+  const { controller } = loadController();
+  let disconnected = false;
+  const tools = controller.register('tools', {
+    async disconnect() { disconnected = true; }
+  });
+
+  await tools.acquire();
+  tools.setState('connected');
+  const token = tools.beginOperation('restore-flash', { critical: true });
+  await controller.releaseCurrent('user');
+
+  assert.equal(disconnected, false);
+  assert.equal(controller.getSnapshot().owner, 'tools');
+  tools.endOperation(token);
+});
+
 test('ignores an operation token that does not own the active operation', () => {
   const { controller } = loadController();
   const tools = controller.register('tools');

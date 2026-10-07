@@ -27,6 +27,16 @@ const MSG_READ_EEPROM_RESP = 0x051C;
 const MSG_WRITE_EEPROM = 0x051D;
 const MSG_WRITE_EEPROM_RESP = 0x051E;
 const MSG_REBOOT = 0x05DD;
+// Full external-flash dump (F4HWN 0x0738 raw physical read; multiboot builds).
+const MSG_READ_FLASH = 0x0738;
+const MSG_READ_FLASH_RESP = 0x0739;
+// Full external-flash restore (F4HWN 0x073A erase / 0x073C write; multiboot).
+const MSG_ERASE_FLASH = 0x073A;
+const MSG_ERASE_FLASH_RESP = 0x073B;
+const MSG_WRITE_FLASH = 0x073C;
+const MSG_WRITE_FLASH_RESP = 0x073D;
+const MSG_CRC_FLASH = 0x073E;
+const MSG_CRC_FLASH_RESP = 0x073F;
 
 const OBFUS_TBL = new Uint8Array([
   0x16, 0x6c, 0x14, 0xe6, 0x2e, 0x91, 0x0d, 0x40,
@@ -37,6 +47,47 @@ const OBFUS_TBL = new Uint8Array([
 const CALIB_SIZE = 512; // bytes
 const CHUNK_SIZE = 16;
 let CALIB_OFFSET = 0x1E00; // Default for firmware < v5.0.0
+
+// Full external SPI flash (PY25Q16, 2 MiB). Dumped by raw physical address in
+// 128-byte chunks (the firmware 0x0739 reply payload is capped at 128 bytes).
+const FLASH_TOTAL_SIZE = 0x200000;
+const FLASH_DUMP_CHUNK = 128;
+// Restore programs sector-by-sector: erase one 4 KiB sector, then write it in
+// 128-byte chunks (the firmware 0x073C command buffer caps the payload).
+const FLASH_SECTOR_SIZE = 0x1000;
+const FLASH_WRITE_CHUNK = 128;
+const FLASH_COMMAND_TIMEOUT_MS = 2000;
+const FLASH_ERASE_TIMEOUT_MS = 3000;
+const FLASH_CRC_PROBE_TIMEOUT_MS = 1000;
+const FLASH_COMMAND_RETRIES = 3;
+// Calibration is device-specific. Restore deliberately leaves its entire erase
+// sector untouched; the boot logo begins in the following sector at 0x011000.
+const FLASH_CALIBRATION_SECTOR = 0x010000;
+
+// Factory recovery assets for UV-K1 and UV-K5 V3. Every image is checked before
+// any sector is erased. The external images differ only in factory boot-message
+// line 2 (UV-K1 / UV-K5); calibration remains device-specific and untouched.
+const FACTORY_FLASH_SIZE = 0x200000;
+const FACTORY_STATE_A = 0x100000;
+const FACTORY_STATE_B = 0x101000;
+const FACTORY_TARGETS = Object.freeze({
+  k1: Object.freeze({
+    label: 'UV-K1',
+    flashUrl: 'assets/factory/K1_External_Flash_Factory_Reconstructed.bin',
+    flashSha256: 'a2383aa050dc0963fee7b7c99692b8330d9455a6bbb2bb7498b2bba4174c9d55',
+    firmwareUrl: 'assets/factory/quansheng.k1.stock.firmware.v7.03.01.bin',
+    firmwareSize: 71268,
+    firmwareSha256: '55ec0daffc5668bdb41dcc118475d7e6e23ad953d70f57a9bca64a6202734ba0'
+  }),
+  k5v3: Object.freeze({
+    label: 'UV-K5 V3',
+    flashUrl: 'assets/factory/K5V3_External_Flash_Factory_Reconstructed.bin',
+    flashSha256: 'b85c8066a1b0885d1cf3e430533f45c9c8ea91c8b936a94aba99221fd1bff79b',
+    firmwareUrl: 'assets/factory/quansheng.k5v3.stock.firmware.v7.00.11.bin',
+    firmwareSize: 71712,
+    firmwareSha256: 'f4e5264a6f9a5436a6c75f7b217c60ba002cec04928f247392b9968c5c9458cb'
+  })
+});
 
 // Boot logo memory layout (mirrors firmware App/ui/welcome.c)
 // Layout in flash sector starting at PY25Q16 0x011000, exposed via EEPROM
@@ -72,7 +123,11 @@ let firmwareLoadAbort = null;
 // Version of the CHIRP driver currently offered for download, or null when none.
 let chirpDriverVersion = null;
 let calibData = null;
+let flashRestoreData = null;       // Uint8Array of the .bin image to restore
+let flashRestoreLoadSeq = 0;
+let flashDumpDownloadUrl = null;
 let activeOperationToken = null;
+let activeOperationName = null;
 let activeToolsView = 'flash';
 let readBuffer = [];
 let serialReadRevision = 0;
@@ -116,6 +171,30 @@ const logToggle = document.getElementById('logToggle');
 const languageSelect = document.getElementById('languageSelect');
 const dumpDownload = document.getElementById('dumpDownload');
 const dumpLink = document.getElementById('dumpLink');
+const flashDumpBtn = document.getElementById('flashDumpBtn');
+const flashDumpDownload = document.getElementById('flashDumpDownload');
+const flashDumpLink = document.getElementById('flashDumpLink');
+const flashRestoreBtn = document.getElementById('flashRestoreBtn');
+const flashFileInput = document.getElementById('flashFile');
+const flashFileName = document.getElementById('flashFileName');
+const flashFileButton = document.getElementById('flashFileButton');
+const flashFileLabel = document.getElementById('flashFileLabel');
+const labelFlashFileEl = document.getElementById('labelFlashFile');
+const flashRestoreConfirmModal = document.getElementById('flashRestoreConfirmModal');
+const flashRestoreConfirmClose = document.getElementById('flashRestoreConfirmClose');
+const flashRestoreConfirmBody = document.getElementById('flashRestoreConfirmBody');
+const flashRestoreCancelBtn = document.getElementById('flashRestoreCancelBtn');
+const flashRestoreConfirmBtn = document.getElementById('flashRestoreConfirmBtn');
+const factoryResetK1Btn = document.getElementById('factoryResetK1Btn');
+const factoryResetK5V3Btn = document.getElementById('factoryResetK5V3Btn');
+const factoryResetButtons = [factoryResetK1Btn, factoryResetK5V3Btn].filter(Boolean);
+const factoryResetDescription = document.getElementById('factoryResetDescription');
+const factoryResetModal = document.getElementById('factoryResetModal');
+const factoryResetTitle = document.getElementById('factoryResetTitle');
+const factoryResetBody = document.getElementById('factoryResetBody');
+const factoryResetClose = document.getElementById('factoryResetClose');
+const factoryResetCancelBtn = document.getElementById('factoryResetCancelBtn');
+const factoryResetConfirmBtn = document.getElementById('factoryResetConfirmBtn');
 const chirpDriverDownload = document.getElementById('chirpDriverDownload');
 const chirpDriverLink = document.getElementById('chirpDriverLink');
 const chirpDriverText = document.getElementById('chirpDriverText');
@@ -140,6 +219,7 @@ const logoInvertInput = document.getElementById('logoInvert');
 const logoPreviewCanvas = document.getElementById('logoPreviewCanvas');
 const logoUploadBtn = document.getElementById('logoUploadBtn');
 const logoDumpBtn = document.getElementById('logoDumpBtn');
+const logoDumpDownload = document.getElementById('logoDumpDownload');
 const logoDumpResult = document.getElementById('logoDumpResult');
 const logoDumpedCanvas = document.getElementById('logoDumpedCanvas');
 const logoDumpLink = document.getElementById('logoDumpLink');
@@ -204,6 +284,27 @@ function refreshLocalizedToolsState() {
   const downloadText = document.getElementById('downloadText');
   if (dumpDesc) dumpDesc.textContent = t('dumpDescription');
   if (downloadText) downloadText.textContent = t('downloadText');
+
+  // Dump external flash labels
+  const flashDumpDesc = document.getElementById('flashDumpDescription');
+  const flashDumpDownloadText = document.getElementById('flashDumpDownloadText');
+  if (flashDumpDesc) flashDumpDesc.textContent = t('flashDumpDescription');
+  if (flashDumpBtn) flashDumpBtn.textContent = t('flashDumpBtn');
+  if (flashDumpDownloadText) flashDumpDownloadText.textContent = t('flashDumpDownloadText');
+  const flashRestoreDesc = document.getElementById('flashRestoreDescription');
+  if (flashRestoreDesc) flashRestoreDesc.textContent = t('flashRestoreDescription');
+  if (flashRestoreBtn) flashRestoreBtn.textContent = t('flashRestoreBtn');
+  if (factoryResetDescription) factoryResetDescription.textContent = t('factoryResetDescription');
+  if (factoryResetK1Btn) factoryResetK1Btn.textContent = t('factoryResetK1Btn');
+  if (factoryResetK5V3Btn) factoryResetK5V3Btn.textContent = t('factoryResetK5V3Btn');
+  if (labelFlashFileEl) labelFlashFileEl.textContent = t('labelFlashFile');
+  if (flashFileButton) flashFileButton.textContent = t('fileChoose');
+  if (flashFileName && !flashRestoreData) {
+    flashFileName.textContent = t('fileNoFile');
+    flashFileName.classList.remove('has-file');
+    if (flashFileLabel) flashFileLabel.classList.remove('has-file');
+  }
+  if (factoryResetModal?.classList.contains('show')) renderFactoryResetModal();
 
   // RF Log labels
   const rfLogDescription = document.getElementById('rfLogDescription');
@@ -528,6 +629,43 @@ if (calibFileInput) {
   });
 }
 
+// ========== EXTERNAL FLASH RESTORE FILE INPUT ==========
+if (flashFileInput) {
+  flashFileInput.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const loadSeq = ++flashRestoreLoadSeq;
+    flashRestoreData = null;
+    if (flashFileName) {
+      flashFileName.textContent = t('fileNoFile');
+      flashFileName.classList.remove('has-file');
+    }
+    if (flashFileLabel) flashFileLabel.classList.remove('has-file');
+    updateActionButtons();
+    const fr = new FileReader();
+    fr.onload = (ev) => {
+      if (loadSeq !== flashRestoreLoadSeq) return;
+      const buf = new Uint8Array(ev.target.result);
+      // The dump produces exactly 2 MiB; require the same so a partial or wrong
+      // file can never be written over the whole chip.
+      if (buf.length !== FLASH_TOTAL_SIZE) {
+        log(t('flashInvalidSize', buf.length), 'error');
+        flashFileInput.value = '';
+        return;
+      }
+      flashRestoreData = buf;
+      if (flashFileName) {
+        flashFileName.textContent = file.name;
+        flashFileName.classList.add('has-file');
+      }
+      if (flashFileLabel) flashFileLabel.classList.add('has-file');
+      log(t('flashLoaded', file.name, flashRestoreData.length), 'success');
+      updateActionButtons();
+    };
+    fr.readAsArrayBuffer(file);
+  });
+}
+
 function updateRestoreButton() {
   updateActionButtons();
 }
@@ -619,6 +757,11 @@ function updateActionButtons() {
   if (restoreBtn) restoreBtn.disabled = !serialSupported || busy || !calibData;
   if (logoUploadBtn) logoUploadBtn.disabled = !serialSupported || busy || !logoBitmap;
   if (logoDumpBtn) logoDumpBtn.disabled = !serialSupported || busy;
+  if (flashDumpBtn) flashDumpBtn.disabled = !serialSupported || busy;
+  if (flashRestoreBtn) flashRestoreBtn.disabled = !serialSupported || busy || !flashRestoreData;
+  // Keep this entry point clickable when Web Serial is unavailable so the user
+  // receives an explanation instead of a button that silently ignores clicks.
+  factoryResetButtons.forEach(button => { button.disabled = busy; });
   if (rfLogExportBtn) rfLogExportBtn.disabled = !serialSupported || busy;
   if (slotNameInput) slotNameInput.disabled = busy || !slotImage;
   if (slotWriteBtn) slotWriteBtn.disabled = !serialSupported || busy || !slotImage || !slotNameValid;
@@ -631,6 +774,7 @@ function beginToolsOperation(name, critical) {
   const token = toolsSerial.beginOperation(name, { critical });
   if (!token) return null;
   activeOperationToken = token;
+  activeOperationName = name;
   updateActionButtons();
   return token;
 }
@@ -639,6 +783,7 @@ function endToolsOperation(token) {
   if (!token || token !== activeOperationToken) return;
   toolsSerial.endOperation(token);
   activeOperationToken = null;
+  activeOperationName = null;
   updateActionButtons();
   runPendingSlotRefresh();
 }
@@ -675,7 +820,12 @@ async function readLoop() {
       }
       if (value?.length) {
         readBuffer.push(...value);
-        if (activeToolsView !== 'slots') log(t('rxData', value.length, readBuffer.length), 'info');
+        const isBulkFlashTransfer = activeOperationName === 'dump-flash' ||
+          activeOperationName === 'restore-flash' ||
+          activeOperationName === 'factory-reset';
+        if (activeToolsView !== 'slots' && !isBulkFlashTransfer) {
+          log(t('rxData', value.length, readBuffer.length), 'info');
+        }
         notifySerialRead();
       }
     }
@@ -686,7 +836,7 @@ async function readLoop() {
     }
   }
   log(t('readComplete'), 'info');
-  if (unexpectedlyClosed) void handleSlotHardwareDisconnect();
+  if (unexpectedlyClosed) void handleToolsHardwareDisconnect();
 }
 
 // ========== FIRMWARE SLOTS AUTO-RECONNECT ==========
@@ -725,6 +875,28 @@ async function handleSlotHardwareDisconnect() {
     await slotHardwareDisconnectPromise;
   } finally {
     slotHardwareDisconnectPromise = null;
+  }
+}
+
+// Outside Firmware Slots (e.g. the port inherited from Slots or Apps), a lost
+// device must not leave a dead `port` behind: the next action would reuse it
+// instead of reconnecting, typically when the radio is switched to DFU mode
+// before flashing. Release it so the next action starts a fresh connection.
+// A running operation is left alone: it fails and releases the port itself.
+let toolsHardwareDisconnectPromise = null;
+async function handleToolsHardwareDisconnect() {
+  if (activeToolsView === 'slots') return handleSlotHardwareDisconnect();
+  if (toolsHardwareDisconnectPromise) return toolsHardwareDisconnectPromise;
+  if (!port || !toolsSerial.isOwner() || activeOperationToken) return;
+
+  toolsHardwareDisconnectPromise = (async () => {
+    await toolsSerial.release('hardware-disconnect');
+    log(t('tools_disconnected'), 'info');
+  })();
+  try {
+    await toolsHardwareDisconnectPromise;
+  } finally {
+    toolsHardwareDisconnectPromise = null;
   }
 }
 
@@ -797,7 +969,7 @@ function runPendingSlotRefresh() {
 
 if (serialSupported) {
   navigator.serial.addEventListener('disconnect', event => {
-    if (port && event.target === port) void handleSlotHardwareDisconnect();
+    if (port && event.target === port) void handleToolsHardwareDisconnect();
   });
   navigator.serial.addEventListener('connect', event => {
     void reconnectSlotPort(event.target);
@@ -937,7 +1109,7 @@ flashBtn.addEventListener('click', async () => {
   }
 });
 
-async function flashFirmware(fw) {
+async function flashFirmware(fw, options = {}) {
   hideChirpDriverOffer();
   if (progressContainer) progressContainer.style.display = 'block';
   updateProgress(0);
@@ -981,10 +1153,12 @@ async function flashFirmware(fw) {
 
   // Global community counter: a firmware was successfully flashed.
   // Best-effort — never blocks or fails the flash.
-  try { window.UVStudioFlashCounter?.increment(); } catch (e) {}
+  if (options.count !== false) {
+    try { window.UVStudioFlashCounter?.increment(); } catch (e) {}
+  }
 
   // Offer the matching CHIRP driver for download. Best-effort, never blocks.
-  maybeOfferChirpDriver(firmwareFileName);
+  if (options.offerChirpDriver !== false) maybeOfferChirpDriver(firmwareFileName);
 
   setTimeout(() => {
     if (progressContainer) progressContainer.style.display = 'none';
@@ -1192,8 +1366,559 @@ dumpBtn.addEventListener('click', async () => {
     const url = URL.createObjectURL(blob);
     dumpLink.href = url;
     dumpLink.download = 'calibration.dat';
-    dumpDownload.style.display = 'block';
+    dumpDownload.style.display = 'flex';
     log(t('dumpSaved'), 'success');
+
+    setTimeout(() => {
+      if (progressContainer) progressContainer.style.display = 'none';
+      updateProgress(0);
+    }, 800);
+  } catch (e) {
+    log(t('error', e?.message ?? String(e)), 'error');
+  } finally {
+    if (port) await disconnect();
+    endToolsOperation(operation);
+  }
+});
+
+function flashAddress(address) {
+  return address.toString(16).padStart(6, '0');
+}
+
+async function waitForExternalFlashResponse(responseType, address, timeoutMs, session) {
+  let revision = serialReadRevision;
+  const deadline = performance.now() + timeoutMs;
+
+  for (;;) {
+    if (session !== toolsSerialSession) {
+      throw Object.assign(new Error(t('tools_disconnected')), {
+        code: 'UVSTUDIO_SERIAL_SESSION_CHANGED'
+      });
+    }
+
+    for (;;) {
+      const buffered = readBuffer.length;
+      const resp = fetchMessage(readBuffer);
+      if (resp && resp.msgType === responseType && resp.data.length >= 4) {
+        const dv = new DataView(resp.data.buffer, resp.data.byteOffset, resp.data.byteLength);
+        if (dv.getUint32(0, true) === address) return resp;
+      }
+      if (resp === null && readBuffer.length === buffered) break;
+    }
+
+    const remaining = deadline - performance.now();
+    if (remaining <= 0) return null;
+    const received = await waitForSerialRead(revision, remaining);
+    revision = serialReadRevision;
+    if (!received) return null;
+  }
+}
+
+async function exchangeExternalFlashMessage(
+  msg, responseType, address, timeoutMs, retries = FLASH_COMMAND_RETRIES
+) {
+  const session = toolsSerialSession;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (session !== toolsSerialSession) {
+      throw Object.assign(new Error(t('tools_disconnected')), {
+        code: 'UVSTUDIO_SERIAL_SESSION_CHANGED'
+      });
+    }
+
+    readBuffer = [];
+    await sendMessage(msg);
+    const resp = await waitForExternalFlashResponse(responseType, address, timeoutMs, session);
+    if (resp) return resp;
+  }
+  return null;
+}
+
+async function readExternalFlashChunk(address, length, timestamp) {
+  const msg = createMessage(MSG_READ_FLASH, 10);
+  const view = new DataView(msg.buffer);
+  view.setUint32(4, address, true);
+  view.setUint16(8, length, true);
+  view.setUint32(10, timestamp, true);
+
+  const resp = await exchangeExternalFlashMessage(
+    msg, MSG_READ_FLASH_RESP, address, FLASH_COMMAND_TIMEOUT_MS
+  );
+  if (!resp || resp.data.length < 7) {
+    throw new Error(t('flashReadError', flashAddress(address)));
+  }
+  const dv = new DataView(resp.data.buffer, resp.data.byteOffset, resp.data.byteLength);
+  const respSize = dv.getUint16(4, true);
+  if (resp.data[6] !== 0 || respSize !== length || resp.data.length < 7 + length) {
+    throw new Error(t('flashReadError', flashAddress(address)));
+  }
+  return resp.data.slice(7, 7 + length);
+}
+
+async function eraseExternalFlashSector(address, timestamp) {
+  const msg = createMessage(MSG_ERASE_FLASH, 8);
+  const view = new DataView(msg.buffer);
+  view.setUint32(4, address, true);
+  view.setUint32(8, timestamp, true);
+
+  const resp = await exchangeExternalFlashMessage(
+    msg, MSG_ERASE_FLASH_RESP, address, FLASH_ERASE_TIMEOUT_MS
+  );
+  if (!resp || resp.data.length < 5 || resp.data[4] !== 0) {
+    throw new Error(t('flashRestoreError', flashAddress(address)));
+  }
+}
+
+async function writeExternalFlashChunk(address, data, timestamp) {
+  const msg = createMessage(MSG_WRITE_FLASH, 10 + data.length);
+  const view = new DataView(msg.buffer);
+  view.setUint32(4, address, true);
+  view.setUint16(8, data.length, true);
+  view.setUint32(10, timestamp, true);
+  msg.set(data, 14);
+
+  const resp = await exchangeExternalFlashMessage(
+    msg, MSG_WRITE_FLASH_RESP, address, FLASH_COMMAND_TIMEOUT_MS
+  );
+  if (!resp || resp.data.length < 7) {
+    throw new Error(t('flashRestoreError', flashAddress(address)));
+  }
+  const dv = new DataView(resp.data.buffer, resp.data.byteOffset, resp.data.byteLength);
+  if (resp.data[6] !== 0 || dv.getUint16(4, true) !== data.length) {
+    throw new Error(t('flashRestoreError', flashAddress(address)));
+  }
+}
+
+async function readExternalFlashCrc32(
+  address, length, timestamp, timeoutMs = FLASH_COMMAND_TIMEOUT_MS,
+  retries = FLASH_COMMAND_RETRIES
+) {
+  const msg = createMessage(MSG_CRC_FLASH, 12);
+  const view = new DataView(msg.buffer);
+  view.setUint32(4, address, true);
+  view.setUint32(8, length, true);
+  view.setUint32(12, timestamp, true);
+
+  const resp = await exchangeExternalFlashMessage(
+    msg, MSG_CRC_FLASH_RESP, address, timeoutMs, retries
+  );
+  if (!resp || resp.data.length < 13) {
+    throw new Error(t('flashReadError', flashAddress(address)));
+  }
+  const dv = new DataView(resp.data.buffer, resp.data.byteOffset, resp.data.byteLength);
+  if (resp.data[12] !== 0 || dv.getUint32(4, true) !== length) {
+    throw new Error(t('flashReadError', flashAddress(address)));
+  }
+  return dv.getUint32(8, true);
+}
+
+async function detectExternalFlashCrcSupport(timestamp) {
+  try {
+    await readExternalFlashCrc32(0, 1, timestamp, FLASH_CRC_PROBE_TIMEOUT_MS, 0);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function externalFlashSectorMatches(data, sector, sectorEnd, timestamp) {
+  const expectedCrc = crc32Bytes(data.subarray(sector, sectorEnd));
+  const actualCrc = await readExternalFlashCrc32(
+    sector, sectorEnd - sector, timestamp
+  );
+  return actualCrc === expectedCrc;
+}
+
+async function verifyExternalFlashSector(data, sector, sectorEnd, timestamp, crcSupported) {
+  if (crcSupported &&
+      await externalFlashSectorMatches(data, sector, sectorEnd, timestamp)) return;
+
+  // Fall back to a byte comparison for older Labs firmware, or to locate the
+  // exact failing address when a sector CRC does not match.
+  for (let address = sector; address < sectorEnd; address += FLASH_DUMP_CHUNK) {
+    const expected = data.subarray(address, Math.min(address + FLASH_DUMP_CHUNK, sectorEnd));
+    const actual = await readExternalFlashChunk(address, expected.length, timestamp);
+    for (let i = 0; i < expected.length; i++) {
+      if (actual[i] !== expected[i]) {
+        throw new Error(t('flashVerifyError', flashAddress(address + i)));
+      }
+    }
+  }
+}
+
+// Labs-only gate for External Flash and Factory reset: a firmware without
+// external-flash access never answers 0x0738. Returns false after logging and
+// showing the Labs modal, so the caller simply stops.
+async function hasExternalFlashSupport(timestamp, featureKey) {
+  try {
+    await readExternalFlashChunk(0, 1, timestamp);
+    return true;
+  } catch (e) {
+    if (e?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e;
+    log(t('flashUnsupported'), 'error');
+    showLabsRequiredModal(featureKey);
+    return false;
+  }
+}
+
+async function sha256Hex(data) {
+  if (!window.crypto?.subtle) throw new Error(t('factoryResetCryptoError'));
+  const digest = await window.crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+let factoryAssetsFallbackPromise = null;
+
+function loadFactoryAssetsFallback() {
+  if (window.UVStudioFactoryAssets) return Promise.resolve(window.UVStudioFactoryAssets);
+  if (factoryAssetsFallbackPromise) return factoryAssetsFallbackPromise;
+
+  factoryAssetsFallbackPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'assets/factory/factory-assets.js';
+    script.onload = () => {
+      if (window.UVStudioFactoryAssets) resolve(window.UVStudioFactoryAssets);
+      else reject(new Error(t('factoryResetAssetInvalid')));
+    };
+    script.onerror = () => reject(new Error(t('factoryResetAssetInvalid')));
+    document.head.appendChild(script);
+  });
+  return factoryAssetsFallbackPromise;
+}
+
+function decodeFactoryAsset(encoded) {
+  const binary = window.atob(encoded);
+  const data = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) data[i] = binary.charCodeAt(i);
+  return data;
+}
+
+async function fetchVerifiedBinary(url, expectedSize, expectedHash) {
+  let data;
+  if (window.location.protocol === 'file:') {
+    const assets = await loadFactoryAssetsFallback();
+    const encoded = assets[url];
+    if (!encoded) throw new Error(t('factoryResetAssetInvalid'));
+    data = decodeFactoryAsset(encoded);
+  } else {
+    const response = await fetch(url, { cache: 'no-cache' });
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`.trim());
+    data = new Uint8Array(await response.arrayBuffer());
+  }
+  if (data.length !== expectedSize || await sha256Hex(data) !== expectedHash) {
+    throw new Error(t('factoryResetAssetInvalid'));
+  }
+  return data;
+}
+
+async function restoreFactoryExternalFlash(data, timestamp, crcSupported) {
+  const regularSectors = [];
+  for (let address = 0; address < FLASH_TOTAL_SIZE; address += FLASH_SECTOR_SIZE) {
+    if (address === FLASH_CALIBRATION_SECTOR ||
+        address === FACTORY_STATE_A || address === FACTORY_STATE_B) continue;
+    regularSectors.push(address);
+  }
+  // These first two sectors also contain the Labs multiboot marker. Write them
+  // last so the running firmware remains bootable for as long as possible.
+  const sectors = regularSectors.concat([FACTORY_STATE_A, FACTORY_STATE_B]);
+
+  log(t('flashCalibrationPreserved'), 'info');
+
+  for (let sectorIndex = 0; sectorIndex < sectors.length; sectorIndex++) {
+    const sector = sectors[sectorIndex];
+    updateProgress(Math.round((sectorIndex / sectors.length) * 100));
+    const sectorEnd = sector + FLASH_SECTOR_SIZE;
+    if (crcSupported &&
+        await externalFlashSectorMatches(data, sector, sectorEnd, timestamp)) continue;
+
+    await eraseExternalFlashSector(sector, timestamp);
+    for (let address = sector; address < sectorEnd; address += FLASH_WRITE_CHUNK) {
+      const chunk = data.subarray(address, address + FLASH_WRITE_CHUNK);
+      if (chunk.every(value => value === 0xff)) continue;
+      await writeExternalFlashChunk(address, chunk, timestamp);
+    }
+
+    await verifyExternalFlashSector(data, sector, sectorEnd, timestamp, crcSupported);
+  }
+  updateProgress(100);
+}
+
+let flashRestoreConfirmResolve = null;
+let flashRestoreConfirmFocusOrigin = null;
+
+function closeFlashRestoreConfirmModal(confirmed) {
+  if (!flashRestoreConfirmModal?.classList.contains('show')) return;
+  const resolve = flashRestoreConfirmResolve;
+  const focusTarget = flashRestoreConfirmFocusOrigin;
+  flashRestoreConfirmResolve = null;
+  flashRestoreConfirmFocusOrigin = null;
+  flashRestoreConfirmModal.classList.remove('show');
+  flashRestoreConfirmModal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  if (focusTarget && document.contains(focusTarget)) {
+    focusTarget.focus({ preventScroll: true });
+  }
+  if (resolve) resolve(Boolean(confirmed));
+}
+
+function confirmExternalFlashRestore() {
+  if (!flashRestoreConfirmModal || flashRestoreConfirmResolve) return Promise.resolve(false);
+  flashRestoreConfirmFocusOrigin = document.activeElement;
+  if (flashRestoreConfirmBody) flashRestoreConfirmBody.textContent = t('flashRestoreConfirm');
+  flashRestoreConfirmModal.classList.add('show');
+  flashRestoreConfirmModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => flashRestoreCancelBtn?.focus());
+  return new Promise(resolve => { flashRestoreConfirmResolve = resolve; });
+}
+
+if (flashRestoreConfirmClose) {
+  flashRestoreConfirmClose.addEventListener('click', () => closeFlashRestoreConfirmModal(false));
+}
+if (flashRestoreCancelBtn) {
+  flashRestoreCancelBtn.addEventListener('click', () => closeFlashRestoreConfirmModal(false));
+}
+if (flashRestoreConfirmBtn) {
+  flashRestoreConfirmBtn.addEventListener('click', () => closeFlashRestoreConfirmModal(true));
+}
+if (flashRestoreConfirmModal) {
+  flashRestoreConfirmModal.addEventListener('click', event => {
+    if (event.target === flashRestoreConfirmModal) closeFlashRestoreConfirmModal(false);
+  });
+  flashRestoreConfirmModal.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeFlashRestoreConfirmModal(false);
+  });
+}
+
+let factoryResetModalResolve = null;
+let factoryResetModalFocusOrigin = null;
+let factoryResetModalStep = 'confirm';
+let factoryResetTarget = null;
+
+function renderFactoryResetModal() {
+  const dfuStep = factoryResetModalStep === 'dfu';
+  const unsupportedStep = factoryResetModalStep === 'unsupported';
+  const model = factoryResetTarget?.label ?? '';
+  if (factoryResetTitle) factoryResetTitle.textContent = t(dfuStep ? 'factoryResetDfuTitle' : 'factoryResetTitle', model);
+  if (factoryResetBody) {
+    factoryResetBody.textContent = unsupportedStep
+      ? t('factoryResetUnsupported')
+      : t(dfuStep ? 'factoryResetDfuBody' : 'factoryResetConfirm', model);
+  }
+  if (factoryResetConfirmBtn) {
+    factoryResetConfirmBtn.textContent = t(dfuStep ? 'factoryResetDfuContinue' : unsupportedStep ? 'appClose' : 'factoryResetStart');
+    factoryResetConfirmBtn.classList.toggle('danger', !unsupportedStep);
+  }
+  if (factoryResetCancelBtn) factoryResetCancelBtn.hidden = dfuStep || unsupportedStep;
+  if (factoryResetClose) factoryResetClose.hidden = dfuStep;
+}
+
+function closeFactoryResetModal(confirmed) {
+  if (!factoryResetModal?.classList.contains('show')) return;
+  if (factoryResetModalStep === 'dfu' && !confirmed) return;
+  const resolve = factoryResetModalResolve;
+  const focusTarget = factoryResetModalFocusOrigin;
+  factoryResetModalResolve = null;
+  factoryResetModalFocusOrigin = null;
+  factoryResetModal.classList.remove('show');
+  factoryResetModal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  if (focusTarget && document.contains(focusTarget)) focusTarget.focus({ preventScroll: true });
+  if (resolve) resolve(Boolean(confirmed));
+}
+
+function showFactoryResetModal(step, target = factoryResetTarget) {
+  if (!factoryResetModal || factoryResetModalResolve) return Promise.resolve(false);
+  factoryResetModalStep = step;
+  factoryResetTarget = target;
+  factoryResetModalFocusOrigin = document.activeElement;
+  renderFactoryResetModal();
+  factoryResetModal.classList.add('show');
+  factoryResetModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => (step === 'dfu' ? factoryResetConfirmBtn : factoryResetCancelBtn)?.focus());
+  return new Promise(resolve => { factoryResetModalResolve = resolve; });
+}
+
+factoryResetClose?.addEventListener('click', () => closeFactoryResetModal(false));
+factoryResetCancelBtn?.addEventListener('click', () => closeFactoryResetModal(false));
+factoryResetConfirmBtn?.addEventListener('click', () => closeFactoryResetModal(true));
+factoryResetModal?.addEventListener('click', event => {
+  if (event.target === factoryResetModal) closeFactoryResetModal(false);
+});
+factoryResetModal?.addEventListener('keydown', event => {
+  if (event.key === 'Escape') closeFactoryResetModal(false);
+});
+
+// ========== GUIDED FACTORY SOFTWARE RESTORE ==========
+async function runFactoryReset(targetKey) {
+  if (factoryResetModalResolve || activeOperationToken) return;
+  const target = FACTORY_TARGETS[targetKey];
+  if (!target) return;
+  factoryResetTarget = target;
+  if (!serialSupported) {
+    await showFactoryResetModal('unsupported', target);
+    return;
+  }
+  const operation = beginToolsOperation('factory-reset', true);
+  if (!operation) return;
+
+  try {
+    // Check the Labs-only external-flash service before asking to confirm a
+    // destructive restore that could not run anyway.
+    if (!port) await connect();
+    readBuffer = [];
+    await sleep(1000);
+    const devInfo = await requestDeviceInfo();
+    if (!(await hasExternalFlashSupport(devInfo.timestamp, 'studio_nav_factory_reset'))) return;
+    if (!(await showFactoryResetModal('confirm', target))) return;
+
+    progressContainer.style.display = 'block';
+    updateProgress(0);
+    log(t('factoryResetDownloading', target.label), 'info');
+    const [factoryFlash, stockFirmware] = await Promise.all([
+      fetchVerifiedBinary(target.flashUrl, FACTORY_FLASH_SIZE, target.flashSha256),
+      fetchVerifiedBinary(target.firmwareUrl, target.firmwareSize, target.firmwareSha256)
+    ]);
+    log(t('factoryResetAssetsReady'), 'success');
+
+    const crcSupported = await detectExternalFlashCrcSupport(devInfo.timestamp);
+    log(t('factoryResetRestoringExternal', target.label), 'info');
+    await restoreFactoryExternalFlash(factoryFlash, devInfo.timestamp, crcSupported);
+    log(t('factoryResetExternalComplete', target.label), 'success');
+
+    if (port) await disconnect();
+    if (!(await showFactoryResetModal('dfu'))) return;
+
+    updateProgress(0);
+    log(t('factoryResetWaitingDfu', target.label), 'info');
+    await connect();
+    await flashFirmware(stockFirmware, { count: false, offerChirpDriver: false });
+    log(t('factoryResetComplete', target.label), 'success');
+  } catch (e) {
+    log(t('factoryResetError', e?.message ?? String(e)), 'error');
+  } finally {
+    if (port) await disconnect();
+    endToolsOperation(operation);
+  }
+}
+
+factoryResetButtons.forEach(button => {
+  button.addEventListener('click', () => void runFactoryReset(button.dataset.factoryResetTarget));
+});
+
+// ========== DUMP FULL EXTERNAL FLASH (2 MiB) ==========
+if (flashDumpBtn) flashDumpBtn.addEventListener('click', async () => {
+  const operation = beginToolsOperation('dump-flash', false);
+  if (!operation) return;
+  if (flashDumpDownload) flashDumpDownload.style.display = 'none';
+
+  try {
+    if (!port) await connect();
+    readBuffer = [];
+    await sleep(1000);
+
+    const devInfo = await requestDeviceInfo();
+    if (!(await hasExternalFlashSupport(devInfo.timestamp, 'studio_nav_external_flash'))) return;
+    progressContainer.style.display = 'block';
+    updateProgress(0);
+    log(t('dumpingFlash'), 'info');
+
+    const dumpedData = new Uint8Array(FLASH_TOTAL_SIZE);
+
+    for (let addr = 0; addr < FLASH_TOTAL_SIZE; addr += FLASH_DUMP_CHUNK) {
+      const len = Math.min(FLASH_DUMP_CHUNK, FLASH_TOTAL_SIZE - addr);
+      updateProgress(Math.round((addr / FLASH_TOTAL_SIZE) * 100));
+
+      dumpedData.set(await readExternalFlashChunk(addr, len, devInfo.timestamp), addr);
+    }
+
+    updateProgress(100);
+    log(t('flashDumpComplete'), 'success');
+
+    const blob = new Blob([dumpedData], { type: 'application/octet-stream' });
+    if (flashDumpDownloadUrl) URL.revokeObjectURL(flashDumpDownloadUrl);
+    flashDumpDownloadUrl = URL.createObjectURL(blob);
+    flashDumpLink.href = flashDumpDownloadUrl;
+    flashDumpLink.download = 'external-flash.bin';
+    if (flashDumpDownload) flashDumpDownload.style.display = 'flex';
+    log(t('flashDumpSaved'), 'success');
+
+    setTimeout(() => {
+      if (progressContainer) progressContainer.style.display = 'none';
+      updateProgress(0);
+    }, 800);
+  } catch (e) {
+    log(t('error', e?.message ?? String(e)), 'error');
+  } finally {
+    if (port) await disconnect();
+    endToolsOperation(operation);
+  }
+});
+
+// ========== RESTORE EXTERNAL FLASH ==========
+if (flashRestoreBtn) flashRestoreBtn.addEventListener('click', async () => {
+  if (!flashRestoreData) return;
+
+  const operation = beginToolsOperation('restore-flash', true);
+  if (!operation) return;
+
+  try {
+    if (!port) await connect();
+    readBuffer = [];
+    await sleep(1000);
+
+    const devInfo = await requestDeviceInfo();
+    if (!(await hasExternalFlashSupport(devInfo.timestamp, 'studio_nav_external_flash'))) return;
+    // Destructive: rewriting the external flash replaces the logo, settings,
+    // firmware slots and multiboot state. Device-specific calibration is skipped.
+    // Asked only once the firmware is known to support the restore.
+    if (!(await confirmExternalFlashRestore())) return;
+
+    progressContainer.style.display = 'block';
+    updateProgress(0);
+    const crcSupported = await detectExternalFlashCrcSupport(devInfo.timestamp);
+    log(t('restoringFlash'), 'info');
+
+    const data = flashRestoreData;
+    const total = data.length;
+
+    for (let sector = 0; sector < total; sector += FLASH_SECTOR_SIZE) {
+      updateProgress(Math.round((sector / total) * 100));
+
+      if (sector === FLASH_CALIBRATION_SECTOR) {
+        log(t('flashCalibrationPreserved'), 'info');
+        continue;
+      }
+
+      const sectorEnd = Math.min(sector + FLASH_SECTOR_SIZE, total);
+      if (crcSupported &&
+          await externalFlashSectorMatches(data, sector, sectorEnd, devInfo.timestamp)) continue;
+
+      await eraseExternalFlashSector(sector, devInfo.timestamp);
+      // 0x073C write: program the now-erased sector in chunks.
+      for (let addr = sector; addr < sectorEnd; addr += FLASH_WRITE_CHUNK) {
+        const chunk = data.subarray(addr, Math.min(addr + FLASH_WRITE_CHUNK, sectorEnd));
+        // Erase already produces 0xFF. Avoid needless page-program cycles for
+        // empty areas while still verifying the complete sector below.
+        if (chunk.every(value => value === 0xff)) continue;
+        await writeExternalFlashChunk(addr, chunk, devInfo.timestamp);
+      }
+
+      // A command acknowledgement only proves that the transaction completed.
+      // Verify each complete sector before moving on.
+      await verifyExternalFlashSector(
+        data, sector, sectorEnd, devInfo.timestamp, crcSupported
+      );
+    }
+
+    updateProgress(100);
+    log(t('flashRestoreComplete'), 'success');
+
+    log(t('rebooting'), 'info');
+    const rebootMsg = createMessage(MSG_REBOOT, 0);
+    await sendMessage(rebootMsg);
+    await sleep(500);
+    log(t('rebootComplete'), 'success');
 
     setTimeout(() => {
       if (progressContainer) progressContainer.style.display = 'none';
@@ -1572,6 +2297,7 @@ if (logoDumpBtn) {
     if (!operation) return;
     if (progressContainer) progressContainer.style.display = 'block';
     updateProgress(0);
+    if (logoDumpDownload) logoDumpDownload.style.display = 'none';
     if (logoDumpResult) logoDumpResult.hidden = true;
 
     try {
@@ -1640,6 +2366,7 @@ if (logoDumpBtn) {
             logoDumpLink.href = url;
             logoDumpLink.download = 'logo.png';
           }
+          if (logoDumpDownload) logoDumpDownload.style.display = 'flex';
         }, 'image/png');
       }
       if (logoDumpResult) logoDumpResult.hidden = false;
@@ -1851,7 +2578,7 @@ const SLOT_STATUS_KEY = ['slotStateValid', 'slotStateEmpty', 'slotStateNewHdr',
 function slotStatusText(code) { return t(SLOT_STATUS_KEY[code] || 'slotStateError'); }
 
 // CRC-32 (zlib/PNG, poly 0xEDB88320) — must match the firmware mb_crc32_update.
-function slotCrc32(bytes) {
+function crc32Bytes(bytes) {
   let crc = 0xFFFFFFFF;
   for (let i = 0; i < bytes.length; i++) {
     crc ^= bytes[i];
@@ -1894,10 +2621,10 @@ function slotExtractMeta(bytes, filename) {
     text += (c >= 32 && c < 127) ? String.fromCharCode(c) : '\n';
   }
   let fwVersion = slotVersionFromFilename(filename);
-  // Author token (no '+') + a canonical numeric version. This accepts compact
-  // versions such as "RADIO v50" as well as "F4HWN v5.9.0".
-  const vm = text.match(/[A-Za-z0-9]+ v\d+(?:\.\d+)*/i);
-  if (!fwVersion && vm) fwVersion = vm[0];
+  // Match an author token (without '+') followed by a canonical numeric
+  // version, but store only the normalized v... component.
+  const vm = text.match(/[A-Za-z0-9]+ (v\d+(?:\.\d+)*)/i);
+  if (!fwVersion && vm) fwVersion = vm[1];
   const name = slotEditionFromFilename(filename);
   return { name, fwVersion: fwVersion.slice(0, 15) };
 }
@@ -2181,7 +2908,7 @@ async function slotWriteFlow() {
     const dev = await requestDeviceInfo();
     const ts = dev.timestamp;
     const image = slotImage;
-    const crc = slotCrc32(image);
+    const crc = crc32Bytes(image);
 
     log(t('slotErasing', slot), 'info');
     let st = await slotErase(slot, ts);
@@ -2317,11 +3044,13 @@ slotBuildTable();
 // region via the 0x073x command family. A .app file already carries its 64-byte
 // header (built by pack_app.py), so we just split header/code and write both.
 const APP_SLOT_COUNT = 16;        // firmware capacity (0..15)
-const APP_SLOT_FIRST = 0;         // physical slot indices used here: 0..7
-const APP_SLOT_LAST = 7;          // shown to the user as 1..8 (label = index + 1)
+const APP_SLOT_FIRST = 0;         // first physical slot index
+const APP_SLOT_LAST = APP_SLOT_COUNT - 1; // expose the full capacity (shown as 1..16)
 const appSlotLabel = (s) => String(s + 1);   // physical slot -> user-facing number
 const APP_IMG_OFFSET = 0x1000;    // code starts after the header sector
 const APP_HDR_SIZE = 64;
+const APP_ASSET_OFFSET = 0x100;   // read-only assets live in the header sector (API level 2)
+const APP_ASSET_MAX = 0xF00;      // up to the end of the header sector
 const APP_MAGIC = 0x31504146;     // "FAP1"
 const APP_FLAG_COMMITTED = 1;
 const APP_WRITE_CHUNK = 128;      // keep the whole command under the 256 B VCP ring
@@ -2346,35 +3075,44 @@ const appsTableBody  = document.getElementById('appsTableBody');
 const appMetaEl      = document.getElementById('appMeta');
 
 let appImage = null;   // full .app bytes (header + code)
-let appMeta  = { name: '', version: '', codeSize: 0 };
+let appMeta  = { name: '', version: '', codeSize: 0, assetSize: 0 };
 let appImageLoadSeq = 0;
 let appImageLoadAbort = null;
 
-// --- overlay-apps capability modal --------------------------------------
-// Shown when the booted firmware has no overlay-app support (it never answers
-// 0x0730). Reuses the shared .modal styling; no "flash" button on purpose - it
-// just tells the user which firmware they are on and that Labs is required.
-const appUnsupportedModal = document.getElementById('appUnsupportedModal');
-const appUnsupportedClose = document.getElementById('appUnsupportedClose');
-const appUnsupportedBody  = document.getElementById('appUnsupportedBody');
+// --- Labs-only feature modal ------------------------------------------------
+// Shown when the booted firmware lacks a Labs-only service: overlay apps (it
+// never answers 0x0730) or external-flash access (0x0738, used by External Flash
+// and Factory reset). Reuses the shared .modal styling; no "flash" button on
+// purpose - it names the feature and says that Labs is required.
+const labsRequiredModal = document.getElementById('labsRequiredModal');
+const labsRequiredClose = document.getElementById('labsRequiredClose');
+const labsRequiredBody  = document.getElementById('labsRequiredBody');
 
-function showAppUnsupportedModal() {
-  if (!appUnsupportedModal) return;
-  if (appUnsupportedBody) appUnsupportedBody.innerHTML = t('appUnsupportedBody');  // trusted static locale string (<strong> around Labs)
-  appUnsupportedModal.classList.add('show');
-  appUnsupportedModal.setAttribute('aria-hidden', 'false');
-  if (appUnsupportedClose) requestAnimationFrame(() => appUnsupportedClose.focus());
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
 }
-function hideAppUnsupportedModal() {
-  if (!appUnsupportedModal) return;
-  appUnsupportedModal.classList.remove('show');
-  appUnsupportedModal.setAttribute('aria-hidden', 'true');
+
+// featureKey: the feature's navigation label (studio_nav_*).
+function showLabsRequiredModal(featureKey) {
+  if (!labsRequiredModal) return;
+  // Trusted static locale string (<strong> markup), the feature name escaped.
+  if (labsRequiredBody) labsRequiredBody.innerHTML = t('labsRequiredBody', escapeHtml(t(featureKey)));
+  labsRequiredModal.classList.add('show');
+  labsRequiredModal.setAttribute('aria-hidden', 'false');
+  if (labsRequiredClose) requestAnimationFrame(() => labsRequiredClose.focus());
 }
-if (appUnsupportedClose) appUnsupportedClose.addEventListener('click', hideAppUnsupportedModal);
-if (appUnsupportedModal) {
-  appUnsupportedModal.addEventListener('click', (e) => { if (e.target === appUnsupportedModal) hideAppUnsupportedModal(); });
+function hideLabsRequiredModal() {
+  if (!labsRequiredModal) return;
+  labsRequiredModal.classList.remove('show');
+  labsRequiredModal.setAttribute('aria-hidden', 'true');
+}
+if (labsRequiredClose) labsRequiredClose.addEventListener('click', hideLabsRequiredModal);
+if (labsRequiredModal) {
+  labsRequiredModal.addEventListener('click', (e) => { if (e.target === labsRequiredModal) hideLabsRequiredModal(); });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && appUnsupportedModal.classList.contains('show')) hideAppUnsupportedModal();
+    if (e.key === 'Escape' && labsRequiredModal.classList.contains('show')) hideLabsRequiredModal();
   });
 }
 
@@ -2395,7 +3133,7 @@ async function appsProbe(fw) {
     if (e?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e;
     const name = (fw && fw.name) || t('appUnknownFirmware');
     log(t('appUnsupportedLog', name), 'error');   // firmware still named in the log for diagnostics
-    showAppUnsupportedModal();
+    showLabsRequiredModal('studio_nav_apps');
     return null;
   }
 }
@@ -2404,7 +3142,7 @@ function appParseHeader(b) {
   const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
   const readStr = (off, len) => { let s = ''; for (let i = 0; i < len; i++) { const c = b[off + i]; if (!c) break; s += String.fromCharCode(c); } return s; };
   // app_header_t: magic@0 hdr@4 abi@6 codeSize@8 crc@12 entry@16 flags@18
-  //               name@20 version@36 linkVma@52 (differs from the firmware header).
+  //               name@20 version@36 linkVma@52 caps@56 assetSize@60 assetCrc@62.
   return {
     magic: dv.getUint32(0, true),
     abiVersion: dv.getUint16(6, true),
@@ -2412,7 +3150,8 @@ function appParseHeader(b) {
     codeCrc32: dv.getUint32(12, true),
     name: readStr(20, 16),
     version: readStr(36, 16),
-    linkVma: dv.getUint32(52, true) >>> 0
+    linkVma: dv.getUint32(52, true) >>> 0,
+    assetSize: dv.getUint16(60, true)
   };
 }
 
@@ -2498,7 +3237,7 @@ async function appRefreshFlow() {
     if (!port) await connect();
 
     // Capability gate. A firmware without overlay-app support (Fusion, Transfer,
-    // stock…) never answers 0x0730, so scanning all 8 slots would hang on eight
+    // stock…) never answers 0x0730, so scanning all 16 slots would hang on sixteen
     // timeouts and then show cryptic errors - the exact confusion we want to
     // avoid. Instead: confirm the radio answers device-info (so we can name it),
     // then probe a single slot. A timeout there means "no overlay apps" -> a
@@ -2557,9 +3296,16 @@ async function appInstallFlow() {
   if (!appImage) return;
   const slot = appTargetSelect ? parseInt(appTargetSelect.value, 10) : APP_SLOT_FIRST;
   if (!(slot >= APP_SLOT_FIRST && slot <= APP_SLOT_LAST)) return;
-  const code = appImage.subarray(APP_HDR_SIZE);
+  // .app = header + code (codeSize bytes) + optional read-only assets. The code
+  // goes to the code sector, the assets to the header sector at APP_ASSET_OFFSET.
   const header = appImage.subarray(0, APP_HDR_SIZE);
-  if (code.length > 0x1000) { log(t('appTooBig'), 'error'); return; }
+  const codeEnd = APP_HDR_SIZE + appMeta.codeSize;
+  const code = appImage.subarray(APP_HDR_SIZE, codeEnd);
+  const assets = appImage.subarray(codeEnd);
+  if (appMeta.codeSize === 0 || codeEnd > appImage.length ||
+      assets.length !== appMeta.assetSize) { log(t('appBadFile'), 'error'); return; }
+  if (code.length > 0x1000 || assets.length > APP_ASSET_MAX) { log(t('appTooBig'), 'error'); return; }
+  const total = code.length + assets.length;
 
   const op = beginToolsOperation('apps-install', true);
   if (!op) return;
@@ -2580,12 +3326,16 @@ async function appInstallFlow() {
     if (st !== 0) throw new Error('erase: ' + appStatusText(st));
 
     log(t('appInstalling', appSlotLabel(slot)), 'info');
-    for (let off = 0; off < code.length; off += APP_WRITE_CHUNK) {
-      const chunk = code.subarray(off, Math.min(off + APP_WRITE_CHUNK, code.length));
-      st = await appWriteChunkRetry(slot, APP_IMG_OFFSET + off, ts, chunk);
-      if (st !== 0) throw new Error('write @' + off + ': ' + appStatusText(st));
-      const changed = updateProgress(((off + chunk.length) / code.length) * 95);
-      if (changed) await waitForProgressPaint();
+    let done = 0;
+    for (const [part, base] of [[code, APP_IMG_OFFSET], [assets, APP_ASSET_OFFSET]]) {
+      for (let off = 0; off < part.length; off += APP_WRITE_CHUNK) {
+        const chunk = part.subarray(off, Math.min(off + APP_WRITE_CHUNK, part.length));
+        st = await appWriteChunkRetry(slot, base + off, ts, chunk);
+        if (st !== 0) throw new Error('write @' + (base + off) + ': ' + appStatusText(st));
+        done += chunk.length;
+        const changed = updateProgress((done / total) * 95);
+        if (changed) await waitForProgressPaint();
+      }
     }
     // header last: it carries the committed flag, so a partial write never validates
     st = await appWriteChunkRetry(slot, 0, ts, header);
@@ -2615,7 +3365,7 @@ function updateAppButtons() {
 
 function clearAppImage() {
   appImage = null;
-  appMeta = { name: '', version: '', codeSize: 0 };
+  appMeta = { name: '', version: '', codeSize: 0, assetSize: 0 };
   if (appFileName) { appFileName.setAttribute('data-i18n', 'fileNoFile'); appFileName.textContent = t('fileNoFile'); appFileName.classList.remove('has-file'); }
   if (appFileLabel) appFileLabel.classList.remove('has-file');
   if (appMetaEl) appMetaEl.textContent = '';
@@ -2640,7 +3390,7 @@ function setAppImageBuffer(buf, name) {
   const hdr = appParseHeader(bytes);
   if (hdr.magic !== APP_MAGIC) { log(t('appBadFile'), 'error'); clearAppImage(); return; }
   appImage = bytes;
-  appMeta = { name: hdr.name, version: hdr.version, codeSize: hdr.codeSize };
+  appMeta = { name: hdr.name, version: hdr.version, codeSize: hdr.codeSize, assetSize: hdr.assetSize };
   if (appFileName) { appFileName.removeAttribute('data-i18n'); appFileName.textContent = name; appFileName.classList.add('has-file'); }
   if (appFileLabel) appFileLabel.classList.add('has-file');
   if (appMetaEl) appMetaEl.textContent = t('appDetected', hdr.name || '?', hdr.version || '?', (hdr.codeSize / 1024).toFixed(1));
