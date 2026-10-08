@@ -2784,10 +2784,15 @@ function slotCatalogKey(name) {
 
 function slotRenderUpdateIndicator(row) {
   const button = row.querySelector('.slot-update-button');
-  if (!button) return;
+  const current = row.querySelector('.update-current');
+  if (!button || !current) return;
   const latest = slotLatestVersions.get(slotCatalogKey(row.dataset.slotEdition));
-  const outdated = latest && appCompareVersions(row.dataset.slotVersion, latest.version) < 0;
+  const comparison = latest ? appCompareVersions(row.dataset.slotVersion, latest.version) : null;
+  const outdated = comparison !== null && comparison < 0;
+  const upToDate = comparison === 0;
   button.hidden = !outdated;
+  current.hidden = !upToDate;
+  current.textContent = upToDate ? t('updateCurrent') : '';
   button.disabled = !outdated || !serialSupported || slotUpdateDownloadPending || Boolean(activeOperationToken);
   if (outdated) {
     const label = t('appUpdateAction', `v${latest.version}`);
@@ -2816,7 +2821,7 @@ function slotBuildTable() {
       `<td class="slot-idx">${s}</td>` +
       `<td class="slot-name">—</td>` +
       `<td class="slot-version">—</td>` +
-      `<td class="slot-update-cell"></td>` +
+      `<td class="slot-update-cell"><span class="update-current" hidden></span></td>` +
       `<td class="slot-size">—</td>` +
       `<td><span class="slot-state">—</span></td>` +
       `<td class="slot-actions"></td>`;
@@ -3349,13 +3354,18 @@ function appRenderRowState(row) {
 
 function appRenderUpdateIndicator(row) {
   const button = row.querySelector('.app-update-button');
-  if (!button) return;
+  const current = row.querySelector('.update-current');
+  if (!button || !current) return;
   const latest = appCompatibilityKnown
     ? appCompatibleVersions.get(appCatalogKey(row.dataset.appName))
     : null;
-  const outdated = latest && appCompareVersions(row.dataset.appVersion, latest.version) < 0;
+  const comparison = latest ? appCompareVersions(row.dataset.appVersion, latest.version) : null;
+  const outdated = comparison !== null && comparison < 0;
+  const upToDate = comparison === 0 && !appHasFirmwareMismatch(row);
   row.classList.toggle('app-outdated', Boolean(outdated));
   button.hidden = !outdated;
+  current.hidden = !upToDate;
+  current.textContent = upToDate ? t('updateCurrent') : '';
   if (outdated) {
     const label = t('appUpdateAction', latest.version);
     button.textContent = label;
@@ -3388,7 +3398,7 @@ function appBuildTable() {
       `<td class="slot-idx">${appSlotLabel(s)}</td>` +
       `<td class="slot-name">—</td>` +
       `<td class="slot-version"><span class="slot-version-value">—</span></td>` +
-      `<td class="app-update-cell"></td>` +
+      `<td class="app-update-cell"><span class="update-current" hidden></span></td>` +
       `<td class="slot-size">—</td>` +
       `<td><span class="slot-state">—</span></td>` +
       `<td class="slot-actions"></td>`;

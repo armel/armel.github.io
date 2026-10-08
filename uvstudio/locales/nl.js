@@ -302,6 +302,7 @@ window.UVSTUDIO_LOCALES.nl = {
   "app_catalog_or": "of laad een lokaal bestand",
   "appColName": "Name",
   "appColUpdate": "Update",
+  "updateCurrent": "Actueel",
   "appColSize": "Size",
   "appsRefresh": "Refresh apps",
   "appFileLabel": "App file (.app)",

@@ -302,6 +302,7 @@ window.UVSTUDIO_LOCALES.ru = {
   "app_catalog_or": "или загрузите локальный файл",
   "appColName": "Name",
   "appColUpdate": "Обновление",
+  "updateCurrent": "Актуально",
   "appColSize": "Size",
   "appsRefresh": "Refresh apps",
   "appFileLabel": "App file (.app)",

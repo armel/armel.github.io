@@ -302,6 +302,7 @@ window.UVSTUDIO_LOCALES.zh = {
   "app_catalog_or": "或加载本地文件",
   "appColName": "Name",
   "appColUpdate": "更新",
+  "updateCurrent": "已是最新",
   "appColSize": "Size",
   "appsRefresh": "Refresh apps",
   "appFileLabel": "App file (.app)",

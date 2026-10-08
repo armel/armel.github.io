@@ -644,6 +644,20 @@
 #pane-tools .slots-table .slot-update-cell {
   min-width: 150px;
 }
+#pane-tools .slots-table .update-current {
+  display: inline-block;
+  padding: 3px 9px;
+  border: 1px solid color-mix(in oklab, var(--success) 45%, var(--border));
+  border-radius: 999px;
+  color: var(--success);
+  background: color-mix(in oklab, var(--success) 12%, transparent);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+#pane-tools .slots-table .update-current[hidden] {
+  display: none;
+}
 [data-theme="dark"] #pane-tools .slots-table button.app-update-button,
 [data-theme="dark"] #pane-tools .slots-table button.slot-update-button {
   color: #60a5fa;

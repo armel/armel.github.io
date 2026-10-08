@@ -302,6 +302,7 @@ window.UVSTUDIO_LOCALES.de = {
   "app_catalog_or": "oder eine lokale Datei laden",
   "appColName": "Name",
   "appColUpdate": "Update",
+  "updateCurrent": "Aktuell",
   "appColSize": "Size",
   "appsRefresh": "Refresh apps",
   "appFileLabel": "App file (.app)",

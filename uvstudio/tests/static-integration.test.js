@@ -147,6 +147,7 @@ test('offers one-click updates for outdated multiboot firmware slots', () => {
   assert.ok(slotsTable.indexOf('data-i18n="slotColVersion"') < slotsTable.indexOf('data-i18n="appColUpdate"'));
   assert.ok(slotsTable.indexOf('data-i18n="appColUpdate"') < slotsTable.indexOf('data-i18n="slotColSize"'));
   assert.match(flashSource, /className = 'slot-update-button'/);
+  assert.match(flashSource, /class="slot-update-cell"><span class="update-current" hidden/);
   assert.match(flashSource, /async function slotUpdateFlow/);
   assert.match(flashSource, /await slotWriteFlow\(\)/);
   assert.match(flashSource, /uvstudio:slotcatalogversions/);
@@ -169,10 +170,12 @@ test('marks an installed app only when the catalog has a newer version', () => {
   assert.equal(context.compare('development', '1.0.0'), null);
   assert.match(flashSource, /uvstudio:appcatalogversions/);
   assert.match(flashSource, /className = 'app-update-button'/);
+  assert.match(flashSource, /class="app-update-cell"><span class="update-current" hidden/);
   assert.match(flashSource, /await appInstallFlow\(\)/);
   assert.ok(html.indexOf('data-i18n="slotColVersion"') < html.indexOf('data-i18n="appColUpdate"'));
   assert.ok(html.indexOf('data-i18n="appColUpdate"') < html.indexOf('data-i18n="appColSize"'));
   assert.match(toolsCss, /\.app-update-button/);
+  assert.match(toolsCss, /\.update-current/);
 });
 
 test('checks installed apps against the detected Labs catalog', () => {
