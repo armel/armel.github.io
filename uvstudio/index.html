@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="assets/uv-studio-radio.svg">
 <link href="css/core.css?v=4" rel="stylesheet">
 <link href="css/viewer.css?v=13" rel="stylesheet">
-<link href="css/tools.css?v=18" rel="stylesheet">
+<link href="css/tools.css?v=21" rel="stylesheet">
 <link href="css/studio.css?v=25" rel="stylesheet">
 </head>
 <body data-theme="light">
@@ -375,37 +375,59 @@
               </div>
               <div class="action-view" id="logo-upload-content" role="tabpanel" aria-labelledby="logo-upload-tab" data-action-panel="upload" hidden>
                 <section class="section">
-                    <p class="tab-description" id="logoUploadDescription">Upload a custom 128x64 boot logo to your device. Any image format is accepted (PNG, JPG, BMP, etc.).</p>
+                    <p class="tab-description" id="logoUploadDescription">Upload a custom 128x64 boot logo. Choose an image or a 1024/1032-byte logo bitmap (.bin).</p>
                 </section>
                 <section class="section" aria-labelledby="labelLogoFile">
-                    <label id="labelLogoFile" for="logoFile">Image File</label>
+                    <label id="labelLogoFile" for="logoFile">Image or logo bitmap (.bin)</label>
                     <div class="file-input-wrapper">
-                        <input type="file" id="logoFile" accept="image/*" />
+                        <input type="file" id="logoFile" accept="image/*,.bin" />
                         <div class="file-input-label" id="logoFileLabel">
                             <span class="file-name" id="logoFileName">No file selected</span>
                             <span class="file-button" id="logoFileButton">Choose file</span>
                         </div>
                     </div>
                 </section>
-                <section class="section logo-controls" id="logoControls" hidden>
-                    <label for="logoThreshold"><span id="labelLogoThreshold">Threshold</span>: <span id="logoThresholdValue">128</span></label>
-                    <input type="range" id="logoThreshold" min="0" max="255" value="128" />
-                    <label class="logo-checkbox-label"><input type="checkbox" id="logoInvert" /><span id="labelLogoInvert">Invert colors</span></label>
+                <section class="section logo-controls" id="logoControls">
+                    <div class="logo-editor-settings">
+                        <label for="logoThreshold"><span id="labelLogoThreshold">Threshold</span>: <span id="logoThresholdValue">128</span></label>
+                        <input type="range" id="logoThreshold" min="0" max="255" value="128" disabled />
+                        <label class="logo-checkbox-label"><input type="checkbox" id="logoInvert" disabled /><span id="labelLogoInvert">Invert colors</span></label>
+                    </div>
+                    <div class="logo-editor-toolbar" role="toolbar" aria-label="Drawing tools" data-i18n-aria-label="logoEditorTools">
+                        <button type="button" class="btn logo-tool active" data-logo-tool="pencil" aria-pressed="true" data-i18n="logoToolPencil">Pencil</button>
+                        <button type="button" class="btn logo-tool" data-logo-tool="eraser" aria-pressed="false" data-i18n="logoToolEraser">Eraser</button>
+                        <button type="button" class="btn logo-tool" data-logo-tool="line" aria-pressed="false" data-i18n="logoToolLine">Line</button>
+                        <button type="button" class="btn logo-tool" data-logo-tool="rectangle" aria-pressed="false" data-i18n="logoToolRectangle">Rectangle</button>
+                        <button type="button" class="btn logo-tool" data-logo-tool="ellipse" aria-pressed="false" data-i18n="logoToolEllipse">Ellipse</button>
+                        <button type="button" class="btn logo-tool" data-logo-tool="fill" aria-pressed="false" data-i18n="logoToolFill">Fill</button>
+                    </div>
+                    <div class="logo-editor-toolbar logo-editor-actions" role="toolbar" aria-label="Edit actions" data-i18n-aria-label="logoEditorActions">
+                        <button type="button" class="btn" id="logoUndoBtn" disabled data-i18n="logoUndo">Undo</button>
+                        <button type="button" class="btn" id="logoRedoBtn" disabled data-i18n="logoRedo">Redo</button>
+                        <button type="button" class="btn" id="logoGridBtn" aria-pressed="false" data-i18n="logoGrid">Grid</button>
+                        <button type="button" class="btn" id="logoClearBtn" data-i18n="logoClear">Clear</button>
+                    </div>
                     <div class="logo-preview-wrapper">
                         <span id="labelLogoPreview" class="logo-preview-label">Preview (128x64):</span>
-                        <canvas id="logoPreviewCanvas" width="128" height="64" class="logo-canvas" role="img" aria-labelledby="labelLogoPreview"></canvas>
+                        <div id="logoCanvasFrame" class="logo-canvas-frame">
+                            <canvas id="logoPreviewCanvas" width="128" height="64" class="logo-canvas logo-editor-canvas" role="img" aria-labelledby="labelLogoPreview" tabindex="0"></canvas>
+                        </div>
                     </div>
+                    <p class="logo-editor-hint" data-i18n="logoEditorHint">Draw directly on the enlarged pixel canvas. Hold Shift while using Ellipse to draw a circle.</p>
                 </section>
                 <button id="logoUploadBtn" disabled aria-live="polite">Upload logo to radio</button>
               </div>
 
               <div class="action-view active" id="logo-dump-content" role="tabpanel" aria-labelledby="logo-download-tab" data-action-panel="download">
                 <section class="section">
-                    <p class="tab-description" id="logoDumpDescription">Read the current boot logo from your radio, then download it as a PNG.</p>
+                    <p class="tab-description" id="logoDumpDescription">Read the current boot logo, then download it as a PNG preview or device-ready bitmap.</p>
                     <div class="output-actions">
                         <button id="logoDumpBtn">Read logo from radio</button>
                         <div class="download-link" id="logoDumpDownload">
                             <a href="#" id="logoDumpLink" download="logo.png"><svg class="dl-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="logoDumpDownloadText">Download logo.png</span></a>
+                        </div>
+                        <div class="download-link" id="logoDumpRawDownload">
+                            <a href="#" id="logoDumpRawLink" download="logo.bin"><svg class="dl-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="logoDumpRawDownloadText">Download logo.bin</span></a>
                         </div>
                     </div>
                 </section>
@@ -772,23 +794,24 @@
 </div>
 
 <!-- ═══════════ Scripts (all local, file://-friendly) ═══════════ -->
-<script src="locales/en.js?v=47"></script>
-<script src="locales/fr.js?v=47"></script>
-<script src="locales/it.js?v=47"></script>
-<script src="locales/es.js?v=47"></script>
-<script src="locales/de.js?v=47"></script>
-<script src="locales/pt.js?v=47"></script>
-<script src="locales/ru.js?v=47"></script>
-<script src="locales/pl.js?v=47"></script>
-<script src="locales/zh.js?v=47"></script>
-<script src="locales/nl.js?v=47"></script>
+<script src="locales/en.js?v=50"></script>
+<script src="locales/fr.js?v=50"></script>
+<script src="locales/it.js?v=50"></script>
+<script src="locales/es.js?v=50"></script>
+<script src="locales/de.js?v=50"></script>
+<script src="locales/pt.js?v=50"></script>
+<script src="locales/ru.js?v=50"></script>
+<script src="locales/pl.js?v=50"></script>
+<script src="locales/zh.js?v=50"></script>
+<script src="locales/nl.js?v=50"></script>
 <script src="js/studio-preferences.js?v=1"></script>
 <script src="js/studio-i18n.js?v=4"></script>
 <script src="js/studio-serial.js?v=2"></script>
 <script src="js/rf-log.js?v=4"></script>
     <script src="js/k5viewer.js?v=31"></script>
 <script src="js/keypad-detach.js?v=1"></script>
-<script src="js/flash.js?v=38"></script>
+<script src="js/logo-editor.js?v=4"></script>
+<script src="js/flash.js?v=42"></script>
 <script src="js/flash-catalog.js?v=17"></script>
 <script src="js/app-catalog.js?v=1"></script>
 <script src="js/studio.js?v=18"></script>

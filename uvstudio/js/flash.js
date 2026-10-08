@@ -152,7 +152,11 @@ let slotRefreshPending = false;
 
 // Logo state
 let logoSourceImage = null;       // HTMLImageElement of the user-picked file
-let logoBitmap = null;            // Uint8Array(1024) ST7565-native, after threshold/invert
+let logoBitmap = null;            // Uint8Array(1024) ST7565-native, ready for upload
+let logoSelectedFileName = '';
+let logoDumpPngUrl = null;
+let logoDumpRawUrl = null;
+const logoModel = window.UVStudioLogoEditor.createModel({ historyLimit: 50 });
 
 // ========== UI ELEMENTS ==========
 const flashBtn = document.getElementById('flashBtn');
@@ -212,17 +216,24 @@ const logoFileInput = document.getElementById('logoFile');
 const logoFileLabel = document.getElementById('logoFileLabel');
 const logoFileName = document.getElementById('logoFileName');
 const logoFileButton = document.getElementById('logoFileButton');
-const logoControls = document.getElementById('logoControls');
 const logoThresholdInput = document.getElementById('logoThreshold');
 const logoThresholdValue = document.getElementById('logoThresholdValue');
 const logoInvertInput = document.getElementById('logoInvert');
 const logoPreviewCanvas = document.getElementById('logoPreviewCanvas');
+const logoCanvasFrame = document.getElementById('logoCanvasFrame');
+const logoToolButtons = Array.from(document.querySelectorAll('[data-logo-tool]'));
+const logoUndoBtn = document.getElementById('logoUndoBtn');
+const logoRedoBtn = document.getElementById('logoRedoBtn');
+const logoGridBtn = document.getElementById('logoGridBtn');
+const logoClearBtn = document.getElementById('logoClearBtn');
 const logoUploadBtn = document.getElementById('logoUploadBtn');
 const logoDumpBtn = document.getElementById('logoDumpBtn');
 const logoDumpDownload = document.getElementById('logoDumpDownload');
 const logoDumpResult = document.getElementById('logoDumpResult');
 const logoDumpedCanvas = document.getElementById('logoDumpedCanvas');
 const logoDumpLink = document.getElementById('logoDumpLink');
+const logoDumpRawDownload = document.getElementById('logoDumpRawDownload');
+const logoDumpRawLink = document.getElementById('logoDumpRawLink');
 
 // Firmware Slots (multiboot) UI
 const slotFileInput = document.getElementById('slotFile');
@@ -322,6 +333,7 @@ function refreshLocalizedToolsState() {
   const logoDumpDesc = document.getElementById('logoDumpDescription');
   const logoDumpedLabel = document.getElementById('logoDumpedLabel');
   const logoDumpDownloadText = document.getElementById('logoDumpDownloadText');
+  const logoDumpRawDownloadText = document.getElementById('logoDumpRawDownloadText');
   if (labelLogoFile) labelLogoFile.textContent = t('labelLogoFile');
   if (labelLogoThreshold) labelLogoThreshold.textContent = t('labelLogoThreshold');
   if (labelLogoInvert) labelLogoInvert.textContent = t('labelLogoInvert');
@@ -330,10 +342,11 @@ function refreshLocalizedToolsState() {
   if (logoDumpDesc) logoDumpDesc.textContent = t('logoDumpDescription');
   if (logoDumpedLabel) logoDumpedLabel.textContent = t('logoDumpedLabel');
   if (logoDumpDownloadText) logoDumpDownloadText.textContent = t('logoDumpDownloadText');
+  if (logoDumpRawDownloadText) logoDumpRawDownloadText.textContent = t('logoDumpRawDownloadText');
   if (logoUploadBtn) logoUploadBtn.textContent = t('logoUploadBtn');
   if (logoDumpBtn) logoDumpBtn.textContent = t('logoDumpBtn');
   if (logoFileButton) logoFileButton.textContent = t('fileChoose');
-  if (logoFileName && !logoSourceImage) {
+  if (logoFileName && !logoSelectedFileName) {
     logoFileName.textContent = t('fileNoFile');
     logoFileName.classList.remove('has-file');
     if (logoFileLabel) logoFileLabel.classList.remove('has-file');
@@ -2156,56 +2169,226 @@ function bitmapToCanvas(bitmap, canvas) {
   ctx.putImageData(imgData, 0, 0);
 }
 
-// Refresh preview canvas from current source image + slider/checkbox state.
+function renderLogoEditor(markReady = true) {
+  const bitmap = logoModel.toBitmap();
+  if (markReady) logoBitmap = bitmap;
+  if (logoPreviewCanvas) bitmapToCanvas(bitmap, logoPreviewCanvas);
+  if (logoUndoBtn) logoUndoBtn.disabled = !logoModel.canUndo();
+  if (logoRedoBtn) logoRedoBtn.disabled = !logoModel.canRedo();
+  updateLogoUploadButton();
+}
+
+// Refresh the editable canvas from the current source image and import settings.
 function refreshLogoPreview() {
   if (!logoSourceImage) return;
   const threshold = parseInt(logoThresholdInput.value, 10);
   const invert = logoInvertInput.checked;
-  logoBitmap = imageToLogoBitmap(logoSourceImage, threshold, invert);
-  if (logoPreviewCanvas) bitmapToCanvas(logoBitmap, logoPreviewCanvas);
-  updateLogoUploadButton();
+  logoModel.loadBitmap(imageToLogoBitmap(logoSourceImage, threshold, invert));
+  renderLogoEditor();
 }
 
 function updateLogoUploadButton() {
   updateActionButtons();
 }
 
+function setLogoSelectedFile(fileName) {
+  logoSelectedFileName = fileName;
+  if (logoFileName) {
+    logoFileName.textContent = fileName;
+    logoFileName.classList.add('has-file');
+  }
+  if (logoFileLabel) logoFileLabel.classList.add('has-file');
+}
+
+function decodeLogoImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error || new Error('Failed to read image'));
+    reader.onload = event => {
+      const image = new Image();
+      image.onerror = () => reject(new Error('Failed to decode image'));
+      image.onload = () => resolve(image);
+      image.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+const logoFileLoader = window.UVStudioLogoEditor.createLogoFileLoader({
+  decodeImage: decodeLogoImageFile,
+  onStart: file => {
+    logoSourceImage = null;
+    logoBitmap = null;
+    setLogoSelectedFile(file.name);
+    if (logoThresholdInput) logoThresholdInput.disabled = true;
+    if (logoInvertInput) logoInvertInput.disabled = true;
+    updateLogoUploadButton();
+  },
+  onSuccess: (source, file) => {
+    if (source.kind === 'bitmap') {
+      logoModel.loadBitmap(source.bitmap);
+      renderLogoEditor();
+      log(t('logoRawLoaded', file.name), 'success');
+      return;
+    }
+    logoSourceImage = source.image;
+    if (logoThresholdInput) logoThresholdInput.disabled = false;
+    if (logoInvertInput) logoInvertInput.disabled = false;
+    log(t('logoLoaded', file.name), 'success');
+    refreshLogoPreview();
+  },
+  onError: (error, _file, kind) => {
+    if (kind === 'bitmap') log(t('logoRawInvalid', error?.message ?? String(error)), 'error');
+    else log(t('logoDecodeError'), 'error');
+  }
+});
+
 // ========== LOGO: FILE INPUT + LIVE PREVIEW ==========
 if (logoFileInput) {
-  logoFileInput.addEventListener('change', (e) => {
+  logoFileInput.addEventListener('change', e => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const fr = new FileReader();
-    fr.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => {
-        logoSourceImage = img;
-        if (logoFileName) {
-          logoFileName.textContent = file.name;
-          logoFileName.classList.add('has-file');
-        }
-        if (logoFileLabel) logoFileLabel.classList.add('has-file');
-        if (logoControls) logoControls.hidden = false;
-        log(t('logoLoaded', file.name), 'success');
-        refreshLogoPreview();
-      };
-      img.onerror = () => log(t('logoDecodeError'), 'error');
-      img.src = ev.target.result;
-    };
-    fr.readAsDataURL(file);
+    void logoFileLoader.load(file);
   });
 }
 
 if (logoThresholdInput) {
+  logoThresholdInput.addEventListener('pointerdown', () => logoModel.beginAction());
   logoThresholdInput.addEventListener('input', () => {
     if (logoThresholdValue) logoThresholdValue.textContent = logoThresholdInput.value;
     refreshLogoPreview();
+  });
+  logoThresholdInput.addEventListener('change', () => {
+    logoModel.commitAction();
+    renderLogoEditor();
   });
 }
 
 if (logoInvertInput) {
   logoInvertInput.addEventListener('change', refreshLogoPreview);
 }
+
+const logoInteraction = window.UVStudioLogoEditor.createInteraction(logoModel, () => {
+  renderLogoEditor();
+});
+let logoPointerId = null;
+let logoPointerPoint = null;
+let logoPointerConstrain = false;
+let logoActiveTool = 'pencil';
+
+function logoPointFromEvent(event) {
+  const rect = logoPreviewCanvas.getBoundingClientRect();
+  return {
+    x: Math.max(0, Math.min(LOGO_WIDTH - 1, Math.floor((event.clientX - rect.left) * LOGO_WIDTH / rect.width))),
+    y: Math.max(0, Math.min(LOGO_HEIGHT - 1, Math.floor((event.clientY - rect.top) * LOGO_HEIGHT / rect.height)))
+  };
+}
+
+logoToolButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    const tool = button.dataset.logoTool;
+    logoActiveTool = tool;
+    logoInteraction.setTool(tool);
+    logoToolButtons.forEach(candidate => {
+      const selected = candidate === button;
+      candidate.classList.toggle('active', selected);
+      candidate.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
+    logoPreviewCanvas?.focus({ preventScroll: true });
+  });
+});
+
+if (logoPreviewCanvas) {
+  logoPreviewCanvas.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || logoPointerId !== null) return;
+    event.preventDefault();
+    logoPointerId = event.pointerId;
+    logoPointerPoint = logoPointFromEvent(event);
+    logoPointerConstrain = event.shiftKey;
+    logoPreviewCanvas.setPointerCapture(event.pointerId);
+    logoPreviewCanvas.focus({ preventScroll: true });
+    logoInteraction.pointerDown(logoPointerPoint.x, logoPointerPoint.y);
+  });
+
+  logoPreviewCanvas.addEventListener('pointermove', event => {
+    if (event.pointerId !== logoPointerId) return;
+    event.preventDefault();
+    logoPointerPoint = logoPointFromEvent(event);
+    logoPointerConstrain = event.shiftKey;
+    logoInteraction.pointerMove(logoPointerPoint.x, logoPointerPoint.y, { constrain: logoPointerConstrain });
+  });
+
+  const finishLogoPointer = event => {
+    if (event.pointerId !== logoPointerId) return;
+    event.preventDefault();
+    logoPointerPoint = event.type === 'pointercancel'
+      ? logoPointerPoint
+      : logoPointFromEvent(event);
+    if (event.type !== 'pointercancel') logoPointerConstrain = event.shiftKey;
+    if (logoPointerPoint) {
+      logoInteraction.pointerUp(logoPointerPoint.x, logoPointerPoint.y, { constrain: logoPointerConstrain });
+    }
+    if (logoPreviewCanvas.hasPointerCapture(event.pointerId)) {
+      logoPreviewCanvas.releasePointerCapture(event.pointerId);
+    }
+    logoPointerId = null;
+    logoPointerPoint = null;
+    logoPointerConstrain = false;
+  };
+
+  logoPreviewCanvas.addEventListener('pointerup', finishLogoPointer);
+  logoPreviewCanvas.addEventListener('pointercancel', finishLogoPointer);
+  logoPreviewCanvas.addEventListener('contextmenu', event => event.preventDefault());
+  logoPreviewCanvas.addEventListener('keydown', event => {
+    if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'z') return;
+    event.preventDefault();
+    if (event.shiftKey) logoModel.redo();
+    else logoModel.undo();
+    renderLogoEditor();
+  });
+}
+
+function refreshLogoEllipseConstraint(event) {
+  if (event.key !== 'Shift' || logoPointerId === null || logoActiveTool !== 'ellipse' || !logoPointerPoint) return;
+  logoPointerConstrain = event.type === 'keydown';
+  logoInteraction.pointerMove(logoPointerPoint.x, logoPointerPoint.y, { constrain: logoPointerConstrain });
+}
+
+window.addEventListener('keydown', refreshLogoEllipseConstraint);
+window.addEventListener('keyup', refreshLogoEllipseConstraint);
+
+if (logoUndoBtn) {
+  logoUndoBtn.addEventListener('click', () => {
+    logoModel.undo();
+    renderLogoEditor();
+  });
+}
+
+if (logoRedoBtn) {
+  logoRedoBtn.addEventListener('click', () => {
+    logoModel.redo();
+    renderLogoEditor();
+  });
+}
+
+if (logoGridBtn) {
+  logoGridBtn.addEventListener('click', () => {
+    const visible = !logoCanvasFrame.classList.contains('show-grid');
+    logoCanvasFrame.classList.toggle('show-grid', visible);
+    logoGridBtn.classList.toggle('active', visible);
+    logoGridBtn.setAttribute('aria-pressed', visible ? 'true' : 'false');
+    logoPreviewCanvas?.focus({ preventScroll: true });
+  });
+}
+
+if (logoClearBtn) {
+  logoClearBtn.addEventListener('click', () => {
+    logoModel.clear();
+    renderLogoEditor();
+  });
+}
+
+renderLogoEditor(false);
 
 // ========== LOGO: UPLOAD ==========
 if (logoUploadBtn) {
@@ -2298,6 +2481,7 @@ if (logoDumpBtn) {
     if (progressContainer) progressContainer.style.display = 'block';
     updateProgress(0);
     if (logoDumpDownload) logoDumpDownload.style.display = 'none';
+    if (logoDumpRawDownload) logoDumpRawDownload.style.display = 'none';
     if (logoDumpResult) logoDumpResult.hidden = true;
 
     try {
@@ -2357,13 +2541,22 @@ if (logoDumpBtn) {
 
       // Extract bitmap and render
       const bitmap = dumped.slice(LOGO_HEADER_SIZE, LOGO_HEADER_SIZE + LOGO_BITMAP_SIZE);
+      const rawFile = window.UVStudioLogoEditor.encodeLogoFile(bitmap);
+      if (logoDumpRawUrl) URL.revokeObjectURL(logoDumpRawUrl);
+      logoDumpRawUrl = URL.createObjectURL(new Blob([rawFile], { type: 'application/octet-stream' }));
+      if (logoDumpRawLink) {
+        logoDumpRawLink.href = logoDumpRawUrl;
+        logoDumpRawLink.download = 'logo.bin';
+      }
+      if (logoDumpRawDownload) logoDumpRawDownload.style.display = 'flex';
       if (logoDumpedCanvas) {
         bitmapToCanvas(bitmap, logoDumpedCanvas);
         logoDumpedCanvas.toBlob((blob) => {
           if (!blob) return;
-          const url = URL.createObjectURL(blob);
+          if (logoDumpPngUrl) URL.revokeObjectURL(logoDumpPngUrl);
+          logoDumpPngUrl = URL.createObjectURL(blob);
           if (logoDumpLink) {
-            logoDumpLink.href = url;
+            logoDumpLink.href = logoDumpPngUrl;
             logoDumpLink.download = 'logo.png';
           }
           if (logoDumpDownload) logoDumpDownload.style.display = 'flex';

@@ -503,10 +503,54 @@
   border-radius: var(--radius);
 }
 
-#pane-tools .logo-controls input[type="range"] {
+#pane-tools .logo-editor-settings {
+  display: grid;
+  grid-template-columns: minmax(90px, auto) minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 10px 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+#pane-tools .logo-editor-settings > label {
+  margin-bottom: 0;
+}
+
+#pane-tools .logo-editor-settings input[type="range"] {
   width: 100%;
   accent-color: var(--accent);
   cursor: pointer;
+}
+
+#pane-tools .logo-editor-settings input:disabled {
+  cursor: not-allowed;
+}
+
+#pane-tools .logo-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#pane-tools .logo-editor-toolbar .btn {
+  min-height: 36px;
+  padding: 7px 12px;
+}
+
+#pane-tools .logo-editor-toolbar .logo-tool.active,
+#pane-tools .logo-editor-actions .btn.active {
+  color: #ffffff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+#pane-tools .logo-editor-actions {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+#pane-tools .logo-editor-actions #logoClearBtn {
+  margin-left: auto;
 }
 
 #pane-tools .logo-checkbox-label {
@@ -540,19 +584,74 @@
 }
 
 #pane-tools .logo-canvas {
+  display: block;
   width: 512px;
   max-width: 100%;
   height: auto;
-  /* Physical aspect ratio of the ST7565 LCD on UV-K5/K1 (~22x12 mm panel),
-     not the logical 128/64=2.0. Pixels render slightly taller than wide,
-     matching what the user actually sees on the radio. */
-  aspect-ratio: 22 / 16;
+  aspect-ratio: 2 / 1;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: var(--shadow);
+}
+
+#pane-tools .logo-canvas-frame {
+  position: relative;
+  width: 512px;
+  max-width: 100%;
+  aspect-ratio: 2 / 1;
+}
+
+#pane-tools .logo-canvas-frame .logo-canvas {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+}
+
+#pane-tools .logo-canvas-frame.show-grid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--accent) 28%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--accent) 28%, transparent) 1px, transparent 1px);
+  background-size: calc(100% / 128) 100%, 100% calc(100% / 64);
+}
+
+#pane-tools .logo-editor-canvas {
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+
+#pane-tools .logo-editor-canvas:focus-visible {
+  outline: 3px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  outline-offset: 3px;
+}
+
+#pane-tools .logo-editor-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  #pane-tools .logo-editor-settings {
+    grid-template-columns: 1fr;
+  }
+
+  #pane-tools .logo-editor-toolbar .btn {
+    flex: 1 1 calc(33.333% - 8px);
+  }
+
+  #pane-tools .logo-editor-actions #logoClearBtn {
+    margin-left: 0;
+  }
 }
 
 /* ---------- Accessibility helpers ---------- */

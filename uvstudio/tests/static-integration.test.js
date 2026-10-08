@@ -235,6 +235,57 @@ test('orders logo actions from radio read to radio write', () => {
   assert.deepEqual(routes, ['download-logo', 'upload-logo']);
 });
 
+test('loads the boot-logo editor before the serial upload controller', () => {
+  const editor = html.indexOf('js/logo-editor.js');
+  const flash = html.indexOf('js/flash.js');
+  assert.ok(editor > 0 && editor < flash);
+});
+
+test('offers the complete boot-logo editing toolbar on a 128 by 64 canvas', () => {
+  assert.match(html, /id="logoPreviewCanvas" width="128" height="64"/);
+  ['pencil', 'eraser', 'line', 'rectangle', 'ellipse', 'fill'].forEach(tool => {
+    assert.match(html, new RegExp(`data-logo-tool="${tool}"`));
+  });
+  ['logoUndoBtn', 'logoRedoBtn', 'logoClearBtn'].forEach(id => {
+    assert.match(html, new RegExp(`id="${id}"`));
+  });
+});
+
+test('keeps threshold, invert and edit actions in one logo editor panel', () => {
+  const start = html.indexOf('id="logoControls"');
+  const end = html.indexOf('id="logoUploadBtn"', start);
+  const panel = html.slice(start, end);
+  assert.match(panel, /id="logoThreshold"/);
+  assert.match(panel, /id="logoInvert"/);
+  assert.match(panel, /id="logoUndoBtn"/);
+  assert.doesNotMatch(html, /id="logoImportControls"/);
+  assert.doesNotMatch(html, /id="logoInvertBtn"/);
+});
+
+test('offers a visual-only pixel grid overlay', () => {
+  assert.match(html, /id="logoGridBtn"[^>]*aria-pressed="false"/);
+  assert.match(html, /id="logoCanvasFrame"[^>]*class="logo-canvas-frame"/);
+  assert.match(toolsCss, /\.logo-canvas-frame\.show-grid::after\s*\{/);
+  assert.match(toolsCss, /pointer-events:\s*none/);
+});
+
+test('renders logical logo pixels as squares', () => {
+  assert.match(toolsCss, /\.logo-canvas\s*\{[^}]*aspect-ratio:\s*2\s*\/\s*1/s);
+  assert.match(toolsCss, /\.logo-canvas-frame\s*\{[^}]*aspect-ratio:\s*2\s*\/\s*1/s);
+});
+
+test('imports native logo bitmap files through the existing picker', () => {
+  assert.match(html, /id="logoFile"[^>]*accept="image\/\*,\.bin"/);
+  assert.match(flashSource, /createLogoFileLoader\(\{/);
+  assert.match(flashSource, /void logoFileLoader\.load\(file\)/);
+});
+
+test('exports the radio-ready logo bitmap beside the PNG preview', () => {
+  assert.match(html, /id="logoDumpRawDownload"/);
+  assert.match(html, /id="logoDumpRawLink"[^>]*download="logo\.bin"/);
+  assert.match(flashSource, /encodeLogoFile\(bitmap\)/);
+});
+
 test('keeps generated-file downloads beside their read actions', () => {
   [
     ['dumpBtn', 'dumpDownload'],

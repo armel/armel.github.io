@@ -15,7 +15,7 @@ No installation, server, dependency, or build step is required.
 - RF activity log with live entries, session markers, and analytics
 - Firmware flashing from a local binary file or a URL
 - Back up and restore radio calibration data
-- Upload and download custom 128 × 64 boot logos
+- Draw, edit, upload, and download custom 128 × 64 boot logos
 - Export the latest RF Log activities as CSV
 - Light and dark themes
 - Global serial connection and operation status
