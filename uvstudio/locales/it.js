@@ -125,6 +125,7 @@ window.UVSTUDIO_LOCALES.it = {
   "logoToolRectangle": "Rettangolo",
   "logoToolEllipse": "Ellisse",
   "logoToolFill": "Riempi",
+  "logoStrokeWidth": "Spessore",
   "logoUndo": "Annulla",
   "logoRedo": "Ripristina",
   "logoGrid": "Griglia",

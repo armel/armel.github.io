@@ -125,6 +125,7 @@ window.UVSTUDIO_LOCALES.pl = {
   "logoToolRectangle": "Prostokąt",
   "logoToolEllipse": "Elipsa",
   "logoToolFill": "Wypełnij",
+  "logoStrokeWidth": "Grubość",
   "logoUndo": "Cofnij",
   "logoRedo": "Ponów",
   "logoGrid": "Siatka",

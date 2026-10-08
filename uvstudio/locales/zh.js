@@ -125,6 +125,7 @@ window.UVSTUDIO_LOCALES.zh = {
   "logoToolRectangle": "矩形",
   "logoToolEllipse": "椭圆",
   "logoToolFill": "填充",
+  "logoStrokeWidth": "线条粗细",
   "logoUndo": "撤销",
   "logoRedo": "重做",
   "logoGrid": "像素网格",

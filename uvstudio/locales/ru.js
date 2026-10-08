@@ -125,6 +125,7 @@ window.UVSTUDIO_LOCALES.ru = {
   "logoToolRectangle": "Прямоугольник",
   "logoToolEllipse": "Эллипс",
   "logoToolFill": "Заливка",
+  "logoStrokeWidth": "Толщина",
   "logoUndo": "Отменить",
   "logoRedo": "Повторить",
   "logoGrid": "Сетка",

@@ -103,10 +103,14 @@
 
   function createModel(options = {}) {
     const pixels = new Uint8Array(WIDTH * HEIGHT);
+    const sourcePixels = new Uint8Array(WIDTH * HEIGHT);
+    const overrides = new Int8Array(WIDTH * HEIGHT);
+    overrides.fill(-1);
     const historyLimit = Math.max(1, Number(options.historyLimit) || 50);
     const undoStack = [];
     const redoStack = [];
     let actionBase = null;
+    let actionManual = false;
 
     function inBounds(x, y) {
       return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT;
@@ -115,12 +119,32 @@
     function rawSetPixel(x, y, on) {
       x = Math.round(x);
       y = Math.round(y);
-      if (inBounds(x, y)) pixels[(y * WIDTH) + x] = on ? 1 : 0;
+      if (!inBounds(x, y)) return;
+      const index = (y * WIDTH) + x;
+      const value = on ? 1 : 0;
+      pixels[index] = value;
+      if (actionManual) overrides[index] = value;
+      else sourcePixels[index] = value;
     }
 
-    function beginAction() {
+    function snapshot() {
+      return {
+        pixels: pixels.slice(),
+        sourcePixels: sourcePixels.slice(),
+        overrides: overrides.slice()
+      };
+    }
+
+    function restoreSnapshot(state) {
+      pixels.set(state.pixels);
+      sourcePixels.set(state.sourcePixels);
+      overrides.set(state.overrides);
+    }
+
+    function beginAction(options = {}) {
       if (actionBase) return false;
-      actionBase = pixels.slice();
+      actionBase = snapshot();
+      actionManual = options.manual === true;
       return true;
     }
 
@@ -131,11 +155,18 @@
       return true;
     }
 
+    function sameState(left, right) {
+      return samePixels(left.pixels, right.pixels)
+        && samePixels(left.sourcePixels, right.sourcePixels)
+        && samePixels(left.overrides, right.overrides);
+    }
+
     function commitAction() {
       if (!actionBase) return false;
       const before = actionBase;
       actionBase = null;
-      if (samePixels(before, pixels)) return false;
+      actionManual = false;
+      if (sameState(before, snapshot())) return false;
       undoStack.push(before);
       if (undoStack.length > historyLimit) undoStack.shift();
       redoStack.length = 0;
@@ -144,13 +175,13 @@
 
     function restoreAction() {
       if (!actionBase) return false;
-      pixels.set(actionBase);
+      restoreSnapshot(actionBase);
       return true;
     }
 
-    function mutate(callback) {
+    function mutate(callback, options = {}) {
       const ownsAction = !actionBase;
-      if (ownsAction) beginAction();
+      if (ownsAction) beginAction(options);
       callback();
       if (ownsAction) commitAction();
     }
@@ -165,7 +196,22 @@
       return inBounds(x, y) ? pixels[(y * WIDTH) + x] === 1 : false;
     }
 
-    function rawDrawLine(x0, y0, x1, y1, on) {
+    function normalizeStrokeWidth(strokeWidth) {
+      return Math.max(1, Math.min(8, Math.round(Number(strokeWidth) || 1)));
+    }
+
+    function rawStamp(x, y, on, strokeWidth) {
+      const width = normalizeStrokeWidth(strokeWidth);
+      const firstOffset = -Math.floor(width / 2);
+      const lastOffset = firstOffset + width - 1;
+      for (let offsetY = firstOffset; offsetY <= lastOffset; offsetY++) {
+        for (let offsetX = firstOffset; offsetX <= lastOffset; offsetX++) {
+          rawSetPixel(x + offsetX, y + offsetY, on);
+        }
+      }
+    }
+
+    function rawDrawLine(x0, y0, x1, y1, on, strokeWidth = 1) {
       x0 = Math.round(x0);
       y0 = Math.round(y0);
       x1 = Math.round(x1);
@@ -176,7 +222,7 @@
       const sy = y0 < y1 ? 1 : -1;
       let error = dx + dy;
       while (true) {
-        rawSetPixel(x0, y0, on);
+        rawStamp(x0, y0, on, strokeWidth);
         if (x0 === x1 && y0 === y1) break;
         const twiceError = error * 2;
         if (twiceError >= dy) {
@@ -190,31 +236,31 @@
       }
     }
 
-    function drawLine(x0, y0, x1, y1, on) {
-      mutate(() => rawDrawLine(x0, y0, x1, y1, on));
+    function drawLine(x0, y0, x1, y1, on, strokeWidth = 1) {
+      mutate(() => rawDrawLine(x0, y0, x1, y1, on, strokeWidth));
     }
 
-    function drawRectangle(x0, y0, x1, y1, on) {
+    function drawRectangle(x0, y0, x1, y1, on, strokeWidth = 1) {
       const left = Math.min(Math.round(x0), Math.round(x1));
       const right = Math.max(Math.round(x0), Math.round(x1));
       const top = Math.min(Math.round(y0), Math.round(y1));
       const bottom = Math.max(Math.round(y0), Math.round(y1));
       mutate(() => {
-        rawDrawLine(left, top, right, top, on);
-        rawDrawLine(right, top, right, bottom, on);
-        rawDrawLine(right, bottom, left, bottom, on);
-        rawDrawLine(left, bottom, left, top, on);
+        rawDrawLine(left, top, right, top, on, strokeWidth);
+        rawDrawLine(right, top, right, bottom, on, strokeWidth);
+        rawDrawLine(right, bottom, left, bottom, on, strokeWidth);
+        rawDrawLine(left, bottom, left, top, on, strokeWidth);
       });
     }
 
-    function drawEllipse(x0, y0, x1, y1, on) {
+    function drawEllipse(x0, y0, x1, y1, on, strokeWidth = 1) {
       const left = Math.min(Math.round(x0), Math.round(x1));
       const right = Math.max(Math.round(x0), Math.round(x1));
       const top = Math.min(Math.round(y0), Math.round(y1));
       const bottom = Math.max(Math.round(y0), Math.round(y1));
       mutate(() => {
         if (left === right || top === bottom) {
-          rawDrawLine(left, top, right, bottom, on);
+          rawDrawLine(left, top, right, bottom, on, strokeWidth);
           return;
         }
         const centerX = (left + right) / 2;
@@ -229,7 +275,7 @@
           const angle = (Math.PI * 2 * step) / steps;
           const nextX = Math.round(centerX + radiusX * Math.cos(angle));
           const nextY = Math.round(centerY + radiusY * Math.sin(angle));
-          rawDrawLine(previousX, previousY, nextX, nextY, on);
+          rawDrawLine(previousX, previousY, nextX, nextY, on, strokeWidth);
           previousX = nextX;
           previousY = nextY;
         }
@@ -250,7 +296,7 @@
         let head = 0;
         let tail = 0;
         queue[tail++] = startIndex;
-        pixels[startIndex] = replacement;
+        rawSetPixel(startX, startY, on);
         while (head < tail) {
           const index = queue[head++];
           const x = index % WIDTH;
@@ -263,7 +309,7 @@
           ];
           for (const next of neighbours) {
             if (next >= 0 && pixels[next] === target) {
-              pixels[next] = replacement;
+              rawSetPixel(next % WIDTH, Math.floor(next / WIDTH), on);
               queue[tail++] = next;
             }
           }
@@ -281,21 +327,39 @@
 
     function undo() {
       if (!canUndo() || actionBase) return false;
-      redoStack.push(pixels.slice());
-      pixels.set(undoStack.pop());
+      redoStack.push(snapshot());
+      restoreSnapshot(undoStack.pop());
       return true;
     }
 
     function redo() {
       if (!canRedo() || actionBase) return false;
-      undoStack.push(pixels.slice());
-      pixels.set(redoStack.pop());
+      undoStack.push(snapshot());
+      restoreSnapshot(redoStack.pop());
       return true;
     }
 
     function loadBitmap(bitmap) {
       const nextPixels = bitmapToPixels(bitmap);
-      mutate(() => pixels.set(nextPixels));
+      mutate(() => {
+        sourcePixels.set(nextPixels);
+        overrides.fill(-1);
+        pixels.set(nextPixels);
+      });
+    }
+
+    function loadSourceBitmap(bitmap) {
+      loadBitmap(bitmap);
+    }
+
+    function rebaseSourceBitmap(bitmap) {
+      const nextPixels = bitmapToPixels(bitmap);
+      mutate(() => {
+        sourcePixels.set(nextPixels);
+        for (let index = 0; index < pixels.length; index++) {
+          pixels[index] = overrides[index] < 0 ? sourcePixels[index] : overrides[index];
+        }
+      });
     }
 
     function toBitmap() {
@@ -304,12 +368,18 @@
 
     function invert() {
       mutate(() => {
-        for (let i = 0; i < pixels.length; i++) pixels[i] = pixels[i] ? 0 : 1;
+        for (let i = 0; i < pixels.length; i++) sourcePixels[i] = pixels[i] ? 0 : 1;
+        overrides.fill(-1);
+        pixels.set(sourcePixels);
       });
     }
 
     function clear() {
-      mutate(() => pixels.fill(0));
+      mutate(() => {
+        for (let y = 0; y < HEIGHT; y++) {
+          for (let x = 0; x < WIDTH; x++) rawSetPixel(x, y, false);
+        }
+      });
     }
 
     return {
@@ -327,6 +397,8 @@
       undo,
       redo,
       loadBitmap,
+      loadSourceBitmap,
+      rebaseSourceBitmap,
       toBitmap,
       invert,
       clear
@@ -341,24 +413,31 @@
     let startY = 0;
     let lastX = 0;
     let lastY = 0;
+    let strokeWidth = 1;
 
     function setTool(nextTool) {
       if (!tools.has(nextTool)) throw new RangeError(`Unknown logo tool: ${nextTool}`);
       tool = nextTool;
     }
 
+    function setStrokeWidth(nextStrokeWidth) {
+      strokeWidth = Math.max(1, Math.min(8, Math.round(Number(nextStrokeWidth) || 1)));
+    }
+
     function pointerDown(x, y) {
       if (tool === 'fill') {
+        model.beginAction({ manual: true });
         model.floodFill(x, y, true);
+        model.commitAction();
         onChange();
         return;
       }
       active = true;
       startX = lastX = x;
       startY = lastY = y;
-      model.beginAction();
+      model.beginAction({ manual: true });
       if (tool === 'pencil' || tool === 'eraser') {
-        model.setPixel(x, y, tool === 'pencil');
+        model.drawLine(x, y, x, y, tool === 'pencil', strokeWidth);
         onChange();
       }
     }
@@ -375,18 +454,18 @@
     }
 
     function drawShape(x, y, options) {
-      if (tool === 'line') model.drawLine(startX, startY, x, y, true);
-      else if (tool === 'rectangle') model.drawRectangle(startX, startY, x, y, true);
+      if (tool === 'line') model.drawLine(startX, startY, x, y, true, strokeWidth);
+      else if (tool === 'rectangle') model.drawRectangle(startX, startY, x, y, true, strokeWidth);
       else if (tool === 'ellipse') {
         const end = ellipseEndPoint(x, y, options);
-        model.drawEllipse(startX, startY, end.x, end.y, true);
+        model.drawEllipse(startX, startY, end.x, end.y, true, strokeWidth);
       }
     }
 
     function pointerMove(x, y, options = {}) {
       if (!active) return;
       if (tool === 'pencil' || tool === 'eraser') {
-        model.drawLine(lastX, lastY, x, y, tool === 'pencil');
+        model.drawLine(lastX, lastY, x, y, tool === 'pencil', strokeWidth);
         lastX = x;
         lastY = y;
         onChange();
@@ -400,7 +479,7 @@
     function pointerUp(x, y, options = {}) {
       if (!active) return;
       if (tool === 'pencil' || tool === 'eraser') {
-        model.drawLine(lastX, lastY, x, y, tool === 'pencil');
+        model.drawLine(lastX, lastY, x, y, tool === 'pencil', strokeWidth);
       } else if (tool === 'line' || tool === 'rectangle' || tool === 'ellipse') {
         model.restoreAction();
         drawShape(x, y, options);
@@ -410,7 +489,7 @@
       onChange();
     }
 
-    return { setTool, pointerDown, pointerMove, pointerUp };
+    return { setTool, setStrokeWidth, pointerDown, pointerMove, pointerUp };
   }
 
   return {

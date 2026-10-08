@@ -125,6 +125,7 @@ window.UVSTUDIO_LOCALES.es = {
   "logoToolRectangle": "Rectángulo",
   "logoToolEllipse": "Elipse",
   "logoToolFill": "Rellenar",
+  "logoStrokeWidth": "Grosor",
   "logoUndo": "Deshacer",
   "logoRedo": "Rehacer",
   "logoGrid": "Cuadrícula",

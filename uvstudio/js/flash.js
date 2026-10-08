@@ -219,6 +219,8 @@ const logoFileButton = document.getElementById('logoFileButton');
 const logoThresholdInput = document.getElementById('logoThreshold');
 const logoThresholdValue = document.getElementById('logoThresholdValue');
 const logoInvertInput = document.getElementById('logoInvert');
+const logoStrokeWidthInput = document.getElementById('logoStrokeWidth');
+const logoStrokeWidthValue = document.getElementById('logoStrokeWidthValue');
 const logoPreviewCanvas = document.getElementById('logoPreviewCanvas');
 const logoCanvasFrame = document.getElementById('logoCanvasFrame');
 const logoToolButtons = Array.from(document.querySelectorAll('[data-logo-tool]'));
@@ -2178,12 +2180,14 @@ function renderLogoEditor(markReady = true) {
   updateLogoUploadButton();
 }
 
-// Refresh the editable canvas from the current source image and import settings.
-function refreshLogoPreview() {
+// Refresh the source image while retaining explicit pixel edits by default.
+function refreshLogoPreview(preserveEdits = true) {
   if (!logoSourceImage) return;
   const threshold = parseInt(logoThresholdInput.value, 10);
   const invert = logoInvertInput.checked;
-  logoModel.loadBitmap(imageToLogoBitmap(logoSourceImage, threshold, invert));
+  const bitmap = imageToLogoBitmap(logoSourceImage, threshold, invert);
+  if (preserveEdits) logoModel.rebaseSourceBitmap(bitmap);
+  else logoModel.loadSourceBitmap(bitmap);
   renderLogoEditor();
 }
 
@@ -2235,7 +2239,7 @@ const logoFileLoader = window.UVStudioLogoEditor.createLogoFileLoader({
     if (logoThresholdInput) logoThresholdInput.disabled = false;
     if (logoInvertInput) logoInvertInput.disabled = false;
     log(t('logoLoaded', file.name), 'success');
-    refreshLogoPreview();
+    refreshLogoPreview(false);
   },
   onError: (error, _file, kind) => {
     if (kind === 'bitmap') log(t('logoRawInvalid', error?.message ?? String(error)), 'error');
@@ -2271,6 +2275,15 @@ if (logoInvertInput) {
 const logoInteraction = window.UVStudioLogoEditor.createInteraction(logoModel, () => {
   renderLogoEditor();
 });
+
+if (logoStrokeWidthInput) {
+  logoInteraction.setStrokeWidth(logoStrokeWidthInput.value);
+  logoStrokeWidthInput.addEventListener('input', () => {
+    logoInteraction.setStrokeWidth(logoStrokeWidthInput.value);
+    if (logoStrokeWidthValue) logoStrokeWidthValue.textContent = logoStrokeWidthInput.value;
+  });
+}
+
 let logoPointerId = null;
 let logoPointerPoint = null;
 let logoPointerConstrain = false;
@@ -2383,7 +2396,9 @@ if (logoGridBtn) {
 
 if (logoClearBtn) {
   logoClearBtn.addEventListener('click', () => {
+    logoModel.beginAction({ manual: true });
     logoModel.clear();
+    logoModel.commitAction();
     renderLogoEditor();
   });
 }

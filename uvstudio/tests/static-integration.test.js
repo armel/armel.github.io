@@ -262,6 +262,14 @@ test('keeps threshold, invert and edit actions in one logo editor panel', () => 
   assert.doesNotMatch(html, /id="logoInvertBtn"/);
 });
 
+test('places a 1 to 8 pixel stroke-width slider in the drawing toolbar', () => {
+  const toolbarStart = html.indexOf('class="logo-editor-toolbar"');
+  const toolbarEnd = html.indexOf('</div>', toolbarStart);
+  const toolbar = html.slice(toolbarStart, toolbarEnd);
+  assert.match(toolbar, /id="logoStrokeWidth"[^>]*type="range"[^>]*min="1"[^>]*max="8"/);
+  assert.match(toolbar, /id="logoStrokeWidthValue"/);
+});
+
 test('offers a visual-only pixel grid overlay', () => {
   assert.match(html, /id="logoGridBtn"[^>]*aria-pressed="false"/);
   assert.match(html, /id="logoCanvasFrame"[^>]*class="logo-canvas-frame"/);

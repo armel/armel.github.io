@@ -125,6 +125,7 @@ window.UVSTUDIO_LOCALES.fr = {
   "logoToolRectangle": "Rectangle",
   "logoToolEllipse": "Ellipse",
   "logoToolFill": "Remplir",
+  "logoStrokeWidth": "Épaisseur",
   "logoUndo": "Annuler",
   "logoRedo": "Rétablir",
   "logoGrid": "Grille",

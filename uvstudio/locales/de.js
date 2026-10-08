@@ -125,6 +125,7 @@ window.UVSTUDIO_LOCALES.de = {
   "logoToolRectangle": "Rechteck",
   "logoToolEllipse": "Ellipse",
   "logoToolFill": "Füllen",
+  "logoStrokeWidth": "Linienstärke",
   "logoUndo": "Rückgängig",
   "logoRedo": "Wiederholen",
   "logoGrid": "Raster",

@@ -537,6 +537,30 @@
   padding: 7px 12px;
 }
 
+#pane-tools .logo-stroke-width-control {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  margin: 0 0 0 auto;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+#pane-tools .logo-stroke-width-control output {
+  min-width: 1ch;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+#pane-tools .logo-stroke-width-control input[type="range"] {
+  width: 112px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 #pane-tools .logo-editor-toolbar .logo-tool.active,
 #pane-tools .logo-editor-actions .btn.active {
   color: #ffffff;
@@ -647,6 +671,12 @@
 
   #pane-tools .logo-editor-toolbar .btn {
     flex: 1 1 calc(33.333% - 8px);
+  }
+
+  #pane-tools .logo-stroke-width-control {
+    flex: 1 1 100%;
+    justify-content: center;
+    margin-left: 0;
   }
 
   #pane-tools .logo-editor-actions #logoClearBtn {

@@ -400,6 +400,10 @@
                         <button type="button" class="btn logo-tool" data-logo-tool="rectangle" aria-pressed="false" data-i18n="logoToolRectangle">Rectangle</button>
                         <button type="button" class="btn logo-tool" data-logo-tool="ellipse" aria-pressed="false" data-i18n="logoToolEllipse">Ellipse</button>
                         <button type="button" class="btn logo-tool" data-logo-tool="fill" aria-pressed="false" data-i18n="logoToolFill">Fill</button>
+                        <label class="logo-stroke-width-control" for="logoStrokeWidth">
+                            <span data-i18n="logoStrokeWidth">Stroke width</span>: <output id="logoStrokeWidthValue" for="logoStrokeWidth">1</output>
+                            <input id="logoStrokeWidth" type="range" min="1" max="8" value="1" />
+                        </label>
                     </div>
                     <div class="logo-editor-toolbar logo-editor-actions" role="toolbar" aria-label="Edit actions" data-i18n-aria-label="logoEditorActions">
                         <button type="button" class="btn" id="logoUndoBtn" disabled data-i18n="logoUndo">Undo</button>

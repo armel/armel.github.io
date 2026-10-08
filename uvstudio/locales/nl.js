@@ -125,6 +125,7 @@ window.UVSTUDIO_LOCALES.nl = {
   "logoToolRectangle": "Rechthoek",
   "logoToolEllipse": "Ellips",
   "logoToolFill": "Vullen",
+  "logoStrokeWidth": "Lijndikte",
   "logoUndo": "Ongedaan maken",
   "logoRedo": "Opnieuw",
   "logoGrid": "Raster",

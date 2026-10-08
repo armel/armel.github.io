@@ -48,6 +48,29 @@ test('draws a one-pixel Bresenham line including both endpoints', () => {
   assert.equal(model.getPixel(2, 1), false);
 });
 
+test('draws thick strokes for lines, rectangles and ellipses', () => {
+  const line = logoEditor.createModel();
+  line.drawLine(4, 4, 8, 4, true, 3);
+  assert.equal(line.getPixel(6, 3), true);
+  assert.equal(line.getPixel(6, 4), true);
+  assert.equal(line.getPixel(6, 5), true);
+  assert.equal(line.getPixel(6, 2), false);
+
+  const rectangle = logoEditor.createModel();
+  rectangle.drawRectangle(10, 10, 16, 16, true, 3);
+  assert.equal(rectangle.getPixel(13, 9), true);
+  assert.equal(rectangle.getPixel(13, 10), true);
+  assert.equal(rectangle.getPixel(13, 11), true);
+  assert.equal(rectangle.getPixel(13, 13), false);
+
+  const ellipse = logoEditor.createModel();
+  ellipse.drawEllipse(20, 20, 30, 26, true, 3);
+  assert.equal(ellipse.getPixel(25, 19), true);
+  assert.equal(ellipse.getPixel(25, 20), true);
+  assert.equal(ellipse.getPixel(25, 21), true);
+  assert.equal(ellipse.getPixel(25, 23), false);
+});
+
 test('draws an outline rectangle without filling its interior', () => {
   const model = logoEditor.createModel();
 
@@ -159,6 +182,52 @@ test('turns a pencil drag into one continuous undoable gesture', () => {
   model.undo();
   assert.equal(model.getPixel(1, 2), false);
   assert.equal(model.getPixel(4, 4), false);
+});
+
+test('applies the selected stroke width to pencil and eraser gestures', () => {
+  const model = logoEditor.createModel();
+  const interaction = logoEditor.createInteraction(model);
+  interaction.setStrokeWidth(3);
+
+  interaction.pointerDown(5, 5);
+  interaction.pointerUp(7, 5);
+  assert.equal(model.getPixel(6, 4), true);
+  assert.equal(model.getPixel(6, 5), true);
+  assert.equal(model.getPixel(6, 6), true);
+
+  interaction.setTool('eraser');
+  interaction.pointerDown(6, 5);
+  interaction.pointerUp(6, 5);
+  assert.equal(model.getPixel(6, 4), false);
+  assert.equal(model.getPixel(6, 5), false);
+  assert.equal(model.getPixel(6, 6), false);
+});
+
+test('preserves explicit pencil and eraser edits when the source bitmap changes', () => {
+  const model = logoEditor.createModel();
+  const interaction = logoEditor.createInteraction(model);
+  const firstSource = new Uint8Array(1024);
+  firstSource[0] = 0x01;
+  model.loadSourceBitmap(firstSource);
+
+  interaction.pointerDown(0, 0);
+  interaction.pointerUp(0, 0);
+  interaction.setTool('eraser');
+  interaction.pointerDown(1, 0);
+  interaction.pointerUp(1, 0);
+
+  const nextSource = new Uint8Array(1024);
+  nextSource[1] = 0x01;
+  nextSource[2] = 0x01;
+  model.rebaseSourceBitmap(nextSource);
+
+  assert.equal(model.getPixel(0, 0), true);
+  assert.equal(model.getPixel(1, 0), false);
+  assert.equal(model.getPixel(2, 0), true);
+  model.undo();
+  assert.equal(model.getPixel(0, 0), true);
+  assert.equal(model.getPixel(1, 0), false);
+  assert.equal(model.getPixel(2, 0), false);
 });
 
 test('applies eraser, line, rectangle and fill tools through the same interaction', () => {
