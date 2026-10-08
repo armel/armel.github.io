@@ -37,3 +37,16 @@ test('targets the stable versioned apps archive on GitHub', () => {
     'https://api.github.com/repos/armel/uv-k1-k5v3-firmware-custom/contents/archive/apps/v6.0.0?ref=main'
   );
 });
+
+test('reads the app identity and version from a FAP1 header', () => {
+  const header = Buffer.alloc(64);
+  header.writeUInt32LE(0x31504146, 0);
+  header.write('Beacon', 20, 'ascii');
+  header.write('1.4.2', 36, 'ascii');
+
+  assert.deepEqual(catalog.parseAppHeader(header), {
+    name: 'Beacon',
+    version: '1.4.2'
+  });
+  assert.equal(catalog.parseAppHeader(Buffer.alloc(64)), null);
+});

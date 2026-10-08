@@ -310,6 +310,14 @@
         const counts = render();
         showCatalog(counts.flash > 0, counts.slots > 0);
         loaded = counts.flash > 0 || counts.slots > 0;
+        const slotEntries = [];
+        groups.forEach(entries => {
+          const latest = entries.find(entry => isSlotOffered(entry) && !entry.model);
+          if (latest) slotEntries.push(latest);
+        });
+        window.dispatchEvent(new CustomEvent('uvstudio:slotcatalogversions', {
+          detail: { entries: slotEntries }
+        }));
       } catch (error) {
         // No connection, or the API is unreachable / rate limited: keep the whole
         // picker hidden so only the local-file input remains — same as offline.
