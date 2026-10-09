@@ -78,6 +78,34 @@
     return `${app.label} · ${(app.size / 1024).toFixed(1)} KB`;
   }
 
+  function parseAppHeader(buffer) {
+    const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    if (bytes.byteLength < 52) return null;
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    if (view.getUint32(0, true) !== 0x31504146) return null; // "FAP1"
+    const readString = (offset, length) => {
+      let value = '';
+      for (let i = 0; i < length; i++) {
+        const char = bytes[offset + i];
+        if (!char) break;
+        value += String.fromCharCode(char);
+      }
+      return value;
+    };
+    return { name: readString(20, 16), version: readString(36, 16) };
+  }
+
+  async function readAppMetadata(app) {
+    const response = await fetch(app.url, {
+      cache: 'no-cache',
+      headers: { Range: 'bytes=0-63' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const header = parseAppHeader(await response.arrayBuffer());
+    if (!header || !header.name || !header.version) throw new Error('Invalid app header');
+    return { ...header, url: app.url, filename: app.name };
+  }
+
   function boot() {
     const section = document.getElementById('appCatalogSection');
     const divider = document.getElementById('appCatalogOr');
@@ -89,6 +117,10 @@
     let loaded = false;
     let loading = false;
     let appLoadSeq = 0;
+    let metadataLoadSeq = 0;
+    let compatibilityLoadSeq = 0;
+    let requestedFirmwareVersion = '';
+    const metadataCache = new Map();
 
     function t(key) {
       return window.uvStudioI18n ? window.uvStudioI18n.t(key) : key;
@@ -114,13 +146,69 @@
       if (divider) divider.hidden = false;
     }
 
+    async function fetchApps(versionEntry) {
+      const response = await fetch(contentsURL(versionEntry.path), { cache: 'no-cache' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return listApps(await response.json());
+    }
+
+    function loadAppMetadata(versionEntry, knownApps) {
+      if (metadataCache.has(versionEntry.version)) return metadataCache.get(versionEntry.version);
+      const request = (async () => {
+        const apps = knownApps || await fetchApps(versionEntry);
+        const settled = await Promise.allSettled(apps.map(readAppMetadata));
+        if (settled.some(result => result.status === 'rejected')) {
+          throw new Error('Incomplete app metadata');
+        }
+        return settled
+          .filter(result => result.status === 'fulfilled')
+          .map(result => result.value);
+      })();
+      metadataCache.set(versionEntry.version, request);
+      request.catch(() => { metadataCache.delete(versionEntry.version); });
+      return request;
+    }
+
+    async function publishLatestAppVersions(versionEntry, knownApps) {
+      const seq = ++metadataLoadSeq;
+      try {
+        const metadata = await loadAppMetadata(versionEntry, knownApps);
+        if (seq !== metadataLoadSeq) return;
+        window.dispatchEvent(new CustomEvent('uvstudio:appcatalogversions', {
+          detail: { firmwareVersion: versionEntry.version, apps: metadata }
+        }));
+      } catch (error) {
+        // Update information is supplementary; keep the catalog usable.
+      }
+    }
+
+    async function publishCompatibleAppVersions() {
+      const requested = requestedFirmwareVersion;
+      if (!requested) return;
+      const seq = ++compatibilityLoadSeq;
+      const versionEntry = versions.find(entry => entry.version === requested);
+      if (!versionEntry) {
+        window.dispatchEvent(new CustomEvent('uvstudio:appcatalogcompatibility', {
+          detail: { firmwareVersion: requested, found: false, apps: [] }
+        }));
+        return;
+      }
+      try {
+        const metadata = await loadAppMetadata(versionEntry);
+        if (seq !== compatibilityLoadSeq || requested !== requestedFirmwareVersion) return;
+        window.dispatchEvent(new CustomEvent('uvstudio:appcatalogcompatibility', {
+          detail: { firmwareVersion: requested, found: true, apps: metadata }
+        }));
+      } catch (error) {
+        // Compatibility information is supplementary; keep the radio scan usable.
+      }
+    }
+
     async function loadApps(versionEntry) {
       const seq = ++appLoadSeq;
       resetSelect(appSelect, 'app_catalog_app_placeholder');
       appSelect.disabled = true;
-      const response = await fetch(contentsURL(versionEntry.path), { cache: 'no-cache' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const apps = listApps(await response.json());
+      const apps = await fetchApps(versionEntry);
       if (seq !== appLoadSeq) return;
       apps.forEach(app => {
         const option = document.createElement('option');
@@ -130,6 +218,7 @@
         appSelect.appendChild(option);
       });
       appSelect.disabled = apps.length === 0;
+      return apps;
     }
 
     async function load() {
@@ -149,9 +238,11 @@
           versionSelect.appendChild(option);
         });
         versionSelect.value = versions[0].directory;
-        await loadApps(versions[0]);
+        const latestApps = await loadApps(versions[0]);
         showCatalog();
         loaded = true;
+        void publishLatestAppVersions(versions[0], latestApps);
+        void publishCompatibleAppVersions();
       } catch (error) {
         hideCatalog();
       } finally {
@@ -186,6 +277,11 @@
       }
     });
 
+    window.addEventListener('uvstudio:appfirmwareversion', event => {
+      requestedFirmwareVersion = String(event.detail?.firmwareVersion || '');
+      if (loaded) void publishCompatibleAppVersions();
+    });
+
     window.addEventListener('uvstudio:languagechange', () => {
       const selectedVersion = versionSelect.value;
       const selectedApp = appSelect.value;
@@ -218,6 +314,8 @@
     formatAppLabel,
     listApps,
     listVersions,
-    parseVersionDirectory
+    parseAppHeader,
+    parseVersionDirectory,
+    readAppMetadata
   };
 });

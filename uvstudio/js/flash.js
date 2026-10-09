@@ -149,6 +149,8 @@ let slotReconnectInProgress = false;
 let slotLastPortInfo = null;
 let slotHardwareDisconnectPromise = null;
 let slotRefreshPending = false;
+let slotLatestVersions = new Map();
+let slotUpdateDownloadPending = false;
 
 // Logo state
 let logoSourceImage = null;       // HTMLImageElement of the user-picked file
@@ -765,7 +767,8 @@ const toolsSerial = window.UVStudioSerial.register('tools', {
 });
 
 function updateActionButtons() {
-  const busy = Boolean(activeOperationToken) || slotAutoReconnecting || slotReconnectInProgress;
+  const busy = Boolean(activeOperationToken) || slotAutoReconnecting ||
+    slotReconnectInProgress || slotUpdateDownloadPending;
   const slotNameValid = Boolean(slotNormalizeName(slotNameInput?.value ?? slotMeta.name));
   if (flashBtn) flashBtn.disabled = !serialSupported || busy || !firmwareData;
   if (dumpBtn) dumpBtn.disabled = !serialSupported || busy;
@@ -782,6 +785,7 @@ function updateActionButtons() {
   if (slotWriteBtn) slotWriteBtn.disabled = !serialSupported || busy || !slotImage || !slotNameValid;
   if (slotsRefreshBtn) slotsRefreshBtn.disabled = !serialSupported || busy;
   if (slotsTableBody) slotsTableBody.querySelectorAll('button').forEach(b => { b.disabled = !serialSupported || busy; });
+  slotRefreshUpdateIndicators();
 }
 
 function beginToolsOperation(name, critical) {
@@ -2969,9 +2973,50 @@ function slotRenderRow(slot, info) {
   row.querySelector('.slot-name').textContent = committed ? (hdr.name || '—') : '—';
   row.querySelector('.slot-version').textContent = committed ? (hdr.fwVersion || '—') : '—';
   row.querySelector('.slot-size').textContent = committed ? `${Math.round(hdr.imageSize / 1024)} KB` : '—';
+  if (valid) {
+    row.dataset.slotEdition = hdr.name || '';
+    row.dataset.slotVersion = hdr.fwVersion || '';
+  } else {
+    delete row.dataset.slotEdition;
+    delete row.dataset.slotVersion;
+  }
   const stateCell = row.querySelector('.slot-state');
   stateCell.textContent = info ? slotStatusText(info.status) : '—';
   stateCell.className = 'slot-state ' + (valid ? 'ok' : (info && info.status === 1 ? 'empty' : 'bad'));
+  slotRenderUpdateIndicator(row);
+}
+
+function slotCatalogKey(name) {
+  return String(name || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+}
+
+function slotRenderUpdateIndicator(row) {
+  const button = row.querySelector('.slot-update-button');
+  const current = row.querySelector('.update-current');
+  if (!button || !current) return;
+  const latest = slotLatestVersions.get(slotCatalogKey(row.dataset.slotEdition));
+  const comparison = latest ? appCompareVersions(row.dataset.slotVersion, latest.version) : null;
+  const outdated = comparison !== null && comparison < 0;
+  const upToDate = comparison === 0;
+  button.hidden = !outdated;
+  current.hidden = !upToDate;
+  current.textContent = upToDate ? t('updateCurrent') : '';
+  button.disabled = !outdated || !serialSupported || slotUpdateDownloadPending || Boolean(activeOperationToken);
+  if (outdated) {
+    const label = t('appUpdateAction', `v${latest.version}`);
+    button.textContent = label;
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  } else {
+    button.textContent = '';
+    button.removeAttribute('title');
+    button.removeAttribute('aria-label');
+  }
+}
+
+function slotRefreshUpdateIndicators() {
+  if (!slotsTableBody) return;
+  slotsTableBody.querySelectorAll('tr[data-slot]').forEach(slotRenderUpdateIndicator);
 }
 
 function slotBuildTable() {
@@ -2984,6 +3029,7 @@ function slotBuildTable() {
       `<td class="slot-idx">${s}</td>` +
       `<td class="slot-name">—</td>` +
       `<td class="slot-version">—</td>` +
+      `<td class="slot-update-cell"><span class="update-current" hidden></span></td>` +
       `<td class="slot-size">—</td>` +
       `<td><span class="slot-state">—</span></td>` +
       `<td class="slot-actions"></td>`;
@@ -2997,6 +3043,13 @@ function slotBuildTable() {
     resetBtn.className = 'slot-act-reset';
     resetBtn.textContent = t('slotResetConfig');
     resetBtn.addEventListener('click', () => { void slotResetConfigFlow(s); });
+    const updateBtn = document.createElement('button');
+    updateBtn.type = 'button';
+    updateBtn.className = 'slot-update-button';
+    updateBtn.hidden = true;
+    updateBtn.disabled = true;
+    updateBtn.addEventListener('click', () => { void slotUpdateFlow(s); });
+    tr.querySelector('.slot-update-cell').appendChild(updateBtn);
     const actions = tr.querySelector('.slot-actions');
     actions.appendChild(eraseBtn);
     actions.appendChild(resetBtn);
@@ -3013,6 +3066,7 @@ function slotLocalize() {
   if (slotImage && slotMetaEl) {
     slotMetaEl.textContent = t('slotDetected', slotMeta.name || '?', slotMeta.fwVersion || '?', Math.round(slotImage.length / 1024));
   }
+  slotRefreshUpdateIndicators();
 }
 
 async function finishSlotOperation(op) {
@@ -3201,6 +3255,7 @@ function setSlotImageBuffer(buf, name = 'firmware.bin') {
   }
   log(t('slotFileLoaded', name), 'success');
   updateActionButtons();
+  return true;
 }
 
 async function loadSlotFirmwareFromURL(url) {
@@ -3218,15 +3273,36 @@ async function loadSlotFirmwareFromURL(url) {
     if (!res.ok) throw new Error(`${t('urlFetchError')} HTTP ${res.status}`);
 
     const buf = await res.arrayBuffer();
-    if (seq !== slotImageLoadSeq) return;
+    if (seq !== slotImageLoadSeq) return false;
     const fname = (urlObj.pathname.split('/').pop() || 'firmware.bin').split('?')[0];
-    setSlotImageBuffer(buf, fname);
+    return setSlotImageBuffer(buf, fname);
   } catch (err) {
-    if (err && err.name === 'AbortError') return;
+    if (err && err.name === 'AbortError') return false;
     log(`${t('urlFetchError')} ${err?.message ?? String(err)}`, 'error');
     if (seq === slotImageLoadSeq) clearSlotImage();
+    return false;
   } finally {
     if (slotImageLoadAbort === controller) slotImageLoadAbort = null;
+  }
+}
+
+async function slotUpdateFlow(slot) {
+  const row = slotsTableBody?.querySelector(`tr[data-slot="${slot}"]`);
+  const latest = row && slotLatestVersions.get(slotCatalogKey(row.dataset.slotEdition));
+  if (!latest?.url || slotUpdateDownloadPending || activeOperationToken) return;
+
+  const displayName = row.dataset.slotEdition;
+  slotUpdateDownloadPending = true;
+  updateActionButtons();
+  try {
+    const loaded = await loadSlotFirmwareFromURL(latest.url);
+    if (!loaded) return;
+    if (slotTargetSelect) slotTargetSelect.value = String(slot);
+    if (slotNameInput) slotNameInput.value = displayName;
+    await slotWriteFlow();
+  } finally {
+    slotUpdateDownloadPending = false;
+    updateActionButtons();
   }
 }
 
@@ -3246,6 +3322,14 @@ if (slotNameInput) slotNameInput.addEventListener('input', updateActionButtons);
 if (slotWriteBtn) slotWriteBtn.addEventListener('click', () => { void slotWriteFlow(); });
 if (slotsRefreshBtn) slotsRefreshBtn.addEventListener('click', () => { void slotRefreshFlow(); });
 slotBuildTable();
+
+window.addEventListener('uvstudio:slotcatalogversions', event => {
+  const entries = Array.isArray(event.detail?.entries) ? event.detail.entries : [];
+  slotLatestVersions = new Map(entries
+    .filter(entry => entry && entry.name && entry.version && entry.url)
+    .map(entry => [slotCatalogKey(slotEditionFromFilename(entry.name)), entry]));
+  slotRefreshUpdateIndicators();
+});
 
 // ========== OVERLAY APPS ==========
 // Parallels the firmware-slots feature, targeting the external-flash "Apps"
@@ -3273,6 +3357,40 @@ const APP_STATUS_KEY = ['appStateValid', 'appStateBadSlot', 'appStateEmpty', 'ap
   'appStateIncomplete', 'appStateBadSize', 'appStateCrc', 'appStateVma', 'appStateAuth'];
 function appStatusText(code) { return t(APP_STATUS_KEY[code] || 'slotStateError'); }
 
+function appVersionParts(value) {
+  const match = String(value || '').trim().match(/^v?(\d+(?:\.\d+)*)(?:[-_]?([a-z][0-9a-z.-]*))?$/i);
+  if (!match) return null;
+  return {
+    numbers: match[1].split('.').map(Number),
+    suffix: (match[2] || '').toLowerCase()
+  };
+}
+
+// Compare app versions without making non-version labels look obsolete.
+// Returns a negative value when `current` is older than `available`.
+function appCompareVersions(current, available) {
+  const a = appVersionParts(current);
+  const b = appVersionParts(available);
+  if (!a || !b) return null;
+  const length = Math.max(a.numbers.length, b.numbers.length);
+  for (let i = 0; i < length; i++) {
+    const delta = (a.numbers[i] || 0) - (b.numbers[i] || 0);
+    if (delta) return delta;
+  }
+  if (a.suffix === b.suffix) return 0;
+  if (!a.suffix) return 1;
+  if (!b.suffix) return -1;
+  return a.suffix.localeCompare(b.suffix, undefined, { numeric: true });
+}
+
+function appCatalogKey(name) { return String(name || '').trim().toLowerCase(); }
+
+function appFirmwareVersionFromName(name) {
+  const version = String(name || '').match(/\bv?(\d+(?:\.\d+){1,2})\b/i)?.[1];
+  if (!version) return '';
+  return version.split('.').concat('0', '0').slice(0, 3).join('.');
+}
+
 const appFileInput   = document.getElementById('appFile');
 const appFileLabel   = document.getElementById('appFileLabel');
 const appFileName    = document.getElementById('appFileName');
@@ -3286,6 +3404,11 @@ let appImage = null;   // full .app bytes (header + code)
 let appMeta  = { name: '', version: '', codeSize: 0, assetSize: 0 };
 let appImageLoadSeq = 0;
 let appImageLoadAbort = null;
+let appLatestVersions = new Map();
+let appCompatibleVersions = new Map();
+let appCurrentFirmwareVersion = '';
+let appCompatibilityKnown = false;
+let appUpdateDownloadPending = false;
 
 // --- Labs-only feature modal ------------------------------------------------
 // Shown when the booted firmware lacks a Labs-only service: overlay apps (it
@@ -3394,13 +3517,83 @@ function appRenderRow(slot, info) {
   const valid = info && info.status === 0;
   const hdr = info && info.hdr;
   row.querySelector('.slot-name').textContent = valid ? (hdr.name || '—') : '—';
-  row.querySelector('.slot-version').textContent = valid ? (hdr.version || '—') : '—';
+  row.querySelector('.slot-version-value').textContent = valid ? (hdr.version || '—') : '—';
   row.querySelector('.slot-size').textContent = valid ? `${(hdr.codeSize / 1024).toFixed(1)} KB` : '—';
-  const stateCell = row.querySelector('.slot-state');
-  stateCell.textContent = info ? appStatusText(info.status) : '—';
-  stateCell.className = 'slot-state ' + (valid ? 'ok' : (info && info.status === 2 ? 'empty' : 'bad'));
+  if (valid) {
+    row.dataset.appName = hdr.name || '';
+    row.dataset.appVersion = hdr.version || '';
+  } else {
+    delete row.dataset.appName;
+    delete row.dataset.appVersion;
+  }
+  if (info) row.dataset.appStatus = String(info.status);
+  else delete row.dataset.appStatus;
+  appRenderRowState(row);
   const del = row.querySelector('.app-act-delete');
   if (del) del.disabled = !valid;
+  appRenderUpdateIndicator(row);
+}
+
+function appHasFirmwareMismatch(row) {
+  if (!appCompatibilityKnown || !row.dataset.appName) return false;
+  const key = appCatalogKey(row.dataset.appName);
+  const latest = appLatestVersions.get(key);
+  if (!latest) return false; // Local/unpublished app: compatibility is unknown.
+  const compatible = appCompatibleVersions.get(key);
+  if (!compatible) return true;
+  return appCompareVersions(row.dataset.appVersion, compatible.version) > 0;
+}
+
+function appRenderRowState(row) {
+  const stateCell = row.querySelector('.slot-state');
+  if (!stateCell) return;
+  if (row.dataset.appStatus === undefined) {
+    stateCell.textContent = '—';
+    stateCell.className = 'slot-state';
+    return;
+  }
+  const status = Number(row.dataset.appStatus);
+  const mismatch = status === 0 && appHasFirmwareMismatch(row);
+  stateCell.textContent = mismatch
+    ? t('appStateFirmwareMismatch', appCurrentFirmwareVersion)
+    : appStatusText(status);
+  stateCell.className = 'slot-state ' + (mismatch ? 'bad' : (status === 0 ? 'ok' : (status === 2 ? 'empty' : 'bad')));
+}
+
+function appRenderUpdateIndicator(row) {
+  const button = row.querySelector('.app-update-button');
+  const current = row.querySelector('.update-current');
+  if (!button || !current) return;
+  const latest = appCompatibilityKnown
+    ? appCompatibleVersions.get(appCatalogKey(row.dataset.appName))
+    : null;
+  const comparison = latest ? appCompareVersions(row.dataset.appVersion, latest.version) : null;
+  const outdated = comparison !== null && comparison < 0;
+  const upToDate = comparison === 0 && !appHasFirmwareMismatch(row);
+  row.classList.toggle('app-outdated', Boolean(outdated));
+  button.hidden = !outdated;
+  current.hidden = !upToDate;
+  current.textContent = upToDate ? t('updateCurrent') : '';
+  if (outdated) {
+    const label = t('appUpdateAction', latest.version);
+    button.textContent = label;
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    button.disabled = !serialSupported || appUpdateDownloadPending || Boolean(activeOperationToken);
+  } else {
+    button.textContent = '';
+    button.disabled = true;
+    button.removeAttribute('title');
+    button.removeAttribute('aria-label');
+  }
+}
+
+function appRefreshUpdateIndicators() {
+  if (!appsTableBody) return;
+  appsTableBody.querySelectorAll('tr[data-slot]').forEach(row => {
+    appRenderRowState(row);
+    appRenderUpdateIndicator(row);
+  });
 }
 
 function appBuildTable() {
@@ -3412,7 +3605,8 @@ function appBuildTable() {
     tr.innerHTML =
       `<td class="slot-idx">${appSlotLabel(s)}</td>` +
       `<td class="slot-name">—</td>` +
-      `<td class="slot-version">—</td>` +
+      `<td class="slot-version"><span class="slot-version-value">—</span></td>` +
+      `<td class="app-update-cell"><span class="update-current" hidden></span></td>` +
       `<td class="slot-size">—</td>` +
       `<td><span class="slot-state">—</span></td>` +
       `<td class="slot-actions"></td>`;
@@ -3423,6 +3617,13 @@ function appBuildTable() {
     del.disabled = true;
     del.addEventListener('click', () => { void appDeleteFlow(s); });
     tr.querySelector('.slot-actions').appendChild(del);
+    const update = document.createElement('button');
+    update.type = 'button';
+    update.className = 'app-update-button';
+    update.hidden = true;
+    update.disabled = true;
+    update.addEventListener('click', () => { void appUpdateFlow(s); });
+    tr.querySelector('.app-update-cell').appendChild(update);
     appsTableBody.appendChild(tr);
   }
   if (appTargetSelect && !appTargetSelect.options.length) {
@@ -3454,6 +3655,17 @@ async function appRefreshFlow() {
     try {
       readBuffer = []; await sleep(300);
       fw = await requestDeviceInfo();
+      const firmwareVersion = appFirmwareVersionFromName(fw.name);
+      if (firmwareVersion !== appCurrentFirmwareVersion) {
+        appCurrentFirmwareVersion = firmwareVersion;
+        appCompatibilityKnown = false;
+        appCompatibleVersions = new Map();
+      }
+      if (firmwareVersion) {
+        window.dispatchEvent(new CustomEvent('uvstudio:appfirmwareversion', {
+          detail: { firmwareVersion }
+        }));
+      }
     } catch (e) {
       // Radio not answering at all: a plain connection error, not a capability issue.
       log(t('appsError', e?.message ?? String(e)), 'error');
@@ -3565,10 +3777,15 @@ async function appInstallFlow() {
 }
 
 function updateAppButtons() {
-  const busy = !!activeOperationToken;
+  const busy = appUpdateDownloadPending || Boolean(activeOperationToken);
   if (appInstallBtn) appInstallBtn.disabled = !serialSupported || busy || !appImage;
   if (appsRefreshBtn) appsRefreshBtn.disabled = !serialSupported || busy;
-  if (appsTableBody) appsTableBody.querySelectorAll('button').forEach(b => { if (busy) b.disabled = true; });
+  if (appsTableBody) {
+    appsTableBody.querySelectorAll('.app-act-delete').forEach(button => {
+      button.disabled = busy || !button.closest('tr')?.dataset.appName;
+    });
+    appRefreshUpdateIndicators();
+  }
 }
 
 function clearAppImage() {
@@ -3594,15 +3811,16 @@ function beginAppImageLoad(source) {
 
 function setAppImageBuffer(buf, name) {
   const bytes = new Uint8Array(buf);
-  if (bytes.length <= APP_HDR_SIZE) { log(t('appBadFile'), 'error'); clearAppImage(); return; }
+  if (bytes.length <= APP_HDR_SIZE) { log(t('appBadFile'), 'error'); clearAppImage(); return false; }
   const hdr = appParseHeader(bytes);
-  if (hdr.magic !== APP_MAGIC) { log(t('appBadFile'), 'error'); clearAppImage(); return; }
+  if (hdr.magic !== APP_MAGIC) { log(t('appBadFile'), 'error'); clearAppImage(); return false; }
   appImage = bytes;
   appMeta = { name: hdr.name, version: hdr.version, codeSize: hdr.codeSize, assetSize: hdr.assetSize };
   if (appFileName) { appFileName.removeAttribute('data-i18n'); appFileName.textContent = name; appFileName.classList.add('has-file'); }
   if (appFileLabel) appFileLabel.classList.add('has-file');
   if (appMetaEl) appMetaEl.textContent = t('appDetected', hdr.name || '?', hdr.version || '?', (hdr.codeSize / 1024).toFixed(1));
   updateAppButtons();
+  return true;
 }
 
 async function loadAppFromURL(url, catalogName = 'application.app') {
@@ -3619,15 +3837,36 @@ async function loadAppFromURL(url, catalogName = 'application.app') {
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const buf = await response.arrayBuffer();
-    if (seq !== appImageLoadSeq) return;
+    if (seq !== appImageLoadSeq) return false;
     const filename = catalogName || urlObj.pathname.split('/').pop() || 'application.app';
-    setAppImageBuffer(buf, filename);
+    return setAppImageBuffer(buf, filename);
   } catch (error) {
-    if (error && error.name === 'AbortError') return;
+    if (error && error.name === 'AbortError') return false;
     log(t('appsError', error?.message ?? String(error)), 'error');
     if (seq === appImageLoadSeq) clearAppImage();
+    return false;
   } finally {
     if (appImageLoadAbort === controller) appImageLoadAbort = null;
+  }
+}
+
+async function appUpdateFlow(slot) {
+  const row = appsTableBody?.querySelector(`tr[data-slot="${slot}"]`);
+  const latest = row && appCompatibilityKnown
+    ? appCompatibleVersions.get(appCatalogKey(row.dataset.appName))
+    : null;
+  if (!latest?.url || appUpdateDownloadPending || activeOperationToken) return;
+
+  appUpdateDownloadPending = true;
+  updateAppButtons();
+  try {
+    const loaded = await loadAppFromURL(latest.url, latest.filename || `${latest.name}.app`);
+    if (!loaded) return;
+    if (appTargetSelect) appTargetSelect.value = String(slot);
+    await appInstallFlow();
+  } finally {
+    appUpdateDownloadPending = false;
+    updateAppButtons();
   }
 }
 
@@ -3652,9 +3891,26 @@ window.addEventListener('uvstudio:toolviewchange', event => {
   const nextView = event.detail?.view || 'flash';
   if (nextView === 'apps') { updateAppButtons(); void appRefreshFlow(); }
 });
+window.addEventListener('uvstudio:appcatalogversions', event => {
+  const apps = Array.isArray(event.detail?.apps) ? event.detail.apps : [];
+  appLatestVersions = new Map(apps
+    .filter(app => app && app.name && app.version)
+    .map(app => [appCatalogKey(app.name), app]));
+  appRefreshUpdateIndicators();
+});
+window.addEventListener('uvstudio:appcatalogcompatibility', event => {
+  if (String(event.detail?.firmwareVersion || '') !== appCurrentFirmwareVersion) return;
+  const apps = Array.isArray(event.detail?.apps) ? event.detail.apps : [];
+  appCompatibilityKnown = event.detail?.found === true;
+  appCompatibleVersions = new Map(apps
+    .filter(app => app && app.name && app.version)
+    .map(app => [appCatalogKey(app.name), app]));
+  appRefreshUpdateIndicators();
+});
 window.addEventListener('uvstudio:languagechange', () => {
   if (appsTableBody) appsTableBody.querySelectorAll('.app-act-delete').forEach(b => { b.textContent = t('appDelete'); });
   if (appImage && appMetaEl) appMetaEl.textContent = t('appDetected', appMeta.name || '?', appMeta.version || '?', (appMeta.codeSize / 1024).toFixed(1));
+  appRefreshUpdateIndicators();
 });
 
 // ========== CAPABILITY CHECK ==========

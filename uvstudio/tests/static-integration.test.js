@@ -140,6 +140,63 @@ test('exposes all 16 app slots in a bounded, scrollable table', () => {
   assert.match(toolsCss, /\.apps-table-wrap \.slots-table tbody tr\s*\{[^}]*height:\s*50px/s);
 });
 
+test('offers one-click updates for outdated multiboot firmware slots', () => {
+  const slotsStart = html.indexOf('id="slotsTable"');
+  const slotsEnd = html.indexOf('</table>', slotsStart);
+  const slotsTable = html.slice(slotsStart, slotsEnd);
+  assert.ok(slotsTable.indexOf('data-i18n="slotColVersion"') < slotsTable.indexOf('data-i18n="appColUpdate"'));
+  assert.ok(slotsTable.indexOf('data-i18n="appColUpdate"') < slotsTable.indexOf('data-i18n="slotColSize"'));
+  assert.match(flashSource, /className = 'slot-update-button'/);
+  assert.match(flashSource, /class="slot-update-cell"><span class="update-current" hidden/);
+  assert.match(flashSource, /async function slotUpdateFlow/);
+  assert.match(flashSource, /await slotWriteFlow\(\)/);
+  assert.match(flashSource, /uvstudio:slotcatalogversions/);
+  assert.match(toolsCss, /\.slot-update-button/);
+});
+
+test('marks an installed app only when the catalog has a newer version', () => {
+  const start = flashSource.indexOf('function appVersionParts');
+  const end = flashSource.indexOf('\n\nfunction appCatalogKey', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {};
+  vm.runInNewContext(
+    `${flashSource.slice(start, end)}; this.compare = appCompareVersions;`,
+    context
+  );
+
+  assert.ok(context.compare('1.2.9', '1.3.0') < 0);
+  assert.equal(context.compare('v1.3', '1.3.0'), 0);
+  assert.ok(context.compare('2.0.0', '1.9.9') > 0);
+  assert.equal(context.compare('development', '1.0.0'), null);
+  assert.match(flashSource, /uvstudio:appcatalogversions/);
+  assert.match(flashSource, /className = 'app-update-button'/);
+  assert.match(flashSource, /class="app-update-cell"><span class="update-current" hidden/);
+  assert.match(flashSource, /await appInstallFlow\(\)/);
+  assert.ok(html.indexOf('data-i18n="slotColVersion"') < html.indexOf('data-i18n="appColUpdate"'));
+  assert.ok(html.indexOf('data-i18n="appColUpdate"') < html.indexOf('data-i18n="appColSize"'));
+  assert.match(toolsCss, /\.app-update-button/);
+  assert.match(toolsCss, /\.update-current/);
+});
+
+test('checks installed apps against the detected Labs catalog', () => {
+  const start = flashSource.indexOf('function appFirmwareVersionFromName');
+  const end = flashSource.indexOf('\n\nconst appFileInput', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {};
+  vm.runInNewContext(
+    `${flashSource.slice(start, end)}; this.extract = appFirmwareVersionFromName;`,
+    context
+  );
+
+  assert.equal(context.extract('F4HWN Labs v6.0.0'), '6.0.0');
+  assert.equal(context.extract('F4HWN Labs v6.0'), '6.0.0');
+  assert.equal(context.extract('F4HWN v6.1.0 beta'), '6.1.0');
+  assert.equal(context.extract('unknown firmware'), '');
+  assert.match(flashSource, /uvstudio:appfirmwareversion/);
+  assert.match(flashSource, /uvstudio:appcatalogcompatibility/);
+  assert.match(flashSource, /appStateFirmwareMismatch/);
+});
+
 test('downloads a catalog app and forwards its filename to the installer', async () => {
   const start = flashSource.indexOf('async function loadAppFromURL');
   const end = flashSource.indexOf('\n\nif (appFileInput)', start);
@@ -162,6 +219,7 @@ test('downloads a catalog app and forwards its filename to the installer', async
     setAppImageBuffer: (buf, name) => {
       loaded.bytes = new Uint8Array(buf);
       loaded.name = name;
+      return true;
     },
     clearAppImage() {},
     log() {},
@@ -172,12 +230,13 @@ test('downloads a catalog app and forwards its filename to the installer', async
     context
   );
 
-  await context.load(
+  const loadedOk = await context.load(
     'https://example.test/archive/apps/v6.0.0/Beacon.app',
     'Beacon.app'
   );
   assert.deepEqual(Array.from(loaded.bytes), Array.from(expected));
   assert.equal(loaded.name, 'Beacon.app');
+  assert.equal(loadedOk, true);
 });
 
 test('loads resilient preferences before i18n and application consumers', () => {
