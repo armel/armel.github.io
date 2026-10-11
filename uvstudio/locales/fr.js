@@ -443,7 +443,6 @@ window.UVSTUDIO_LOCALES.fr = {
   "appManagerCatalog": "Catalogue",
   "appManagerOnRadio": "Sur votre radio",
   "appManagerInstalledHint": "Seules les apps installées apparaissent dans le menu de la radio.",
-  "appManagerShowSlots": "Afficher les slots vides",
   "appOrderApply": "Appliquer l’ordre",
   "appRenumber": "Renuméroter",
   "appOrderCancel": "Annuler",

@@ -3227,8 +3227,6 @@ const appInstallBtn  = document.getElementById('appInstallBtn');
 const appsTableBody  = document.getElementById('appsTableBody');
 const appMetaEl      = document.getElementById('appMeta');
 const appsTableWrap  = document.getElementById('appsTableWrap');
-const appShowEmptySlots = document.getElementById('appShowEmptySlots');
-const appShowEmptyWrap = document.getElementById('appShowEmptyWrap');
 const appRefreshBtn = document.getElementById('appRefreshBtn');
 const appRenumberBtn = document.getElementById('appRenumberBtn');
 const appOrderActions = document.getElementById('appOrderActions');
@@ -3299,9 +3297,8 @@ function appUpdateManagerSummary() {
   }
   const ready = appSlotStatuses.size === appActiveSlotCount;
   const free = ready ? [...appSlotStatuses.values()].filter(status => status === 2).length : 0;
-  if (appShowEmptyWrap) appShowEmptyWrap.hidden = !ready;
   if (appEmptyInstalled) {
-    appEmptyInstalled.hidden = installed !== 0 || Boolean(appShowEmptySlots?.checked);
+    appEmptyInstalled.hidden = installed !== 0;
   }
   if (appEmptyInstalledText) {
     appEmptyInstalledText.textContent = ready ? t('appManagerNoInstalled') : t('appManagerConnectHint');
@@ -4195,10 +4192,6 @@ if (appRefreshBtn) appRefreshBtn.addEventListener('click', () => { void appRefre
 if (appRenumberBtn) appRenumberBtn.addEventListener('click', () => { void appRenumberFlow(); });
 if (appOrderApplyBtn) appOrderApplyBtn.addEventListener('click', () => { void appApplyOrderFlow(); });
 if (appOrderCancelBtn) appOrderCancelBtn.addEventListener('click', appCancelOrder);
-if (appShowEmptySlots) appShowEmptySlots.addEventListener('change', () => {
-  if (appsTableWrap) appsTableWrap.classList.toggle('show-empty-slots', appShowEmptySlots.checked);
-  appUpdateManagerSummary();
-});
 if (appInstalledTab) appInstalledTab.addEventListener('click', () => appManagerSelectPanel('installed'));
 if (appCatalogTab) appCatalogTab.addEventListener('click', () => appManagerSelectPanel('catalog'));
 appBuildTable();

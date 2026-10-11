@@ -115,6 +115,8 @@ test('reconnects Firmware Slots and refreshes them after the serial port returns
   assert.ok(flashSource.includes("toolsSerial.setState('reconnecting'"));
   assert.ok(flashSource.includes('slotRefreshPending = true'));
   assert.ok(flashSource.includes('void slotRefreshFlow()'));
+  assert.match(html, /class="slots-list-toolbar">\s*<button[^>]+id="slotsRefreshBtn"[^>]+class="btn primary compact-toolbar-action slots-refresh"/);
+  assert.match(toolsCss, /\.compact-toolbar-action\s*\{[^}]*height:\s*32px[^}]*font-size:\s*11px/s);
 });
 
 test('loads the shared RF Log protocol before both consumers', () => {
@@ -148,9 +150,10 @@ test('exposes 48 app slots while retaining the v6.1.0 capacity', () => {
 test('provides a catalog and compact installed-app manager without new firmware commands', () => {
   assert.match(html, /id="appInstalledTab"/);
   assert.match(html, /id="appCatalogTab"/);
-  assert.match(html, /id="appShowEmptySlots"/);
-  assert.match(html, /id="appShowEmptyWrap" hidden/);
-  assert.match(html, /id="appRefreshBtn"[^>]+data-i18n="appsRefresh"/);
+  assert.doesNotMatch(html, /id="appShowEmptySlots"/);
+  assert.match(html, /class="btn primary compact-toolbar-action app-refresh-button" id="appRefreshBtn"[^>]+data-i18n="appsRefresh"/);
+  assert.ok(html.indexOf('id="appRenumberBtn"') < html.indexOf('id="appRefreshBtn"'));
+  assert.ok(html.indexOf('id="appOrderActions"') < html.indexOf('id="appRefreshBtn"'));
   assert.doesNotMatch(html, /id="appEmptyCatalogBtn"/);
   assert.match(html, /id="appCatalogSearch"/);
   assert.match(html, /id="appCategoryFilters"/);
@@ -159,7 +162,6 @@ test('provides a catalog and compact installed-app manager without new firmware 
   assert.match(flashSource, /appSelectFirstEmptySlot/);
   assert.match(flashSource, /appSlotStatuses\.size !== appActiveSlotCount/);
   assert.match(flashSource, /detail: \{ ready, installed, free, apps \}/);
-  assert.match(flashSource, /appShowEmptyWrap\.hidden = !ready/);
   assert.doesNotMatch(flashSource, /appEmptyCatalogBtn/);
   assert.match(flashSource, /updateAppFromURL,/);
   assert.match(flashSource, /deleteAppSlot,/);
@@ -179,7 +181,7 @@ test('provides a catalog and compact installed-app manager without new firmware 
   assert.match(toolsCss, /\.app-category\.btn\[data-category="radio"\]\s*\{\s*--app-category-color:\s*#3b82f6/);
   assert.match(toolsCss, /\.app-category\.btn\.active\s*\{[^}]*var\(--app-category-color\) 84%[^}]*var\(--app-category-color\) 14%/s);
   assert.match(appCatalogSource, /catalogTabEl\.addEventListener\('click'.*if \(!loaded && !loading\) void load\(\)/s);
-  assert.match(toolsCss, /\.apps-table-wrap:not\(\.show-empty-slots\) tr\.app-slot-empty/);
+  assert.match(toolsCss, /\.apps-table-wrap tr\.app-slot-empty\s*\{\s*display:\s*none/);
   assert.doesNotMatch(html, /id="appEmptyReadBtn"/);
   assert.match(flashSource, /appRefreshBtn\.disabled = !serialSupported \|\| busy \|\| orderDirty/);
   assert.match(flashSource, /appRefreshBtn\.addEventListener\('click', \(\) => \{ void appRefreshFlow\(\); \}\)/);

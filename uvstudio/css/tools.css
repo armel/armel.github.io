@@ -735,8 +735,18 @@
 #pane-tools .slot-state.empty {
   color: var(--text-muted);
 }
-#pane-tools #slotsRefreshBtn {
+#pane-tools .slots-list-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 11px;
+}
+#pane-tools .compact-toolbar-action {
+  width: auto;
   min-width: 0;
+  height: 32px;
+  margin: 0;
+  padding: 5px 11px;
+  font-size: 11px;
 }
 #pane-tools .slot-meta {
   margin: 10px 0 0;
@@ -934,23 +944,8 @@
   margin: 0;
   font-size: 11px;
 }
-#pane-tools label.app-show-empty {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-}
-#pane-tools label.app-show-empty[hidden] { display: none; }
-#pane-tools .app-show-empty input {
-  width: 15px;
-  height: 15px;
-  accent-color: var(--accent);
-}
-#pane-tools .apps-table-wrap:not(.show-empty-slots) tr.app-slot-empty { display: none; }
+#pane-tools .app-refresh-button { margin-left: auto; }
+#pane-tools .apps-table-wrap tr.app-slot-empty { display: none; }
 #pane-tools .apps-table-wrap tr.app-slot-pending { display: none; }
 #pane-tools .apps-table-wrap tr.app-slot-installed:hover td {
   background: color-mix(in oklab, var(--accent) 3%, var(--surface));
@@ -1294,9 +1289,8 @@
   #pane-tools .app-capacity-copy { text-align: left; }
   #pane-tools .app-capacity-track { width: 100%; }
   #pane-tools .app-manager-tabs { width: 100%; }
-  #pane-tools .app-panel-toolbar { align-items: flex-start; }
-  #pane-tools .app-panel-actions { align-items: flex-end; flex-direction: column-reverse; }
-  #pane-tools label.app-show-empty { max-width: 110px; }
+  #pane-tools .app-panel-toolbar { align-items: flex-start; flex-wrap: wrap; }
+  #pane-tools .app-panel-actions { align-items: center; flex-direction: row; margin-left: auto; }
   #pane-tools .app-catalog-toolbar { grid-template-columns: 1fr; }
   #pane-tools .app-catalog-card { grid-template-columns: 38px minmax(0, 1fr); }
   #pane-tools .app-catalog-actions { grid-column: 2; justify-self: start; flex-wrap: wrap; justify-content: flex-start; }
@@ -1339,5 +1333,5 @@
   #pane-tools .slots-table .slot-actions-group { justify-content: flex-start; flex-wrap: wrap; }
   #pane-tools .slots-table .slot-actions:not(:has(button:not([hidden]))) { display: none; }
   #pane-tools .apps-table-wrap .slots-table tbody tr.app-slot-pending,
-  #pane-tools .apps-table-wrap:not(.show-empty-slots) .slots-table tbody tr.app-slot-empty { display: none; }
+  #pane-tools .apps-table-wrap .slots-table tbody tr.app-slot-empty { display: none; }
 }

@@ -443,7 +443,6 @@ window.UVSTUDIO_LOCALES.zh = {
   "appManagerCatalog": "Catalog",
   "appManagerOnRadio": "On your radio",
   "appManagerInstalledHint": "Only installed apps appear in the radio menu.",
-  "appManagerShowSlots": "Show empty slots",
   "appOrderApply": "应用顺序",
   "appRenumber": "重新编号",
   "appOrderCancel": "取消",

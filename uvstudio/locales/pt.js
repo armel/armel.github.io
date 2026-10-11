@@ -443,7 +443,6 @@ window.UVSTUDIO_LOCALES.pt = {
   "appManagerCatalog": "Catalog",
   "appManagerOnRadio": "On your radio",
   "appManagerInstalledHint": "Only installed apps appear in the radio menu.",
-  "appManagerShowSlots": "Show empty slots",
   "appOrderApply": "Aplicar ordem",
   "appRenumber": "Renumerar",
   "appOrderCancel": "Cancelar",
