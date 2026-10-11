@@ -134,8 +134,8 @@ test('loads the app catalog after the installer API and exposes both selectors',
   assert.match(flashSource, /uvstudio:appselect/);
 });
 
-test('exposes 32 app slots while retaining the v6.1.0 capacity', () => {
-  assert.match(flashSource, /const APP_SLOT_COUNT = 32/);
+test('exposes 48 app slots while retaining the v6.1.0 capacity', () => {
+  assert.match(flashSource, /const APP_SLOT_COUNT = 48/);
   assert.match(flashSource, /const APP_LEGACY_SLOT_COUNT = 16/);
   assert.match(flashSource, /appCompareVersions\(version, '6\.1\.0'\) > 0/);
   assert.match(html, /class="slots-table-wrap apps-table-wrap">\s*<table class="slots-table" id="appsTable"/);
@@ -317,7 +317,7 @@ test('checks installed apps against the detected Labs catalog', () => {
   const start = flashSource.indexOf('function appVersionParts');
   const end = flashSource.indexOf('\n\nconst appFileInput', start);
   assert.ok(start >= 0 && end > start);
-  const context = { APP_SLOT_COUNT: 32, APP_LEGACY_SLOT_COUNT: 16 };
+  const context = { APP_SLOT_COUNT: 48, APP_LEGACY_SLOT_COUNT: 16 };
   vm.runInNewContext(
     `${flashSource.slice(start, end)}; this.extract = appFirmwareVersionFromName; this.slotCount = appSlotCountForFirmware;`,
     context
@@ -328,8 +328,8 @@ test('checks installed apps against the detected Labs catalog', () => {
   assert.equal(context.extract('F4HWN v6.1.0 beta'), '6.1.0');
   assert.equal(context.extract('unknown firmware'), '');
   assert.equal(context.slotCount('F4HWN Labs v6.1.0'), 16);
-  assert.equal(context.slotCount('F4HWN Fusion v6.1.1'), 32);
-  assert.equal(context.slotCount('F4HWN Fusion v6.2.0'), 32);
+  assert.equal(context.slotCount('F4HWN Fusion v6.1.1'), 48);
+  assert.equal(context.slotCount('F4HWN Fusion v6.2.0'), 48);
   assert.equal(context.slotCount('unknown firmware'), 16);
   assert.match(flashSource, /uvstudio:appfirmwareversion/);
   assert.match(flashSource, /uvstudio:appcatalogcompatibility/);

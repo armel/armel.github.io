@@ -3154,7 +3154,7 @@ window.addEventListener('uvstudio:slotcatalogversions', event => {
 // Parallels the firmware-slots feature, targeting the external-flash "Apps"
 // region via the 0x073x command family. A .app file already carries its 64-byte
 // header (built by pack_app.py), so we just split header/code and write both.
-const APP_SLOT_COUNT = 32;        // v6.2.0+ firmware capacity (0..31)
+const APP_SLOT_COUNT = 48;        // v6.2.0+ firmware capacity (0..47)
 const APP_LEGACY_SLOT_COUNT = 16; // firmware capacity through v6.1.0
 const APP_SLOT_FIRST = 0;         // first physical slot index
 const appSlotLabel = (s) => String(s + 1);   // physical slot -> user-facing number

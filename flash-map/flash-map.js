@@ -40,8 +40,8 @@ const FLASH_MAP = {
     { id: "profile-4", start: 0x0F0000, end: 0x0FFFFF, kind: "profile", target: "profiles", short: { fr: "P4", en: "P4" } },
     { id: "mb-state", start: 0x100000, end: 0x100FFF, kind: "shared", target: "profiles", short: { fr: "État", en: "State" } },
     { id: "gap-mid-a", start: 0x101000, end: 0x101FFF, kind: "free", target: "unused", short: { fr: "Libre", en: "Free" } },
-    { id: "apps", start: 0x102000, end: 0x141FFF, kind: "apps", target: "apps", short: { fr: "Apps 1–32", en: "Apps 1–32" } },
-    { id: "apps-reserve", start: 0x142000, end: 0x1DDFFF, kind: "apps-reserve", target: "apps", short: { fr: "Extension Apps", en: "App expansion" } },
+    { id: "apps", start: 0x102000, end: 0x161FFF, kind: "apps", target: "apps", short: { fr: "Apps 1–48", en: "Apps 1–48" } },
+    { id: "apps-reserve", start: 0x162000, end: 0x1DDFFF, kind: "apps-reserve", target: "apps", short: { fr: "Extension Apps", en: "App expansion" } },
     { id: "sonic-4k", start: 0x1DE000, end: 0x1FFFFF, kind: "sonic", target: "sonic-4k", short: { fr: "Sonic 4K", en: "Sonic 4K" } },
   ],
   sections: [
@@ -147,14 +147,14 @@ const FLASH_MAP = {
       id: "apps", range: [0x102000, 0x1DDFFF],
       title: { fr: "Apps Overlay et réserve d’extension", en: "Overlay apps and expansion reserve" },
       rows: [
-        [0x102000, 0x141FFF, { fr: "32 slots exposés par Fusion v6.2.0", en: "32 slots exposed by Fusion v6.2.0" }],
-        [0x142000, 0x1DDFFF, { fr: "Réserve contiguë pour 78 slots supplémentaires", en: "Contiguous reserve for 78 additional slots" }],
+        [0x102000, 0x161FFF, { fr: "48 slots exposés par Fusion v6.2.0", en: "48 slots exposed by Fusion v6.2.0" }],
+        [0x162000, 0x1DDFFF, { fr: "Réserve contiguë pour 62 slots supplémentaires", en: "Contiguous reserve for 62 additional slots" }],
         ["slot + 0x0000", "0x003F", { fr: "En-tête FAP1 de 64 octets : magic, versions hdr/ABI, taille code, CRC32, offset d’entrée, flags, nom, version, VMA de link", en: "64-byte FAP1 header: magic, hdr/ABI versions, code size, CRC32, entry offset, flags, name, version, link VMA" }],
         ["slot + 0x0040", "0x004F", { fr: "Config de l’app (16 octets max), préservée entre lancements et écrite par le firmware à la sortie", en: "App config (up to 16 bytes), kept across launches and written by the firmware on exit" }],
         ["slot + 0x0050", "0x0FFF", { fr: "Reste du secteur en-tête de 4 Kio, réservé", en: "Remainder of the 4 KiB header sector, reserved" }],
         ["slot + 0x1000", "0x1FFF", { fr: "Secteur code de 4 Kio : blob de l’app (≤ 4 Kio), vérifié par CRC puis copié dans l’overlay RAM pour exécution", en: "4 KiB code sector: app blob (≤ 4 KiB), CRC-checked then copied into the RAM overlay to run" }],
       ],
-      note: { fr: "La région continue offre un plafond géométrique de 110 slots de 8 Kio. Fusion v6.2.0 et UV Studio en exposent 32 ; les 78 suivants restent réservés à une extension future. Les anciennes données vocales de cette plage peuvent être restaurées par UV Studio si un retour au firmware d’origine l’exige.", en: "The contiguous region has a geometric ceiling of 110 8-KiB slots. Fusion v6.2.0 and UV Studio expose 32; the following 78 remain reserved for future expansion. Legacy voice data in this range can be restored by UV Studio if returning to the factory firmware requires it." },
+      note: { fr: "La région continue offre un plafond géométrique de 110 slots de 8 Kio. Fusion v6.2.0 et UV Studio en exposent 48 ; les 62 suivants restent réservés à une extension future. Les anciennes données vocales de cette plage peuvent être restaurées par UV Studio si un retour au firmware d’origine l’exige.", en: "The contiguous region has a geometric ceiling of 110 8-KiB slots. Fusion v6.2.0 and UV Studio expose 48; the following 62 remain reserved for future expansion. Legacy voice data in this range can be restored by UV Studio if returning to the factory firmware requires it." },
     },
     {
       id: "sonic-4k", range: [0x1DE000, 0x1FFFFF],
