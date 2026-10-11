@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="assets/uv-studio-radio.svg">
 <link href="css/core.css?v=5" rel="stylesheet">
 <link href="css/viewer.css?v=13" rel="stylesheet">
-<link href="css/tools.css?v=45" rel="stylesheet">
+<link href="css/tools.css?v=50" rel="stylesheet">
 <link href="css/studio.css?v=26" rel="stylesheet">
 </head>
 <body data-theme="light">
@@ -531,8 +531,8 @@
                         <div><strong id="appManagerFirmware" data-i18n="appManagerRadioPending">Waiting for radio…</strong><span id="appManagerCompatibility" data-i18n="appManagerConnectHint">Connect the radio to check compatibility</span></div>
                     </div>
                     <div class="app-capacity">
-                        <div class="app-capacity-copy"><strong id="appInstalledCount">0 apps installed</strong><span id="appCapacityText">0 of 16 slots used</span></div>
-                        <div class="app-capacity-track" role="progressbar" aria-valuemin="0" aria-valuemax="16" aria-valuenow="0" id="appCapacityBar"><span></span></div>
+                        <div class="app-capacity-copy"><strong id="appInstalledCount">0 apps installed</strong><span id="appCapacityText">0 of 32 slots used</span></div>
+                        <div class="app-capacity-track" role="progressbar" aria-valuemin="0" aria-valuemax="32" aria-valuenow="0" id="appCapacityBar"><span></span></div>
                     </div>
                 </section>
 
@@ -548,7 +548,15 @@
                 <section class="app-manager-panel active" id="appInstalledPanel" role="tabpanel" aria-labelledby="appInstalledTab">
                     <div class="app-panel-toolbar">
                         <div><h2 data-i18n="appManagerOnRadio">On your radio</h2><p data-i18n="appManagerInstalledHint">Only installed apps appear in the radio menu.</p></div>
-                        <label class="app-show-empty" id="appShowEmptyWrap" hidden><input type="checkbox" id="appShowEmptySlots"><span data-i18n="appManagerShowSlots">Show empty slots</span></label>
+                        <div class="app-panel-actions">
+                            <button type="button" class="btn primary app-refresh-button" id="appRefreshBtn" data-i18n="appsRefresh">Read apps from radio</button>
+                            <button type="button" class="btn app-renumber-button" id="appRenumberBtn" data-i18n="appRenumber" hidden>Renumber</button>
+                            <div class="app-order-actions" id="appOrderActions" hidden>
+                                <button type="button" class="btn" id="appOrderCancelBtn" data-i18n="appOrderCancel">Cancel</button>
+                                <button type="button" class="btn primary" id="appOrderApplyBtn" data-i18n="appOrderApply">Apply order</button>
+                            </div>
+                            <label class="app-show-empty" id="appShowEmptyWrap" hidden><input type="checkbox" id="appShowEmptySlots"><span data-i18n="appManagerShowSlots">Show empty slots</span></label>
+                        </div>
                     </div>
                     <div id="appsTableWrap" class="slots-table-wrap apps-table-wrap">
                         <table class="slots-table" id="appsTable">
@@ -566,9 +574,6 @@
                         </table>
                         <div class="app-empty-installed" id="appEmptyInstalled" hidden>
                             <span id="appEmptyInstalledText" data-i18n="appManagerNoInstalled">No apps installed on this radio.</span>
-                            <div class="app-empty-actions">
-                                <button type="button" class="btn primary" id="appEmptyReadBtn" data-i18n="appsRefresh">Read apps from radio</button>
-                            </div>
                         </div>
                     </div>
                 </section>
@@ -840,7 +845,7 @@
 <script src="js/rf-log.js?v=4"></script>
     <script src="js/k5viewer.js?v=32"></script>
 <script src="js/keypad-detach.js?v=1"></script>
-<script src="js/flash.js?v=69"></script>
+<script src="js/flash.js?v=78"></script>
 <script src="js/flash-catalog.js?v=18"></script>
 <script src="js/app-catalog.js?v=6"></script>
 <script src="js/studio.js?v=18"></script>

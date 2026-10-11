@@ -3154,10 +3154,12 @@ window.addEventListener('uvstudio:slotcatalogversions', event => {
 // Parallels the firmware-slots feature, targeting the external-flash "Apps"
 // region via the 0x073x command family. A .app file already carries its 64-byte
 // header (built by pack_app.py), so we just split header/code and write both.
-const APP_SLOT_COUNT = 16;        // firmware capacity (0..15)
+const APP_SLOT_COUNT = 32;        // v6.2.0+ firmware capacity (0..31)
+const APP_LEGACY_SLOT_COUNT = 16; // firmware capacity through v6.1.0
 const APP_SLOT_FIRST = 0;         // first physical slot index
-const APP_SLOT_LAST = APP_SLOT_COUNT - 1; // expose the full capacity (shown as 1..16)
 const appSlotLabel = (s) => String(s + 1);   // physical slot -> user-facing number
+const APP_REGION_BASE = 0x102000; // physical external-flash address of slot 0
+const APP_SLOT_STRIDE = 0x2000;   // complete slot: metadata/assets + code sectors
 const APP_IMG_OFFSET = 0x1000;    // code starts after the header sector
 const APP_HDR_SIZE = 64;
 const APP_ASSET_OFFSET = 0x100;   // read-only assets live in the header sector (API level 2)
@@ -3210,6 +3212,13 @@ function appFirmwareVersionFromName(name) {
   return version.split('.').concat('0', '0').slice(0, 3).join('.');
 }
 
+function appSlotCountForFirmware(name) {
+  const version = appFirmwareVersionFromName(name);
+  return version && appCompareVersions(version, '6.1.0') > 0
+    ? APP_SLOT_COUNT
+    : APP_LEGACY_SLOT_COUNT;
+}
+
 const appFileInput   = document.getElementById('appFile');
 const appFileLabel   = document.getElementById('appFileLabel');
 const appFileName    = document.getElementById('appFileName');
@@ -3220,9 +3229,13 @@ const appMetaEl      = document.getElementById('appMeta');
 const appsTableWrap  = document.getElementById('appsTableWrap');
 const appShowEmptySlots = document.getElementById('appShowEmptySlots');
 const appShowEmptyWrap = document.getElementById('appShowEmptyWrap');
+const appRefreshBtn = document.getElementById('appRefreshBtn');
+const appRenumberBtn = document.getElementById('appRenumberBtn');
+const appOrderActions = document.getElementById('appOrderActions');
+const appOrderApplyBtn = document.getElementById('appOrderApplyBtn');
+const appOrderCancelBtn = document.getElementById('appOrderCancelBtn');
 const appEmptyInstalled = document.getElementById('appEmptyInstalled');
 const appEmptyInstalledText = document.getElementById('appEmptyInstalledText');
-const appEmptyReadBtn = document.getElementById('appEmptyReadBtn');
 const appInstalledCount = document.getElementById('appInstalledCount');
 const appInstalledTabCount = document.getElementById('appInstalledTabCount');
 const appCapacityText = document.getElementById('appCapacityText');
@@ -3241,9 +3254,14 @@ let appImageLoadAbort = null;
 let appLatestVersions = new Map();
 let appCompatibleVersions = new Map();
 let appCurrentFirmwareVersion = '';
+let appActiveSlotCount = APP_SLOT_COUNT;
 let appCompatibilityKnown = false;
 let appUpdateDownloadPending = false;
 const appSlotStatuses = new Map();
+let appOrderBaseline = [];
+let appOrderDraft = [];
+let appOrderDragSlot = null;
+let appOrderDropIndex = null;
 
 function appManagerSelectPanel(name) {
   const catalog = name === 'catalog';
@@ -3272,13 +3290,14 @@ function appUpdateManagerSummary() {
   for (const status of appSlotStatuses.values()) if (status === 0) installed++;
   if (appInstalledCount) appInstalledCount.textContent = t('appManagerInstalledCount', installed);
   if (appInstalledTabCount) appInstalledTabCount.textContent = String(installed);
-  if (appCapacityText) appCapacityText.textContent = t('appManagerCapacity', installed, APP_SLOT_COUNT);
+  if (appCapacityText) appCapacityText.textContent = t('appManagerCapacity', installed, appActiveSlotCount);
   if (appCapacityBar) {
+    appCapacityBar.setAttribute('aria-valuemax', String(appActiveSlotCount));
     appCapacityBar.setAttribute('aria-valuenow', String(installed));
     const fill = appCapacityBar.querySelector('span');
-    if (fill) fill.style.width = `${installed / APP_SLOT_COUNT * 100}%`;
+    if (fill) fill.style.width = `${installed / appActiveSlotCount * 100}%`;
   }
-  const ready = appSlotStatuses.size === APP_SLOT_COUNT;
+  const ready = appSlotStatuses.size === appActiveSlotCount;
   const free = ready ? [...appSlotStatuses.values()].filter(status => status === 2).length : 0;
   if (appShowEmptyWrap) appShowEmptyWrap.hidden = !ready;
   if (appEmptyInstalled) {
@@ -3287,7 +3306,6 @@ function appUpdateManagerSummary() {
   if (appEmptyInstalledText) {
     appEmptyInstalledText.textContent = ready ? t('appManagerNoInstalled') : t('appManagerConnectHint');
   }
-  if (appEmptyReadBtn) appEmptyReadBtn.hidden = ready;
   const apps = [];
   appsTableBody?.querySelectorAll('tr[data-app-name]').forEach(row => {
     const slot = Number.parseInt(row.dataset.slot || '', 10);
@@ -3307,6 +3325,147 @@ function appSelectFirstEmptySlot() {
   if (!appTargetSelect) return;
   const free = [...appTargetSelect.options].find(option => appSlotStatuses.get(Number(option.value)) === 2);
   if (free) appTargetSelect.value = free.value;
+}
+
+function appOrderIsDirty() {
+  return appOrderBaseline.length === appOrderDraft.length &&
+    appOrderBaseline.some((slot, index) => slot !== appOrderDraft[index]);
+}
+
+function appOrderMoves(baseline = appOrderBaseline, draft = appOrderDraft) {
+  return baseline
+    .map((target, index) => ({ target, source: draft[index] }))
+    .filter(move => move.source !== move.target);
+}
+
+function appOrderSupported() {
+  return appSlotStatuses.size === appActiveSlotCount &&
+    appCompareVersions(appCurrentFirmwareVersion, '6.1.0') > 0;
+}
+
+function appCanReorder() {
+  return appOrderSupported() && appOrderDraft.length > 1;
+}
+
+function appRenumberMoves(installed = appOrderBaseline) {
+  if (!installed.length) return [];
+  const last = installed[installed.length - 1];
+  const installedSet = new Set(installed);
+  const slots = Array.from({ length: last + 1 }, (_, slot) => slot);
+  const sources = installed.concat(slots.filter(slot => !installedSet.has(slot)));
+  return slots
+    .map((target, index) => ({ target, source: sources[index] }))
+    .filter(move => move.source !== move.target);
+}
+
+function appCanRenumber() {
+  return appOrderSupported() && !appOrderIsDirty() && appRenumberMoves().length > 0;
+}
+
+function appRenderOrder() {
+  if (!appsTableBody) return;
+  const rows = new Map([...appsTableBody.querySelectorAll('tr[data-slot]')]
+    .map(row => [Number(row.dataset.slot), row]));
+  const sourceByTarget = new Map(appOrderBaseline
+    .map((target, index) => [target, appOrderDraft[index]]));
+
+  for (let target = APP_SLOT_FIRST; target < appActiveSlotCount; target++) {
+    const source = sourceByTarget.has(target) ? sourceByTarget.get(target) : target;
+    const row = rows.get(source);
+    if (!row) continue;
+    row.dataset.targetSlot = String(target);
+    row.querySelector('.slot-idx').textContent = appSlotLabel(target);
+    row.classList.toggle('app-slot-order-pending', source !== target);
+    appsTableBody.appendChild(row);
+  }
+}
+
+function appResetOrder() {
+  appOrderBaseline = [...appSlotStatuses.entries()]
+    .filter(([, status]) => status === 0)
+    .map(([slot]) => slot)
+    .sort((a, b) => a - b);
+  appOrderDraft = [...appOrderBaseline];
+  appRenderOrder();
+  updateAppButtons();
+}
+
+function appClearOrderDropMarker() {
+  if (!appsTableBody) return;
+  appsTableBody.querySelectorAll('.app-order-drop-before, .app-order-drop-after').forEach(row => {
+    row.classList.remove('app-order-drop-before', 'app-order-drop-after');
+  });
+}
+
+function appOrderDragStart(slot, event) {
+  const busy = appUpdateDownloadPending || Boolean(activeOperationToken);
+  if (!appCanReorder() || busy || appOrderDraft.indexOf(slot) < 0 ||
+      event.target.closest('button, a, input, select')) {
+    event.preventDefault();
+    return;
+  }
+  appOrderDragSlot = slot;
+  appOrderDropIndex = appOrderDraft.indexOf(slot);
+  event.currentTarget.classList.add('app-order-dragging');
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', String(slot));
+}
+
+function appOrderDragOver(targetSlot, event) {
+  if (appOrderDragSlot === null) return;
+  const targetIndex = appOrderDraft.indexOf(targetSlot);
+  const sourceIndex = appOrderDraft.indexOf(appOrderDragSlot);
+  if (targetIndex < 0 || sourceIndex < 0) return;
+
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  const row = event.currentTarget;
+  const bounds = row.getBoundingClientRect();
+  const after = event.clientY >= bounds.top + bounds.height / 2;
+  let insertIndex = targetIndex + (after ? 1 : 0);
+  if (sourceIndex < insertIndex) insertIndex--;
+  appOrderDropIndex = Math.max(0, Math.min(appOrderDraft.length - 1, insertIndex));
+
+  appClearOrderDropMarker();
+  if (targetSlot !== appOrderDragSlot)
+    row.classList.add(after ? 'app-order-drop-after' : 'app-order-drop-before');
+
+  if (appsTableWrap) {
+    const viewport = appsTableWrap.getBoundingClientRect();
+    const edge = 48;
+    if (event.clientY < viewport.top + edge) appsTableWrap.scrollTop -= 14;
+    else if (event.clientY > viewport.bottom - edge) appsTableWrap.scrollTop += 14;
+  }
+}
+
+function appOrderDrop(event) {
+  if (appOrderDragSlot === null || appOrderDropIndex === null) return;
+  event.preventDefault();
+  const sourceIndex = appOrderDraft.indexOf(appOrderDragSlot);
+  if (sourceIndex >= 0 && sourceIndex !== appOrderDropIndex) {
+    const [slot] = appOrderDraft.splice(sourceIndex, 1);
+    appOrderDraft.splice(appOrderDropIndex, 0, slot);
+    appRenderOrder();
+    updateAppButtons();
+  }
+  appOrderDragEnd();
+}
+
+function appOrderDragEnd() {
+  if (appsTableBody) {
+    appsTableBody.querySelectorAll('.app-order-dragging').forEach(row => {
+      row.classList.remove('app-order-dragging');
+    });
+  }
+  appClearOrderDropMarker();
+  appOrderDragSlot = null;
+  appOrderDropIndex = null;
+}
+
+function appCancelOrder() {
+  appOrderDraft = [...appOrderBaseline];
+  appRenderOrder();
+  updateAppButtons();
 }
 
 // --- Labs-only feature modal ------------------------------------------------
@@ -3409,6 +3568,55 @@ async function appValidate(slot) {
   return (await slotCommand(MSG_APP_VALIDATE, Uint8Array.of(slot), MSG_APP_VALIDATE_RESP, 20000))[1];
 }
 
+function appSlotAddress(slot) {
+  return APP_REGION_BASE + slot * APP_SLOT_STRIDE;
+}
+
+async function appReadSlotImage(slot, timestamp) {
+  const image = new Uint8Array(APP_SLOT_STRIDE);
+  const base = appSlotAddress(slot);
+  for (let offset = 0; offset < image.length; offset += FLASH_DUMP_CHUNK) {
+    const length = Math.min(FLASH_DUMP_CHUNK, image.length - offset);
+    image.set(await readExternalFlashChunk(base + offset, length, timestamp), offset);
+  }
+  return image;
+}
+
+async function appVerifySlotSector(expected, address, timestamp, crcSupported) {
+  if (crcSupported) {
+    const actualCrc = await readExternalFlashCrc32(address, expected.length, timestamp);
+    if (actualCrc === crc32Bytes(expected)) return;
+  }
+
+  for (let offset = 0; offset < expected.length; offset += FLASH_DUMP_CHUNK) {
+    const chunk = expected.subarray(offset, Math.min(offset + FLASH_DUMP_CHUNK, expected.length));
+    const actual = await readExternalFlashChunk(address + offset, chunk.length, timestamp);
+    for (let index = 0; index < chunk.length; index++) {
+      if (actual[index] !== chunk[index]) {
+        throw new Error(t('flashVerifyError', flashAddress(address + offset + index)));
+      }
+    }
+  }
+}
+
+async function appWriteSlotImage(slot, image, timestamp, crcSupported) {
+  const base = appSlotAddress(slot);
+  for (let sectorOffset = 0; sectorOffset < APP_SLOT_STRIDE; sectorOffset += FLASH_SECTOR_SIZE) {
+    const sector = image.subarray(sectorOffset, sectorOffset + FLASH_SECTOR_SIZE);
+    const address = base + sectorOffset;
+    if (crcSupported &&
+        await readExternalFlashCrc32(address, sector.length, timestamp) === crc32Bytes(sector)) continue;
+
+    await eraseExternalFlashSector(address, timestamp);
+    for (let offset = 0; offset < sector.length; offset += FLASH_WRITE_CHUNK) {
+      const chunk = sector.subarray(offset, Math.min(offset + FLASH_WRITE_CHUNK, sector.length));
+      if (chunk.every(value => value === 0xff)) continue;
+      await writeExternalFlashChunk(address + offset, chunk, timestamp);
+    }
+    await appVerifySlotSector(sector, address, timestamp, crcSupported);
+  }
+}
+
 function appRenderRow(slot, info) {
   if (!appsTableBody) return;
   const row = appsTableBody.querySelector(`tr[data-slot="${slot}"]`);
@@ -3484,7 +3692,8 @@ function appRenderUpdateIndicator(row) {
     const targetVersion = tableActionVersionLabel(latest.version);
     const detail = t('appUpdateAction', targetVersion);
     setTableActionIcon(button, 'update', detail, targetVersion);
-    button.disabled = !serialSupported || appUpdateDownloadPending || Boolean(activeOperationToken);
+    button.disabled = !serialSupported || appUpdateDownloadPending ||
+      Boolean(activeOperationToken) || appOrderIsDirty();
   } else {
     setTableActionIcon(button, 'update', t('appUpdateShort'));
     button.disabled = true;
@@ -3502,7 +3711,7 @@ function appRefreshUpdateIndicators() {
 function appBuildTable() {
   if (!appsTableBody) return;
   appsTableBody.innerHTML = '';
-  for (let s = APP_SLOT_FIRST; s <= APP_SLOT_LAST; s++) {
+  for (let s = APP_SLOT_FIRST; s < appActiveSlotCount; s++) {
     const tr = document.createElement('tr');
     tr.className = 'app-slot-pending';
     tr.dataset.slot = String(s);
@@ -3527,17 +3736,31 @@ function appBuildTable() {
     update.hidden = true;
     update.disabled = true;
     update.addEventListener('click', () => { void appUpdateFlow(s); });
+    tr.addEventListener('dragstart', event => appOrderDragStart(s, event));
+    tr.addEventListener('dragover', event => appOrderDragOver(s, event));
+    tr.addEventListener('drop', appOrderDrop);
+    tr.addEventListener('dragend', appOrderDragEnd);
     const actions = tr.querySelector('.slot-actions-group');
     actions.appendChild(update);
     actions.appendChild(del);
     appsTableBody.appendChild(tr);
   }
-  if (appTargetSelect && !appTargetSelect.options.length) {
-    for (let s = APP_SLOT_FIRST; s <= APP_SLOT_LAST; s++) {
+  if (appTargetSelect) {
+    appTargetSelect.innerHTML = '';
+    for (let s = APP_SLOT_FIRST; s < appActiveSlotCount; s++) {
       const o = document.createElement('option'); o.value = String(s); o.textContent = appSlotLabel(s);
       appTargetSelect.appendChild(o);
     }
   }
+}
+
+function appSetSlotCount(count) {
+  if (count === appActiveSlotCount && appsTableBody?.children.length === count) return;
+  appActiveSlotCount = count;
+  appSlotStatuses.clear();
+  appBuildTable();
+  appResetOrder();
+  appUpdateManagerSummary();
 }
 
 async function finishAppOperation(op) {
@@ -3549,6 +3772,7 @@ async function appRefreshFlow() {
   const op = beginToolsOperation('apps-refresh', false);
   if (!op) return;
   appSlotStatuses.clear();
+  appResetOrder();
   if (appsTableBody) appsTableBody.querySelectorAll('tr[data-slot]').forEach(row => {
     row.classList.add('app-slot-pending');
     row.classList.remove('app-slot-installed', 'app-slot-empty');
@@ -3558,7 +3782,7 @@ async function appRefreshFlow() {
     if (!port) await connect();
 
     // Capability gate. A firmware without overlay-app support (Fusion, Transfer,
-    // stock…) never answers 0x0730, so scanning all 16 slots would hang on sixteen
+    // stock…) never answers 0x0730, so scanning every advertised slot would hang
     // timeouts and then show cryptic errors - the exact confusion we want to
     // avoid. Instead: confirm the radio answers device-info (so we can name it),
     // then probe a single slot. A timeout there means "no overlay apps" -> a
@@ -3570,6 +3794,7 @@ async function appRefreshFlow() {
       if (appManagerFirmware) appManagerFirmware.textContent = fw.name || t('appUnknownFirmware');
       if (appManagerCompatibility) appManagerCompatibility.textContent = t('appManagerCheckingCompatibility');
       const firmwareVersion = appFirmwareVersionFromName(fw.name);
+      appSetSlotCount(appSlotCountForFirmware(fw.name));
       if (firmwareVersion !== appCurrentFirmwareVersion) {
         appCurrentFirmwareVersion = firmwareVersion;
         appCompatibilityKnown = false;
@@ -3591,13 +3816,14 @@ async function appRefreshFlow() {
 
     log(t('appsScanning'), 'info');
     appRenderRow(APP_SLOT_FIRST, firstInfo);   // already read by the probe
-    for (let s = APP_SLOT_FIRST + 1; s <= APP_SLOT_LAST; s++) {
+    for (let s = APP_SLOT_FIRST + 1; s < appActiveSlotCount; s++) {
       try { appRenderRow(s, await appInfo(s)); }
       catch (e) {
         if (e?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e;
         appRenderRow(s, { slot: s, status: 6, hdr: null });
       }
     }
+    appResetOrder();
     appUpdateManagerSummary();
     appSelectFirstEmptySlot();
     log(t('appsScanDone'), 'success');
@@ -3609,6 +3835,10 @@ async function appRefreshFlow() {
 }
 
 async function appDeleteFlow(slot) {
+  if (appOrderIsDirty()) {
+    log(t('appOrderApplyFirst'), 'error');
+    return;
+  }
   const op = beginToolsOperation('apps-delete', true);
   if (!op) return;
   try {
@@ -3621,6 +3851,7 @@ async function appDeleteFlow(slot) {
     if (st !== 0) throw new Error(appStatusText(st));
     log(t('appErased', appSlotLabel(slot)), 'success');
     appRenderRow(slot, await appInfo(slot));
+    appResetOrder();
     appUpdateManagerSummary();
     appSelectFirstEmptySlot();
   } catch (e) {
@@ -3633,13 +3864,17 @@ async function appDeleteFlow(slot) {
 // onProgress (optional): report progress to the caller (catalog card mini gauge)
 // instead of the shared progress bar under the tool.
 async function appInstallFlow({ onProgress } = {}) {
+  if (appOrderIsDirty()) {
+    log(t('appOrderApplyFirst'), 'error');
+    return;
+  }
   if (!appImage) return;
-  if (appSlotStatuses.size !== APP_SLOT_COUNT) {
+  if (appSlotStatuses.size !== appActiveSlotCount) {
     log(t('appManagerScanBeforeInstall'), 'error');
     return;
   }
   const slot = appTargetSelect ? parseInt(appTargetSelect.value, 10) : APP_SLOT_FIRST;
-  if (!(slot >= APP_SLOT_FIRST && slot <= APP_SLOT_LAST)) return;
+  if (!(slot >= APP_SLOT_FIRST && slot < appActiveSlotCount)) return;
   // .app = header + code (codeSize bytes) + optional read-only assets. The code
   // goes to the code sector, the assets to the header sector at APP_ASSET_OFFSET.
   const header = appImage.subarray(0, APP_HDR_SIZE);
@@ -3702,6 +3937,7 @@ async function appInstallFlow({ onProgress } = {}) {
     reportProgress(100);
     log(t('appInstalled', appSlotLabel(slot)), 'success');
     appRenderRow(slot, await appInfo(slot));
+    appResetOrder();
     appUpdateManagerSummary();
     appSelectFirstEmptySlot();
     if (!inline) setTimeout(() => { if (progressContainer) progressContainer.style.display = 'none'; }, 1200);
@@ -3712,16 +3948,116 @@ async function appInstallFlow({ onProgress } = {}) {
   }
 }
 
+function appUpdateOrderControls() {
+  const busy = appUpdateDownloadPending || Boolean(activeOperationToken);
+  const canReorder = appCanReorder();
+  const dirty = appOrderIsDirty();
+  const canRenumber = appCanRenumber();
+  if (appRenumberBtn) {
+    appRenumberBtn.hidden = !canRenumber;
+    appRenumberBtn.disabled = busy || !canRenumber;
+  }
+  if (appOrderActions) appOrderActions.hidden = !dirty;
+  if (appOrderApplyBtn) appOrderApplyBtn.disabled = busy || !dirty;
+  if (appOrderCancelBtn) appOrderCancelBtn.disabled = busy || !dirty;
+
+  if (!appsTableBody) return;
+  appsTableBody.querySelectorAll('tr[data-slot]').forEach(row => {
+    const slot = Number(row.dataset.slot);
+    const visible = canReorder && appSlotStatuses.get(slot) === 0;
+    row.draggable = visible && !busy;
+    row.classList.toggle('app-slot-draggable', visible && !busy);
+  });
+}
+
+async function appRewriteOrderFlow(moves, validateTargets, operation, doneKey) {
+  const op = beginToolsOperation(operation, true);
+  if (!op) return;
+  updateAppButtons();
+  let storageTouched = false;
+  let refreshNeeded = false;
+  if (progressContainer) progressContainer.style.display = 'block';
+  updateProgress(0);
+
+  try {
+    if (!port) await connect();
+    readBuffer = []; await sleep(300);
+    const dev = await requestDeviceInfo();
+    if (!(await appsProbe(dev))) return;
+    if (!(await hasExternalFlashSupport(dev.timestamp, 'studio_nav_apps'))) return;
+
+    const sources = [...new Set(moves.map(move => move.source))];
+    const images = new Map();
+    log(t('appOrderReading'), 'info');
+    for (let index = 0; index < sources.length; index++) {
+      const slot = sources[index];
+      images.set(slot, await appReadSlotImage(slot, dev.timestamp));
+      updateProgress(((index + 1) / sources.length) * 35);
+      await waitForProgressPaint();
+    }
+
+    const crcSupported = await detectExternalFlashCrcSupport(dev.timestamp);
+    log(t('appOrderWriting'), 'info');
+    for (let index = 0; index < moves.length; index++) {
+      const move = moves[index];
+      storageTouched = true;
+      await appWriteSlotImage(move.target, images.get(move.source), dev.timestamp, crcSupported);
+      updateProgress(35 + ((index + 1) / moves.length) * 60);
+      await waitForProgressPaint();
+    }
+
+    for (const target of validateTargets) {
+      const status = await appValidate(target);
+      if (status !== 0) throw new Error(appStatusText(status));
+    }
+    updateProgress(100);
+    refreshNeeded = true;
+    log(t(doneKey), 'success');
+  } catch (e) {
+    refreshNeeded = storageTouched;
+    log(t('appsError', e?.message ?? String(e)), 'error');
+  } finally {
+    if (progressContainer) progressContainer.style.display = 'none';
+    await finishAppOperation(op);
+    if (refreshNeeded) await appRefreshFlow();
+  }
+}
+
+async function appApplyOrderFlow() {
+  if (!appCanReorder()) return;
+  const moves = appOrderMoves();
+  if (!moves.length) return;
+  await appRewriteOrderFlow(
+    moves,
+    [...new Set(moves.map(move => move.target))],
+    'apps-reorder',
+    'appOrderDone'
+  );
+}
+
+async function appRenumberFlow() {
+  if (!appCanRenumber()) return;
+  const moves = appRenumberMoves();
+  await appRewriteOrderFlow(
+    moves,
+    Array.from({ length: appOrderBaseline.length }, (_, slot) => slot),
+    'apps-renumber',
+    'appRenumberDone'
+  );
+}
+
 function updateAppButtons() {
   const busy = appUpdateDownloadPending || Boolean(activeOperationToken);
-  if (appInstallBtn) appInstallBtn.disabled = !serialSupported || busy || !appImage || appSlotStatuses.size !== APP_SLOT_COUNT;
-  if (appEmptyReadBtn) appEmptyReadBtn.disabled = !serialSupported || busy;
+  const orderDirty = appOrderIsDirty();
+  if (appInstallBtn) appInstallBtn.disabled = !serialSupported || busy || orderDirty || !appImage || appSlotStatuses.size !== appActiveSlotCount;
+  if (appRefreshBtn) appRefreshBtn.disabled = !serialSupported || busy || orderDirty;
   if (appsTableBody) {
     appsTableBody.querySelectorAll('.app-act-delete').forEach(button => {
-      button.disabled = busy || !button.closest('tr')?.dataset.appName;
+      button.disabled = busy || orderDirty || !button.closest('tr')?.dataset.appName;
     });
     appRefreshUpdateIndicators();
   }
+  appUpdateOrderControls();
 }
 
 function clearAppImage() {
@@ -3787,7 +4123,7 @@ async function loadAppFromURL(url, catalogName = 'application.app') {
 }
 
 async function installAppFromURL(url, catalogName = 'application.app', options = {}) {
-  if (appSlotStatuses.size !== APP_SLOT_COUNT || ![...appSlotStatuses.values()].some(status => status === 2)) {
+  if (appSlotStatuses.size !== appActiveSlotCount || ![...appSlotStatuses.values()].some(status => status === 2)) {
     log(t('appManagerNoFreeSlot'), 'error');
     return false;
   }
@@ -3855,7 +4191,10 @@ if (appFileInput) {
   });
 }
 if (appInstallBtn) appInstallBtn.addEventListener('click', () => { void appInstallFlow(); });
-if (appEmptyReadBtn) appEmptyReadBtn.addEventListener('click', () => { void appRefreshFlow(); });
+if (appRefreshBtn) appRefreshBtn.addEventListener('click', () => { void appRefreshFlow(); });
+if (appRenumberBtn) appRenumberBtn.addEventListener('click', () => { void appRenumberFlow(); });
+if (appOrderApplyBtn) appOrderApplyBtn.addEventListener('click', () => { void appApplyOrderFlow(); });
+if (appOrderCancelBtn) appOrderCancelBtn.addEventListener('click', appCancelOrder);
 if (appShowEmptySlots) appShowEmptySlots.addEventListener('change', () => {
   if (appsTableWrap) appsTableWrap.classList.toggle('show-empty-slots', appShowEmptySlots.checked);
   appUpdateManagerSummary();
@@ -3863,6 +4202,7 @@ if (appShowEmptySlots) appShowEmptySlots.addEventListener('change', () => {
 if (appInstalledTab) appInstalledTab.addEventListener('click', () => appManagerSelectPanel('installed'));
 if (appCatalogTab) appCatalogTab.addEventListener('click', () => appManagerSelectPanel('catalog'));
 appBuildTable();
+appResetOrder();
 appUpdateManagerSummary();
 
 // Refresh the app list on entering the Apps view; release serial on leaving.
@@ -3896,6 +4236,7 @@ window.addEventListener('uvstudio:languagechange', () => {
   if (appImage && appMetaEl) appMetaEl.textContent = t('appDetected', appMeta.name || '?', appMeta.version || '?', (appMeta.codeSize / 1024).toFixed(1));
   appUpdateManagerSummary();
   appRefreshUpdateIndicators();
+  appUpdateOrderControls();
 });
 
 // ========== CAPABILITY CHECK ==========

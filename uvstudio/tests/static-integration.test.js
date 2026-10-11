@@ -134,9 +134,10 @@ test('loads the app catalog after the installer API and exposes both selectors',
   assert.match(flashSource, /uvstudio:appselect/);
 });
 
-test('exposes all 16 app slots in a bounded, scrollable table', () => {
-  assert.match(flashSource, /const APP_SLOT_COUNT = 16/);
-  assert.match(flashSource, /const APP_SLOT_LAST = APP_SLOT_COUNT - 1/);
+test('exposes 32 app slots while retaining the v6.1.0 capacity', () => {
+  assert.match(flashSource, /const APP_SLOT_COUNT = 32/);
+  assert.match(flashSource, /const APP_LEGACY_SLOT_COUNT = 16/);
+  assert.match(flashSource, /appCompareVersions\(version, '6\.1\.0'\) > 0/);
   assert.match(html, /class="slots-table-wrap apps-table-wrap">\s*<table class="slots-table" id="appsTable"/);
   assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*max-height:\s*442px[^}]*overflow:\s*auto/s);
   assert.match(toolsCss, /\.apps-table-wrap \.slots-table thead th\s*\{[^}]*position:\s*sticky/s);
@@ -149,14 +150,14 @@ test('provides a catalog and compact installed-app manager without new firmware 
   assert.match(html, /id="appCatalogTab"/);
   assert.match(html, /id="appShowEmptySlots"/);
   assert.match(html, /id="appShowEmptyWrap" hidden/);
-  assert.match(html, /id="appEmptyReadBtn"[^>]+data-i18n="appsRefresh"/);
+  assert.match(html, /id="appRefreshBtn"[^>]+data-i18n="appsRefresh"/);
   assert.doesNotMatch(html, /id="appEmptyCatalogBtn"/);
   assert.match(html, /id="appCatalogSearch"/);
   assert.match(html, /id="appCategoryFilters"/);
   assert.match(html, /data-category="other"[^>]*hidden/);
   assert.match(appCatalogSource, /APP_DETAILS\[id\] \|\| \['other'/);
   assert.match(flashSource, /appSelectFirstEmptySlot/);
-  assert.match(flashSource, /appSlotStatuses\.size !== APP_SLOT_COUNT/);
+  assert.match(flashSource, /appSlotStatuses\.size !== appActiveSlotCount/);
   assert.match(flashSource, /detail: \{ ready, installed, free, apps \}/);
   assert.match(flashSource, /appShowEmptyWrap\.hidden = !ready/);
   assert.doesNotMatch(flashSource, /appEmptyCatalogBtn/);
@@ -179,9 +180,69 @@ test('provides a catalog and compact installed-app manager without new firmware 
   assert.match(toolsCss, /\.app-category\.btn\.active\s*\{[^}]*var\(--app-category-color\) 84%[^}]*var\(--app-category-color\) 14%/s);
   assert.match(appCatalogSource, /catalogTabEl\.addEventListener\('click'.*if \(!loaded && !loading\) void load\(\)/s);
   assert.match(toolsCss, /\.apps-table-wrap:not\(\.show-empty-slots\) tr\.app-slot-empty/);
-  assert.doesNotMatch(html, /id="appsRefreshBtn"/);
-  assert.doesNotMatch(flashSource, /appsRefreshBtn/);
+  assert.doesNotMatch(html, /id="appEmptyReadBtn"/);
+  assert.match(flashSource, /appRefreshBtn\.disabled = !serialSupported \|\| busy \|\| orderDirty/);
+  assert.match(flashSource, /appRefreshBtn\.addEventListener\('click', \(\) => \{ void appRefreshFlow\(\); \}\)/);
   assert.doesNotMatch(flashSource, /MSG_APP_(?:ORDER|MOVE|SWAP)/);
+});
+
+test('reorders complete app slots through the existing raw flash protocol', () => {
+  assert.match(html, /id="appOrderActions" hidden/);
+  assert.match(html, /id="appOrderCancelBtn"[^>]+data-i18n="appOrderCancel"/);
+  assert.match(html, /id="appOrderApplyBtn"[^>]+data-i18n="appOrderApply"/);
+  assert.match(html, /id="appRenumberBtn"[^>]+data-i18n="appRenumber"[^>]+hidden/);
+  assert.match(flashSource, /const APP_REGION_BASE = 0x102000/);
+  assert.match(flashSource, /const APP_SLOT_STRIDE = 0x2000/);
+  assert.match(flashSource, /async function appReadSlotImage/);
+  assert.match(flashSource, /async function appWriteSlotImage/);
+  assert.match(flashSource, /function appOrderDragStart\(slot, event\)/);
+  assert.match(flashSource, /function appOrderDragOver\(targetSlot, event\)/);
+  assert.match(flashSource, /appOrderDraft\.splice\(appOrderDropIndex, 0, slot\)/);
+  assert.match(flashSource, /appsTableWrap\.scrollTop \+= 14/);
+  assert.match(flashSource, /row\.draggable = visible && !busy/);
+  assert.match(flashSource, /await readExternalFlashChunk\(base \+ offset, length, timestamp\)/);
+  assert.match(flashSource, /await eraseExternalFlashSector\(address, timestamp\)/);
+  assert.match(flashSource, /await appVerifySlotSector\(sector, address, timestamp, crcSupported\)/);
+  assert.match(flashSource, /for \(const target of validateTargets\)[\s\S]*await appValidate\(target\)/);
+  assert.ok(flashSource.indexOf('images.set(slot, await appReadSlotImage') <
+    flashSource.indexOf('await appWriteSlotImage(move.target'));
+  assert.match(toolsCss, /\.app-order-actions\[hidden\]\s*\{\s*display:\s*none/);
+  assert.match(toolsCss, /\.app-renumber-button\[hidden\]\s*\{\s*display:\s*none/);
+  assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*overflow-anchor:\s*none/s);
+  assert.match(toolsCss, /tr\.app-order-drop-before td\s*\{[^}]*box-shadow/s);
+  assert.match(html, /css\/tools\.css\?v=50/);
+  assert.match(html, /js\/flash\.js\?v=78/);
+  assert.doesNotMatch(flashSource, /app-order-(?:up|down)/);
+  assert.doesNotMatch(flashSource, /function appMoveInOrder/);
+
+  const start = flashSource.indexOf('function appOrderIsDirty');
+  const end = flashSource.indexOf('\n\nfunction appCanReorder', start);
+  const context = {};
+  vm.runInNewContext(
+    `${flashSource.slice(start, end)}; this.moves = appOrderMoves;`,
+    context
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(context.moves([0, 4, 9], [4, 9, 0]))),
+    [{ target: 0, source: 4 }, { target: 4, source: 9 }, { target: 9, source: 0 }]
+  );
+
+  const renumberStart = flashSource.indexOf('function appRenumberMoves');
+  const renumberEnd = flashSource.indexOf('\n\nfunction appCanRenumber', renumberStart);
+  const renumberContext = {};
+  vm.runInNewContext(
+    `${flashSource.slice(renumberStart, renumberEnd)}; this.moves = appRenumberMoves;`,
+    renumberContext
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(renumberContext.moves([0, 1, 3, 4, 5]))),
+    [
+      { target: 2, source: 3 },
+      { target: 3, source: 4 },
+      { target: 4, source: 5 },
+      { target: 5, source: 2 }
+    ]
+  );
 });
 
 test('offers one-click updates for outdated multiboot firmware slots', () => {
@@ -253,12 +314,12 @@ test('marks an installed app only when the catalog has a newer version', () => {
 });
 
 test('checks installed apps against the detected Labs catalog', () => {
-  const start = flashSource.indexOf('function appFirmwareVersionFromName');
+  const start = flashSource.indexOf('function appVersionParts');
   const end = flashSource.indexOf('\n\nconst appFileInput', start);
   assert.ok(start >= 0 && end > start);
-  const context = {};
+  const context = { APP_SLOT_COUNT: 32, APP_LEGACY_SLOT_COUNT: 16 };
   vm.runInNewContext(
-    `${flashSource.slice(start, end)}; this.extract = appFirmwareVersionFromName;`,
+    `${flashSource.slice(start, end)}; this.extract = appFirmwareVersionFromName; this.slotCount = appSlotCountForFirmware;`,
     context
   );
 
@@ -266,6 +327,10 @@ test('checks installed apps against the detected Labs catalog', () => {
   assert.equal(context.extract('F4HWN Labs v6.0'), '6.0.0');
   assert.equal(context.extract('F4HWN v6.1.0 beta'), '6.1.0');
   assert.equal(context.extract('unknown firmware'), '');
+  assert.equal(context.slotCount('F4HWN Labs v6.1.0'), 16);
+  assert.equal(context.slotCount('F4HWN Fusion v6.1.1'), 32);
+  assert.equal(context.slotCount('F4HWN Fusion v6.2.0'), 32);
+  assert.equal(context.slotCount('unknown firmware'), 16);
   assert.match(flashSource, /uvstudio:appfirmwareversion/);
   assert.match(flashSource, /uvstudio:appcatalogcompatibility/);
   assert.match(flashSource, /appStateFirmwareMismatch/);
