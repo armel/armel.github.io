@@ -303,7 +303,7 @@ window.UVSTUDIO_LOCALES.pt = {
   "appColName": "Name",
   "appColActions": "Ações",
   "updateCurrent": "Atualizado",
-  "appColSize": "Size",
+  "appColSize": "Tamanho",
   "appsRefresh": "Ler apps do rádio",
   "appFileLabel": "App file (.app)",
   "appTargetLabel": "Target slot",

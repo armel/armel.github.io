@@ -303,7 +303,7 @@ window.UVSTUDIO_LOCALES.it = {
   "appColName": "Name",
   "appColActions": "Azioni",
   "updateCurrent": "Aggiornato",
-  "appColSize": "Size",
+  "appColSize": "Dimensione",
   "appsRefresh": "Leggi le app dalla radio",
   "appFileLabel": "App file (.app)",
   "appTargetLabel": "Target slot",

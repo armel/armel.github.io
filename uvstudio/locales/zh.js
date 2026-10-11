@@ -303,7 +303,7 @@ window.UVSTUDIO_LOCALES.zh = {
   "appColName": "Name",
   "appColActions": "操作",
   "updateCurrent": "已是最新",
-  "appColSize": "Size",
+  "appColSize": "大小",
   "appsRefresh": "从对讲机读取应用",
   "appFileLabel": "App file (.app)",
   "appTargetLabel": "Target slot",

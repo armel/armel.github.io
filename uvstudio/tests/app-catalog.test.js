@@ -36,6 +36,7 @@ test('adds presentation metadata without changing the app binary format', () => 
     id: 'cwdecode',
     category: 'radio',
     description: 'Decode Morse code in real time.',
+    author: 'armel',
     descriptionFr: 'Décodage du Morse en temps réel.',
     label: 'CW Decode'
   });
@@ -45,6 +46,13 @@ test('adds presentation metadata without changing the app binary format', () => 
   assert.equal(catalog.appDetails('EPIRB406.app').category, 'radio');
   assert.equal(catalog.appDetails('SigFinder.app').category, 'radio');
   assert.equal(catalog.appDetails('FutureApp.app').category, 'other');
+  assert.equal(catalog.appDetails('FutureApp.app').author, '');
+  assert.equal(catalog.appDetails('Snake.app').author, 'mrkusypl');
+  assert.equal(catalog.appDetails('Minesweeper.app').author, 'Sarijen');
+  assert.equal(catalog.appDetails('EPIRB406.app').author, 'jdenoy');
+  assert.equal(catalog.appDetails('SigFinder.app').author, 'jdenoy');
+  assert.equal(catalog.appDetails('ACARSRX.app').author, 'armel');
+  assert.equal(catalog.appDetails('APRSDIGI.app').label, 'APRS DIGI');
   assert.equal(catalog.appCatalogId('Spectrum-3D.app'), 'spectrum3d');
 });
 
@@ -57,9 +65,9 @@ test('targets the stable versioned apps archive on GitHub', () => {
 
 test('keeps the current app catalog available when the GitHub API is unavailable', () => {
   const apps = catalog.fallbackApps();
-  assert.equal(apps.length, 21);
-  assert.equal(apps[0].label, 'APRS RX');
-  assert.match(apps[0].url, /raw\.githubusercontent\.com\/.*\/v6\.1\.0\/APRSRX\.app$/);
+  assert.equal(apps.length, 23);
+  assert.equal(apps[0].label, 'ACARS RX');
+  assert.match(apps[0].url, /raw\.githubusercontent\.com\/.*\/v6\.1\.0\/ACARSRX\.app$/);
   assert.deepEqual(catalog.fallbackApps({ version: '6.0.0', path: 'archive/apps/v6.0.0' }), []);
 });
 
@@ -100,7 +108,7 @@ test('compares app versions numerically and treats a release as newer than its p
 
 test('provides dedicated SVG pictograms for every catalog app and keeps a monogram fallback', () => {
   [
-    'aprsrx', 'aprstx', 'beacon', 'beam', 'breakout', 'broadcastfm',
+    'acarsrx', 'aprsdigi', 'aprsrx', 'aprstx', 'beacon', 'beam', 'breakout', 'broadcastfm',
     'cwdecode', 'cwkeyer', 'cube3d', 'epirb406', 'foxhunt', 'minesweeper',
     'plasma', 'rapidroll', 'sigfinder', 'snake', 'spaceimpact', 'spectrum3d',
     'sstv', 'systeminfo', 'tetris'

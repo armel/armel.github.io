@@ -303,7 +303,7 @@ window.UVSTUDIO_LOCALES.ru = {
   "appColName": "Name",
   "appColActions": "Действия",
   "updateCurrent": "Актуально",
-  "appColSize": "Size",
+  "appColSize": "Размер",
   "appsRefresh": "Прочитать приложения с рации",
   "appFileLabel": "App file (.app)",
   "appTargetLabel": "Target slot",

@@ -303,7 +303,7 @@ window.UVSTUDIO_LOCALES.de = {
   "appColName": "Name",
   "appColActions": "Aktionen",
   "updateCurrent": "Aktuell",
-  "appColSize": "Size",
+  "appColSize": "Größe",
   "appsRefresh": "Apps vom Funkgerät lesen",
   "appFileLabel": "App file (.app)",
   "appTargetLabel": "Target slot",

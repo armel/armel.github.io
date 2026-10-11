@@ -303,7 +303,7 @@ window.UVSTUDIO_LOCALES.nl = {
   "appColName": "Name",
   "appColActions": "Acties",
   "updateCurrent": "Actueel",
-  "appColSize": "Size",
+  "appColSize": "Grootte",
   "appsRefresh": "Apps van de radio lezen",
   "appFileLabel": "App file (.app)",
   "appTargetLabel": "Target slot",

@@ -26,6 +26,7 @@
     path: 'archive/apps/v6.1.0'
   };
   const FALLBACK_APP_FILES = [
+    ['ACARSRX.app', 4516], ['APRSDIGI.app', 3960],
     ['APRSRX.app', 7987], ['APRSTX.app', 7373], ['Beacon.app', 2970],
     ['Beam.app', 1434], ['Breakout.app', 3072], ['BroadcastFM.app', 2458],
     ['Cube3D.app', 3789], ['CWDecode.app', 4608], ['CWKeyer.app', 3789],
@@ -39,6 +40,8 @@
   // the FAP1 binary header. It can later be replaced by a generated catalog
   // manifest without changing the firmware protocol.
   const APP_DETAILS = {
+    acarsrx:     ['radio', 'Receive and decode ACARS aircraft messages.'],
+    aprsdigi:    ['radio', 'Relay APRS packets as a digipeater.'],
     aprsrx:      ['radio', 'Receive and decode APRS packets.'],
     aprstx:      ['radio', 'Transmit APRS beacons from the radio.'],
     beacon:      ['radio', 'Send a configurable radio beacon.'],
@@ -62,6 +65,8 @@
     tetris:      ['games', 'The classic falling-block puzzle.']
   };
   const APP_DESCRIPTIONS_FR = {
+    acarsrx: 'Réception et décodage des messages ACARS des avions.',
+    aprsdigi: 'Relais des paquets APRS en digipeater.',
     aprsrx: 'Réception et décodage des paquets APRS.',
     aprstx: 'Émission de balises APRS depuis la radio.',
     beacon: 'Émission d’une balise radio configurable.',
@@ -85,6 +90,7 @@
     tetris: 'Le classique jeu de blocs qui tombent.'
   };
   const APP_DISPLAY_NAMES = {
+    acarsrx: 'ACARS RX', aprsdigi: 'APRS DIGI',
     aprsrx: 'APRS RX', aprstx: 'APRS TX', broadcastfm: 'Broadcast FM',
     cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cube3d: 'Cube 3D',
     epirb406: 'EPIRB 406', sigfinder: 'Signal Finder', spaceimpact: 'Space Impact',
@@ -96,6 +102,8 @@
     delete: '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/>'
   };
   const APP_ICONS = {
+    acarsrx: '<path d="M12 3v16m0-11 7 5v1.5l-7-2.5m0-4-7 5v1.5l7-2.5m-3 8.5 3-1.5 3 1.5"/>',
+    aprsdigi: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M15 14V4m-2 2.5 2-2.5 2 2.5M19.5 4v10m-2-2.5 2 2.5 2-2.5"/>',
     aprsrx: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M17.5 4v10m-3-3 3 3 3-3"/>',
     aprstx: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M17.5 14V4m-3 3 3-3 3 3"/>',
     beacon: '<path d="M12 20V10m-4 10h8m-6-4 2-6 2 6M8.2 9a5.2 5.2 0 0 1 7.6 0M5.5 6.5a9 9 0 0 1 13 0"/><circle cx="12" cy="7.5" r="1.2"/>',
@@ -134,6 +142,16 @@
     button.appendChild(text);
   }
 
+  // Apps listed in APP_DETAILS are by DEFAULT_APP_AUTHOR unless stated here;
+  // unknown apps get no author rather than a guessed one.
+  const DEFAULT_APP_AUTHOR = 'armel';
+  const APP_AUTHORS = {
+    epirb406:    'jdenoy',
+    minesweeper: 'Sarijen',
+    sigfinder:   'jdenoy',
+    snake:       'mrkusypl'
+  };
+
   function appDetails(filename) {
     const id = appCatalogId(filename);
     const detail = APP_DETAILS[id] || ['other', 'Overlay app for F4HWN Labs.'];
@@ -141,6 +159,7 @@
       id,
       category: detail[0],
       description: detail[1],
+      author: APP_AUTHORS[id] || (APP_DETAILS[id] ? DEFAULT_APP_AUTHOR : ''),
       descriptionFr: APP_DESCRIPTIONS_FR[id] || '',
       ...(APP_DISPLAY_NAMES[id] ? { label: APP_DISPLAY_NAMES[id] } : {})
     };
@@ -483,7 +502,7 @@
         const descriptionText = window.uvStudioI18n?.lang === 'fr' && app.descriptionFr
           ? app.descriptionFr
           : app.description;
-        card.dataset.search = `${app.label} ${app.description} ${app.descriptionFr || ''} ${app.category}`.toLocaleLowerCase();
+        card.dataset.search = `${app.label} ${app.description} ${app.descriptionFr || ''} ${app.category} ${app.author ? '@' + app.author : ''}`.toLocaleLowerCase();
 
         const icon = createAppIcon(app);
 
@@ -514,7 +533,16 @@
           : (metadata?.version ? `v${metadata.version.replace(/^v/i, '')}` : currentVersionEntry?.version || '—');
         const size = document.createElement('span');
         size.textContent = Number.isFinite(app.size) ? `${(app.size / 1024).toFixed(1)} KB` : '—';
+        version.title = t('slotColVersion');
+        size.title = t('appColSize');
         meta.append(version, size);
+        if (app.author) {
+          const author = document.createElement('span');
+          author.className = 'app-catalog-author';
+          author.textContent = `@${app.author}`;
+          author.title = t('studio_about_author');
+          meta.appendChild(author);
+        }
         content.append(title, description, meta);
 
         const actions = document.createElement('div');
