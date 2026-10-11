@@ -163,7 +163,6 @@ body {
     letter-spacing: 0.02em;
     padding: 2px 5px;
 }
-.nav-item-labs:not(.active) .tag { display: none; }
 .nav-item:hover { background: color-mix(in oklab, var(--text) 6%, transparent); color: var(--text); }
 .nav-item:disabled {
     cursor: not-allowed;

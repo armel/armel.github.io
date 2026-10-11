@@ -3630,7 +3630,9 @@ async function appDeleteFlow(slot) {
   }
 }
 
-async function appInstallFlow() {
+// onProgress (optional): report progress to the caller (catalog card mini gauge)
+// instead of the shared progress bar under the tool.
+async function appInstallFlow({ onProgress } = {}) {
   if (!appImage) return;
   if (appSlotStatuses.size !== APP_SLOT_COUNT) {
     log(t('appManagerScanBeforeInstall'), 'error');
@@ -3651,14 +3653,24 @@ async function appInstallFlow() {
 
   const op = beginToolsOperation('apps-install', true);
   if (!op) return;
-  if (progressContainer) progressContainer.style.display = 'block';
-  updateProgress(0);
+  const inline = typeof onProgress === 'function';
+  let inlinePercent = -1;
+  const reportProgress = percent => {
+    if (!inline) return updateProgress(percent);
+    const rounded = Math.round(percent);
+    if (rounded === inlinePercent) return false;
+    inlinePercent = rounded;
+    onProgress(rounded);
+    return true;
+  };
+  if (!inline && progressContainer) progressContainer.style.display = 'block';
+  reportProgress(0);
   try {
     if (!port) await connect();
     readBuffer = []; await sleep(500);
     const dev = await requestDeviceInfo();
     if (!(await appsProbe(dev))) {           // unsupported firmware -> modal, abort before erase
-      if (progressContainer) progressContainer.style.display = 'none';
+      if (!inline && progressContainer) progressContainer.style.display = 'none';
       return;
     }
     const ts = dev.timestamp;
@@ -3675,7 +3687,7 @@ async function appInstallFlow() {
         st = await appWriteChunkRetry(slot, base + off, ts, chunk);
         if (st !== 0) throw new Error('write @' + (base + off) + ': ' + appStatusText(st));
         done += chunk.length;
-        const changed = updateProgress((done / total) * 95);
+        const changed = reportProgress((done / total) * 95);
         if (changed) await waitForProgressPaint();
       }
     }
@@ -3683,16 +3695,16 @@ async function appInstallFlow() {
     st = await appWriteChunkRetry(slot, 0, ts, header);
     if (st !== 0) throw new Error('header: ' + appStatusText(st));
 
-    updateProgress(97); await waitForProgressPaint();
+    reportProgress(97); await waitForProgressPaint();
     log(t('appVerifying', appSlotLabel(slot)), 'info');
     const vs = await appValidate(slot);
     if (vs !== 0) throw new Error('verify: ' + appStatusText(vs));
-    updateProgress(100);
+    reportProgress(100);
     log(t('appInstalled', appSlotLabel(slot)), 'success');
     appRenderRow(slot, await appInfo(slot));
     appUpdateManagerSummary();
     appSelectFirstEmptySlot();
-    setTimeout(() => { if (progressContainer) progressContainer.style.display = 'none'; }, 1200);
+    if (!inline) setTimeout(() => { if (progressContainer) progressContainer.style.display = 'none'; }, 1200);
   } catch (e) {
     log(t('appsError', e?.message ?? String(e)), 'error');
   } finally {
@@ -3774,7 +3786,7 @@ async function loadAppFromURL(url, catalogName = 'application.app') {
   }
 }
 
-async function installAppFromURL(url, catalogName = 'application.app') {
+async function installAppFromURL(url, catalogName = 'application.app', options = {}) {
   if (appSlotStatuses.size !== APP_SLOT_COUNT || ![...appSlotStatuses.values()].some(status => status === 2)) {
     log(t('appManagerNoFreeSlot'), 'error');
     return false;
@@ -3782,11 +3794,11 @@ async function installAppFromURL(url, catalogName = 'application.app') {
   const loaded = await loadAppFromURL(url, catalogName);
   if (!loaded) return false;
   appSelectFirstEmptySlot();
-  await appInstallFlow();
+  await appInstallFlow(options);
   return true;
 }
 
-async function updateAppFromURL(slot, url, catalogName = 'application.app') {
+async function updateAppFromURL(slot, url, catalogName = 'application.app', options = {}) {
   if (!Number.isInteger(slot) || appSlotStatuses.get(slot) !== 0) return false;
   if (appUpdateDownloadPending || activeOperationToken) return false;
 
@@ -3796,7 +3808,7 @@ async function updateAppFromURL(slot, url, catalogName = 'application.app') {
     const loaded = await loadAppFromURL(url, catalogName);
     if (!loaded) return false;
     if (appTargetSelect) appTargetSelect.value = String(slot);
-    await appInstallFlow();
+    await appInstallFlow(options);
     return true;
   } finally {
     appUpdateDownloadPending = false;

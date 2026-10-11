@@ -304,6 +304,7 @@
     let freeSlots = 0;
     let installedApps = new Map();
     let catalogOperationPending = false;
+    let catalogProgress = null;   // { id, percent, shown } while a card installs/updates
     const metadataCache = new Map();
 
     function t(key, ...values) {
@@ -378,16 +379,71 @@
       if (emptyEl) emptyEl.hidden = visible !== 0;
     }
 
-    async function runCatalogOperation(operation) {
+    async function runCatalogOperation(operation, progressApp) {
       if (catalogOperationPending) return;
       catalogOperationPending = true;
+      catalogProgress = progressApp ? { id: appCatalogId(progressApp.name), percent: 0, shown: 0 } : null;
       renderCatalogCards();
       try {
         await operation();
       } finally {
         catalogOperationPending = false;
+        // On success the gauge finishes filling, then removes itself.
+        if (catalogProgress?.percent !== 100) catalogProgress = null;
         renderCatalogCards();
       }
+    }
+
+    function setCatalogProgressValue(bar, percent) {
+      bar.setAttribute('aria-valuenow', String(Math.round(percent)));
+      bar.firstElementChild.style.width = `${percent}%`;
+    }
+
+    function createCatalogProgress(percent) {
+      const bar = document.createElement('div');
+      bar.className = 'app-catalog-progress';
+      bar.setAttribute('role', 'progressbar');
+      bar.setAttribute('aria-valuemin', '0');
+      bar.setAttribute('aria-valuemax', '100');
+      bar.appendChild(document.createElement('div')).className = 'app-catalog-progress-fill';
+      setCatalogProgressValue(bar, percent);
+      return bar;
+    }
+
+    // Apps are written in well under a second and cards are rebuilt during an
+    // operation (inventory events), so the displayed value is eased here rather
+    // than with a CSS transition: it survives rebuilds and always fills steadily.
+    const CATALOG_PROGRESS_FILL_MS = 900;
+    const CATALOG_PROGRESS_HOLD_MS = 700;
+
+    function animateCatalogProgress(progress, last) {
+      requestAnimationFrame(now => {
+        if (catalogProgress !== progress) return;
+        const step = ((now - last) / CATALOG_PROGRESS_FILL_MS) * 100;
+        progress.shown = Math.min(progress.percent, progress.shown + Math.max(0, step));
+        const bar = cardsEl?.querySelector('.app-catalog-progress');
+        if (bar) setCatalogProgressValue(bar, progress.shown);
+        if (progress.shown >= 100) {
+          setTimeout(() => {
+            if (catalogProgress !== progress) return;
+            catalogProgress = null;
+            cardsEl?.querySelector('.app-catalog-progress')?.remove();
+          }, CATALOG_PROGRESS_HOLD_MS);
+        } else if (progress.shown < progress.percent) {
+          animateCatalogProgress(progress, now);
+        } else {
+          progress.animating = false;
+        }
+      });
+    }
+
+    function updateCatalogProgress(percent) {
+      const progress = catalogProgress;
+      if (!progress) return;
+      progress.percent = percent;
+      if (progress.animating || progress.shown >= percent) return;
+      progress.animating = true;
+      animateCatalogProgress(progress, performance.now());
     }
 
     function selectCatalogApp(app) {
@@ -395,7 +451,10 @@
       if (option) appSelect.value = app.url;
       const flash = window.UVStudioFlash;
       if (flash && typeof flash.installAppFromURL === 'function') {
-        void runCatalogOperation(() => flash.installAppFromURL(app.url, app.name));
+        void runCatalogOperation(
+          () => flash.installAppFromURL(app.url, app.name, { onProgress: updateCatalogProgress }),
+          app
+        );
       } else if (flash && typeof flash.loadAppFromURL === 'function') {
         flash.loadAppFromURL(app.url, app.name);
       }
@@ -481,7 +540,10 @@
             update.addEventListener('click', () => {
               const flash = window.UVStudioFlash;
               if (flash && typeof flash.updateAppFromURL === 'function') {
-                void runCatalogOperation(() => flash.updateAppFromURL(installed.slot, app.url, app.name));
+                void runCatalogOperation(
+                  () => flash.updateAppFromURL(installed.slot, app.url, app.name, { onProgress: updateCatalogProgress }),
+                  app
+                );
               }
             });
             actions.appendChild(update);
@@ -498,6 +560,9 @@
             }
           });
           actions.appendChild(remove);
+        }
+        if (catalogProgress?.id === appCatalogId(app.name)) {
+          actions.appendChild(createCatalogProgress(catalogProgress.shown));
         }
         card.append(icon, content, actions);
         cardsEl.appendChild(card);

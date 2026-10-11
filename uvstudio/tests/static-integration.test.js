@@ -357,7 +357,6 @@ test('keeps Labs-only tools together in the sidebar', () => {
   assert.match(studioCss, /\.nav-item-labs\s*\{[^}]*gap:\s*8px/);
   assert.match(studioCss, /\.nav-item-labs \.tag\s*\{[^}]*margin-left:\s*auto/);
   assert.match(studioCss, /\.nav-item-labs \.tag\s*\{[^}]*margin-right:\s*0/);
-  assert.match(studioCss, /\.nav-item-labs:not\(\.active\) \.tag\s*\{[^}]*display:\s*none/);
 });
 
 test('keeps compact app and firmware controls usable on narrow screens', () => {
