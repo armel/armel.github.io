@@ -2766,7 +2766,7 @@ function slotRenderRow(slot, info) {
   const committed = info && (info.status === 0 || info.status === 5); // header present (CRC may be bad)
   const hdr = info && info.hdr;
   row.querySelector('.slot-name').textContent = committed ? (hdr.name || '—') : '—';
-  row.querySelector('.slot-version').textContent = committed ? (hdr.fwVersion || '—') : '—';
+  row.querySelector('.slot-version').textContent = committed ? (tableActionVersionLabel(hdr.fwVersion) || '—') : '—';
   row.querySelector('.slot-size').textContent = committed ? `${Math.round(hdr.imageSize / 1024)} KB` : '—';
   if (valid) {
     row.dataset.slotEdition = hdr.name || '';
@@ -2788,6 +2788,32 @@ function slotCatalogKey(name) {
   return String(name || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
 }
 
+const tableActionIcons = {
+  update: '<svg class="table-action-update-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v6h-6"/></svg>',
+  reset: '<svg class="table-action-reset-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4L13 3a2.4 2.4 0 0 1 3.4 0L21 7.6a2.4 2.4 0 0 1 0 3.4L11 21"/><path d="m5 11 9 9"/><path d="M7 21h15"/></svg>',
+  delete: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>'
+};
+
+function tableActionVersionLabel(version) {
+  const value = String(version || '').trim();
+  if (!value) return '';
+  return value.replace(/^v(?=\d)/i, '');
+}
+
+function setTableActionIcon(button, icon, label, visibleDetail = '') {
+  if (!button) return;
+  button.innerHTML = tableActionIcons[icon] || '';
+  button.classList.toggle('has-detail', Boolean(visibleDetail));
+  if (visibleDetail) {
+    const detail = document.createElement('span');
+    detail.className = 'table-action-detail';
+    detail.textContent = visibleDetail;
+    button.appendChild(detail);
+  }
+  button.title = label;
+  button.setAttribute('aria-label', label);
+}
+
 function slotRenderUpdateIndicator(row) {
   const button = row.querySelector('.slot-update-button');
   if (!button) return;
@@ -2797,14 +2823,11 @@ function slotRenderUpdateIndicator(row) {
   button.hidden = !outdated;
   button.disabled = !outdated || !serialSupported || slotUpdateDownloadPending || Boolean(activeOperationToken);
   if (outdated) {
-    const detail = t('appUpdateAction', `v${latest.version}`);
-    button.textContent = t('appUpdateShort');
-    button.title = detail;
-    button.setAttribute('aria-label', detail);
+    const targetVersion = tableActionVersionLabel(latest.version);
+    const detail = t('appUpdateAction', targetVersion);
+    setTableActionIcon(button, 'update', detail, targetVersion);
   } else {
-    button.textContent = '';
-    button.removeAttribute('title');
-    button.removeAttribute('aria-label');
+    setTableActionIcon(button, 'update', t('appUpdateShort'));
   }
 }
 
@@ -2828,19 +2851,20 @@ function slotBuildTable() {
       `<td class="slot-actions"><div class="slot-actions-group"></div></td>`;
     const eraseBtn = document.createElement('button');
     eraseBtn.type = 'button';
-    eraseBtn.className = 'btn danger slot-act-erase';
-    eraseBtn.textContent = t('slotEraseFw');
+    eraseBtn.className = 'btn table-icon-action is-danger slot-act-erase';
+    setTableActionIcon(eraseBtn, 'delete', t('slotEraseFw'));
     eraseBtn.hidden = true;
     eraseBtn.addEventListener('click', () => { void slotEraseFlow(s); });
     const resetBtn = document.createElement('button');
     resetBtn.type = 'button';
-    resetBtn.className = 'btn slot-act-reset';
-    resetBtn.textContent = t('slotResetConfig');
+    resetBtn.className = 'btn table-icon-action is-neutral slot-act-reset';
+    setTableActionIcon(resetBtn, 'reset', t('slotResetConfig'));
     resetBtn.hidden = true;
     resetBtn.addEventListener('click', () => { void slotResetConfigFlow(s); });
     const updateBtn = document.createElement('button');
     updateBtn.type = 'button';
-    updateBtn.className = 'btn primary slot-update-button';
+    updateBtn.className = 'btn table-icon-action is-primary slot-update-button';
+    setTableActionIcon(updateBtn, 'update', t('appUpdateShort'));
     updateBtn.hidden = true;
     updateBtn.disabled = true;
     updateBtn.addEventListener('click', () => { void slotUpdateFlow(s); });
@@ -2855,8 +2879,8 @@ function slotBuildTable() {
 // Re-localize the static slot labels after a language change.
 function slotLocalize() {
   if (slotsTableBody) {
-    slotsTableBody.querySelectorAll('.slot-act-erase').forEach(b => { b.textContent = t('slotEraseFw'); });
-    slotsTableBody.querySelectorAll('.slot-act-reset').forEach(b => { b.textContent = t('slotResetConfig'); });
+    slotsTableBody.querySelectorAll('.slot-act-erase').forEach(b => setTableActionIcon(b, 'delete', t('slotEraseFw')));
+    slotsTableBody.querySelectorAll('.slot-act-reset').forEach(b => setTableActionIcon(b, 'reset', t('slotResetConfig')));
   }
   if (slotImage && slotMetaEl) {
     slotMetaEl.textContent = t('slotDetected', slotMeta.name || '?', slotMeta.fwVersion || '?', Math.round(slotImage.length / 1024));
@@ -3191,7 +3215,6 @@ const appFileLabel   = document.getElementById('appFileLabel');
 const appFileName    = document.getElementById('appFileName');
 const appTargetSelect = document.getElementById('appTarget');
 const appInstallBtn  = document.getElementById('appInstallBtn');
-const appsRefreshBtn = document.getElementById('appsRefreshBtn');
 const appsTableBody  = document.getElementById('appsTableBody');
 const appMetaEl      = document.getElementById('appMeta');
 const appsTableWrap  = document.getElementById('appsTableWrap');
@@ -3200,7 +3223,6 @@ const appShowEmptyWrap = document.getElementById('appShowEmptyWrap');
 const appEmptyInstalled = document.getElementById('appEmptyInstalled');
 const appEmptyInstalledText = document.getElementById('appEmptyInstalledText');
 const appEmptyReadBtn = document.getElementById('appEmptyReadBtn');
-const appEmptyCatalogBtn = document.getElementById('appEmptyCatalogBtn');
 const appInstalledCount = document.getElementById('appInstalledCount');
 const appInstalledTabCount = document.getElementById('appInstalledTabCount');
 const appCapacityText = document.getElementById('appCapacityText');
@@ -3459,16 +3481,13 @@ function appRenderUpdateIndicator(row) {
   row.classList.toggle('app-outdated', Boolean(outdated));
   button.hidden = !outdated;
   if (outdated) {
-    const detail = t('appUpdateAction', latest.version);
-    button.textContent = t('appUpdateShort');
-    button.title = detail;
-    button.setAttribute('aria-label', detail);
+    const targetVersion = tableActionVersionLabel(latest.version);
+    const detail = t('appUpdateAction', targetVersion);
+    setTableActionIcon(button, 'update', detail, targetVersion);
     button.disabled = !serialSupported || appUpdateDownloadPending || Boolean(activeOperationToken);
   } else {
-    button.textContent = '';
+    setTableActionIcon(button, 'update', t('appUpdateShort'));
     button.disabled = true;
-    button.removeAttribute('title');
-    button.removeAttribute('aria-label');
   }
 }
 
@@ -3496,14 +3515,15 @@ function appBuildTable() {
       `<td class="slot-actions"><div class="slot-actions-group"></div></td>`;
     const del = document.createElement('button');
     del.type = 'button';
-    del.className = 'btn danger app-act-delete';
-    del.textContent = t('appDelete');
+    del.className = 'btn table-icon-action is-danger app-act-delete';
+    setTableActionIcon(del, 'delete', t('appDelete'));
     del.hidden = true;
     del.disabled = true;
     del.addEventListener('click', () => { void appDeleteFlow(s); });
     const update = document.createElement('button');
     update.type = 'button';
-    update.className = 'btn primary app-update-button';
+    update.className = 'btn table-icon-action is-primary app-update-button';
+    setTableActionIcon(update, 'update', t('appUpdateShort'));
     update.hidden = true;
     update.disabled = true;
     update.addEventListener('click', () => { void appUpdateFlow(s); });
@@ -3683,7 +3703,6 @@ async function appInstallFlow() {
 function updateAppButtons() {
   const busy = appUpdateDownloadPending || Boolean(activeOperationToken);
   if (appInstallBtn) appInstallBtn.disabled = !serialSupported || busy || !appImage || appSlotStatuses.size !== APP_SLOT_COUNT;
-  if (appsRefreshBtn) appsRefreshBtn.disabled = !serialSupported || busy;
   if (appEmptyReadBtn) appEmptyReadBtn.disabled = !serialSupported || busy;
   if (appsTableBody) {
     appsTableBody.querySelectorAll('.app-act-delete').forEach(button => {
@@ -3824,9 +3843,7 @@ if (appFileInput) {
   });
 }
 if (appInstallBtn) appInstallBtn.addEventListener('click', () => { void appInstallFlow(); });
-if (appsRefreshBtn) appsRefreshBtn.addEventListener('click', () => { void appRefreshFlow(); });
 if (appEmptyReadBtn) appEmptyReadBtn.addEventListener('click', () => { void appRefreshFlow(); });
-if (appEmptyCatalogBtn) appEmptyCatalogBtn.addEventListener('click', () => appManagerSelectPanel('catalog'));
 if (appShowEmptySlots) appShowEmptySlots.addEventListener('change', () => {
   if (appsTableWrap) appsTableWrap.classList.toggle('show-empty-slots', appShowEmptySlots.checked);
   appUpdateManagerSummary();
@@ -3863,7 +3880,7 @@ window.addEventListener('uvstudio:appcatalogcompatibility', event => {
   appRefreshUpdateIndicators();
 });
 window.addEventListener('uvstudio:languagechange', () => {
-  if (appsTableBody) appsTableBody.querySelectorAll('.app-act-delete').forEach(b => { b.textContent = t('appDelete'); });
+  if (appsTableBody) appsTableBody.querySelectorAll('.app-act-delete').forEach(b => setTableActionIcon(b, 'delete', t('appDelete')));
   if (appImage && appMetaEl) appMetaEl.textContent = t('appDetected', appMeta.name || '?', appMeta.version || '?', (appMeta.codeSize / 1024).toFixed(1));
   appUpdateManagerSummary();
   appRefreshUpdateIndicators();

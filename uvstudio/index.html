@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="assets/uv-studio-radio.svg">
 <link href="css/core.css?v=5" rel="stylesheet">
 <link href="css/viewer.css?v=13" rel="stylesheet">
-<link href="css/tools.css?v=31" rel="stylesheet">
+<link href="css/tools.css?v=45" rel="stylesheet">
 <link href="css/studio.css?v=26" rel="stylesheet">
 </head>
 <body data-theme="light">
@@ -523,10 +523,6 @@
                         <span class="app-manager-eyebrow" data-i18n="appManagerEyebrow">APP MANAGER</span>
                         <p class="tab-description" data-i18n="appsDescription">Install only the tools you need. Apps are launched from the radio's F + 7 menu.</p>
                     </div>
-                    <button id="appsRefreshBtn" class="btn app-manager-refresh" type="button">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 1 0 .2 3M20 4v7h-7"/></svg>
-                        <span data-i18n="appsRefresh">Refresh apps</span>
-                    </button>
                 </header>
 
                 <section class="app-device-summary" aria-live="polite">
@@ -572,7 +568,6 @@
                             <span id="appEmptyInstalledText" data-i18n="appManagerNoInstalled">No apps installed on this radio.</span>
                             <div class="app-empty-actions">
                                 <button type="button" class="btn primary" id="appEmptyReadBtn" data-i18n="appsRefresh">Read apps from radio</button>
-                                <button type="button" class="btn" id="appEmptyCatalogBtn" data-i18n="appManagerCatalog">Catalog</button>
                             </div>
                         </div>
                     </div>
@@ -645,10 +640,7 @@
                 <div class="log" id="log" aria-live="polite"></div>
             </section>
 
-            <details class="info-box info-box-details">
-                <summary data-i18n="studio_about_compatibility">Compatibility</summary>
-                <div id="infoBox"><strong>Note:</strong> This application requires Chrome/Edge/Opera or Firefox 151+ on desktop.</div>
-            </details>
+            <aside class="info-box" id="infoBox"><strong>Note:</strong> This application requires Chrome/Edge/Opera or Firefox 151+ on desktop.</aside>
           </div>
         </section>
 
@@ -848,9 +840,9 @@
 <script src="js/rf-log.js?v=4"></script>
     <script src="js/k5viewer.js?v=32"></script>
 <script src="js/keypad-detach.js?v=1"></script>
-<script src="js/flash.js?v=51"></script>
+<script src="js/flash.js?v=69"></script>
 <script src="js/flash-catalog.js?v=18"></script>
-<script src="js/app-catalog.js?v=5"></script>
+<script src="js/app-catalog.js?v=6"></script>
 <script src="js/studio.js?v=18"></script>
 <script src="js/studio-flash-counter.js?v=2"></script>
 </body>

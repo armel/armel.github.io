@@ -491,19 +491,6 @@
   color: var(--text-secondary);
   font-size: 13px;
 }
-#pane-tools .info-box-details { padding: 0; overflow: hidden; }
-#pane-tools .info-box-details summary {
-  padding: 10px 12px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-#pane-tools .info-box-details #infoBox {
-  padding: 0 12px 12px;
-  line-height: 1.5;
-}
-
 /* ---------- Logo controls ---------- */
 #pane-tools .logo-controls {
   display: flex;
@@ -662,6 +649,52 @@
   padding: 5px 11px;
   font-size: 11px;
 }
+#pane-tools .slots-table button.table-icon-action {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--text-secondary);
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+#pane-tools .slots-table button.table-icon-action svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+#pane-tools .slots-table button.table-icon-action svg.table-action-update-icon,
+#pane-tools .slots-table button.table-icon-action svg.table-action-reset-icon {
+  stroke-width: 2;
+}
+#pane-tools .slots-table button.table-icon-action.has-detail {
+  width: auto;
+  padding: 0 7px;
+  gap: 5px;
+}
+#pane-tools .slots-table .table-action-detail {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+#pane-tools .slots-table button.table-icon-action:hover:not(:disabled) {
+  border-color: transparent;
+  color: var(--text);
+  background: color-mix(in oklab, var(--text) 6%, transparent);
+  box-shadow: none;
+  transform: none;
+}
 #pane-tools .slots-table button.btn[hidden] { display: none; }
 #pane-tools .slots-table .app-update-button[hidden],
 #pane-tools .slots-table .slot-update-button[hidden] {
@@ -677,7 +710,7 @@
   align-items: center;
   justify-content: flex-end;
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: 4px;
 }
 #pane-tools .slot-state {
   display: inline-block;
@@ -700,16 +733,6 @@
 }
 #pane-tools .slot-state.empty {
   color: var(--text-muted);
-}
-/* Compact per-row actions share the same semantic button variants as the app catalog. */
-#pane-tools .slots-table .slot-actions button.slot-act-erase,
-#pane-tools .slots-table .slot-actions button.app-act-delete {
-  margin: 0;
-}
-/* Compact per-row "reset config" button, next to erase but neutral: it wipes
-   the slot's config profile (channels/settings), not the firmware image. */
-#pane-tools .slots-table .slot-actions button.slot-act-reset {
-  margin: 0;
 }
 #pane-tools #slotsRefreshBtn {
   min-width: 0;
@@ -762,18 +785,6 @@
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.11em;
-}
-#pane-tools .app-manager-refresh.btn {
-  flex: 0 0 auto;
-}
-#pane-tools .app-manager-refresh svg {
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 #pane-tools .app-device-summary {
   display: flex;
@@ -997,22 +1008,28 @@
   padding: 2px;
 }
 #pane-tools .app-category.btn {
+  --app-category-color: #64748b;
   flex: 0 0 auto;
   height: 31px;
   padding: 5px 10px;
-  border-color: var(--border);
+  border-color: color-mix(in oklab, var(--app-category-color) 20%, var(--border));
   border-radius: 7px;
-  color: var(--text-secondary);
-  background: var(--surface);
+  color: color-mix(in oklab, var(--app-category-color) 72%, var(--text));
+  background: color-mix(in oklab, var(--app-category-color) 7%, var(--surface));
   box-shadow: none;
   font-size: 11px;
 }
+#pane-tools .app-category.btn[data-category="radio"] { --app-category-color: #3b82f6; }
+#pane-tools .app-category.btn[data-category="tools"] { --app-category-color: #10b981; }
+#pane-tools .app-category.btn[data-category="games"] { --app-category-color: #f59e0b; }
+#pane-tools .app-category.btn[data-category="demos"] { --app-category-color: #ec4899; }
+#pane-tools .app-category.btn[data-category="other"] { --app-category-color: #8b5cf6; }
 #pane-tools .app-category.btn:hover:not(:disabled),
 #pane-tools .app-category.btn.active {
   transform: none;
-  color: var(--accent-hover);
-  border-color: color-mix(in oklab, var(--accent) 38%, var(--border));
-  background: color-mix(in oklab, var(--accent) 8%, var(--surface));
+  color: color-mix(in oklab, var(--app-category-color) 84%, var(--text));
+  border-color: color-mix(in oklab, var(--app-category-color) 38%, var(--border));
+  background: color-mix(in oklab, var(--app-category-color) 14%, var(--surface));
 }
 #pane-tools .app-category.btn[hidden] { display: none; }
 #pane-tools .app-catalog-summary {
@@ -1029,6 +1046,7 @@
   gap: 10px;
 }
 #pane-tools .app-catalog-card {
+  --app-category-color: #64748b;
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: start;
@@ -1039,6 +1057,11 @@
   background: var(--surface);
   box-shadow: var(--shadow);
 }
+#pane-tools .app-catalog-card[data-category="radio"] { --app-category-color: #3b82f6; }
+#pane-tools .app-catalog-card[data-category="tools"] { --app-category-color: #10b981; }
+#pane-tools .app-catalog-card[data-category="games"] { --app-category-color: #f59e0b; }
+#pane-tools .app-catalog-card[data-category="demos"] { --app-category-color: #ec4899; }
+#pane-tools .app-catalog-card[data-category="other"] { --app-category-color: #8b5cf6; }
 #pane-tools .app-catalog-card:hover {
   border-color: color-mix(in oklab, var(--accent) 34%, var(--border));
 }
@@ -1048,10 +1071,10 @@
   place-items: center;
   width: 38px;
   height: 38px;
-  border: 1px solid color-mix(in oklab, currentColor 28%, var(--border));
+  border: 1px solid color-mix(in oklab, currentColor 22%, var(--border));
   border-radius: 9px;
-  color: var(--accent-hover);
-  background: color-mix(in oklab, currentColor 8%, var(--surface));
+  color: var(--text-secondary);
+  background: color-mix(in oklab, currentColor 5%, var(--surface));
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.03em;
@@ -1065,9 +1088,6 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-#pane-tools .app-catalog-card[data-category="tools"] .app-catalog-icon { color: #047857; }
-#pane-tools .app-catalog-card[data-category="games"] .app-catalog-icon { color: #c2410c; }
-#pane-tools .app-catalog-card[data-category="demos"] .app-catalog-icon { color: #be185d; }
 #pane-tools .app-catalog-content { min-width: 0; }
 #pane-tools .app-catalog-title {
   display: flex;
@@ -1079,9 +1099,10 @@
 #pane-tools .app-catalog-tag {
   overflow: hidden;
   padding: 2px 6px;
+  border: 1px solid color-mix(in oklab, var(--app-category-color) 22%, var(--border));
   border-radius: 5px;
-  color: var(--text-muted);
-  background: var(--bg);
+  color: color-mix(in oklab, var(--app-category-color) 78%, var(--text));
+  background: color-mix(in oklab, var(--app-category-color) 12%, var(--surface));
   font-size: 9px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1122,20 +1143,40 @@
   width: auto;
   min-width: 0;
   height: 32px;
-  padding: 5px 11px;
+  padding: 5px 9px;
+  gap: 6px;
+  color: var(--text-secondary);
+  border-color: var(--border);
+  background: var(--bg);
+  box-shadow: none;
   font-size: 11px;
+  font-weight: 600;
+  transform: none;
 }
-#pane-tools .app-catalog-delete.btn {
-  color: #fff;
-  border-color: #dc2626;
-  background: linear-gradient(160deg, #f87171 0%, #ef4444 100%);
-  box-shadow: 0 2px 6px rgba(239,68,68,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+#pane-tools .app-catalog-actions .app-catalog-action svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-#pane-tools .app-catalog-delete.btn:hover:not(:disabled) {
-  color: #fff;
-  border-color: #b91c1c;
-  background: linear-gradient(160deg, #ef4444 0%, #dc2626 100%);
-  box-shadow: 0 3px 10px rgba(239,68,68,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+#pane-tools .app-catalog-actions .app-catalog-action:hover:not(:disabled) {
+  color: var(--text);
+  border-color: color-mix(in oklab, var(--text) 16%, var(--border));
+  background: color-mix(in oklab, var(--text) 5%, var(--surface));
+  box-shadow: none;
+  transform: none;
+}
+#pane-tools .app-catalog-actions .app-catalog-delete:hover:not(:disabled) {
+  color: #dc2626;
+  border-color: color-mix(in oklab, #ef4444 32%, var(--border));
+  background: color-mix(in oklab, #ef4444 7%, var(--surface));
+}
+[data-theme="dark"] #pane-tools .app-catalog-actions .app-catalog-delete:hover:not(:disabled) {
+  color: #f87171;
 }
 #pane-tools .app-catalog-empty {
   padding: 34px 18px;
@@ -1151,11 +1192,9 @@
 [data-theme="dark"] #pane-tools .app-capacity-copy span,
 [data-theme="dark"] #pane-tools .app-catalog-summary,
 [data-theme="dark"] #pane-tools .app-catalog-meta,
-[data-theme="dark"] #pane-tools .app-catalog-tag,
 [data-theme="dark"] #pane-tools .app-empty-installed {
   color: #a8b4c5;
 }
-[data-theme="dark"] #pane-tools .app-catalog-tag { background: #1f2c3b; }
 [data-theme="dark"] #pane-tools .app-catalog-actions .btn:disabled { opacity: 0.68; }
 #pane-tools .app-local-install {
   margin-top: 15px;
@@ -1197,8 +1236,6 @@
 }
 @media (max-width: 640px) {
   #pane-tools .app-manager-heading { align-items: flex-start; }
-  #pane-tools .app-manager-refresh.btn { width: 36px; padding: 0; font-size: 0; }
-  #pane-tools .app-manager-refresh svg { width: 17px; height: 17px; }
   #pane-tools .app-device-summary { align-items: stretch; flex-direction: column; gap: 13px; }
   #pane-tools .app-capacity { grid-template-columns: 1fr 1fr; }
   #pane-tools .app-capacity-copy { text-align: left; }

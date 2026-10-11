@@ -90,6 +90,11 @@
     epirb406: 'EPIRB 406', sigfinder: 'Signal Finder', spaceimpact: 'Space Impact',
     spectrum3d: 'Spectrum 3D', systeminfo: 'System Info'
   };
+  const APP_ACTION_ICONS = {
+    install: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+    update: '<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v6h-6"/>',
+    delete: '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/>'
+  };
   const APP_ICONS = {
     aprsrx: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M17.5 4v10m-3-3 3 3 3-3"/>',
     aprstx: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M17.5 14V4m-3 3 3-3 3 3"/>',
@@ -120,6 +125,13 @@
 
   function appIconSVG(id) {
     return APP_ICONS[String(id)] || '';
+  }
+
+  function setCatalogActionContent(button, icon, label) {
+    button.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${APP_ACTION_ICONS[icon] || ''}</svg>`;
+    const text = document.createElement('span');
+    text.textContent = label;
+    button.appendChild(text);
   }
 
   function appDetails(filename) {
@@ -451,8 +463,8 @@
         if (!installed) {
           const install = document.createElement('button');
           install.type = 'button';
-          install.className = 'btn primary app-catalog-install';
-          install.textContent = t('appInstallBtn');
+          install.className = 'btn app-catalog-action app-catalog-install';
+          setCatalogActionContent(install, 'install', t('appInstallBtn'));
           install.disabled = catalogOperationPending || !inventoryReady || freeSlots === 0;
           install.title = !inventoryReady
             ? t('appManagerScanBeforeInstall')
@@ -463,8 +475,8 @@
           if (state === 'update') {
             const update = document.createElement('button');
             update.type = 'button';
-            update.className = 'btn primary app-catalog-update';
-            update.textContent = t('appUpdateAction', metadata.version);
+            update.className = 'btn app-catalog-action app-catalog-update';
+            setCatalogActionContent(update, 'update', t('appUpdateAction', metadata.version.replace(/^v/i, '')));
             update.disabled = catalogOperationPending || !inventoryReady;
             update.addEventListener('click', () => {
               const flash = window.UVStudioFlash;
@@ -476,8 +488,8 @@
           }
           const remove = document.createElement('button');
           remove.type = 'button';
-          remove.className = 'btn danger app-catalog-delete';
-          remove.textContent = t('appDelete');
+          remove.className = 'btn app-catalog-action app-catalog-delete';
+          setCatalogActionContent(remove, 'delete', t('appDelete'));
           remove.disabled = catalogOperationPending || !inventoryReady;
           remove.addEventListener('click', () => {
             const flash = window.UVStudioFlash;
