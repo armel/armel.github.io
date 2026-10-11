@@ -10,7 +10,7 @@
 
 const FLASH_MAP = {
   meta: {
-    updated: "2026-08-28",
+    updated: "2026-10-11",
     flashSize: 0x200000,
     eraseSize: 0x1000,
     programSize: 0x100,
@@ -27,7 +27,8 @@ const FLASH_MAP = {
   overview: [
     { id: "profile-0", start: 0x000000, end: 0x00FFFF, kind: "profile", target: "radio-data", short: { fr: "PM", en: "PM" } },
     { id: "cal-logo", start: 0x010000, end: 0x011FFF, kind: "shared", target: "calibration-logo", short: { fr: "Cal/Logo", en: "Cal/Logo" } },
-    { id: "gap-low", start: 0x012000, end: 0x01FFFF, kind: "free", target: "unused", short: { fr: "Libre", en: "Free" } },
+    { id: "gap-low", start: 0x012000, end: 0x017FFF, kind: "free", target: "unused", short: { fr: "Libre", en: "Free" } },
+    { id: "log", start: 0x018000, end: 0x01FFFF, kind: "log", target: "rxtx-log", short: { fr: "Log", en: "Log" } },
     { id: "slot-0", start: 0x020000, end: 0x03FFFF, kind: "slot", target: "slots", short: { fr: "SM", en: "SM" } },
     { id: "slot-1", start: 0x040000, end: 0x05FFFF, kind: "slot", target: "slots", short: { fr: "S1", en: "S1" } },
     { id: "slot-2", start: 0x060000, end: 0x07FFFF, kind: "slot", target: "slots", short: { fr: "S2", en: "S2" } },
@@ -39,11 +40,9 @@ const FLASH_MAP = {
     { id: "profile-4", start: 0x0F0000, end: 0x0FFFFF, kind: "profile", target: "profiles", short: { fr: "P4", en: "P4" } },
     { id: "mb-state", start: 0x100000, end: 0x100FFF, kind: "shared", target: "profiles", short: { fr: "État", en: "State" } },
     { id: "gap-mid-a", start: 0x101000, end: 0x101FFF, kind: "free", target: "unused", short: { fr: "Libre", en: "Free" } },
-    { id: "apps", start: 0x102000, end: 0x121FFF, kind: "apps", target: "apps", short: { fr: "Apps", en: "Apps" } },
-    { id: "gap-mid-b", start: 0x122000, end: 0x14BFFF, kind: "free", target: "unused", short: { fr: "Non attribué", en: "Unallocated" } },
-    { id: "voice", start: 0x14C000, end: 0x1DFFFF, kind: "voice", target: "voice-log", short: { fr: "Voix", en: "Voice" } },
-    { id: "log", start: 0x1E0000, end: 0x1E7FFF, kind: "log", target: "voice-log", short: { fr: "Log", en: "Log" } },
-    { id: "gap-high", start: 0x1E8000, end: 0x1FFFFF, kind: "free", target: "unused", short: { fr: "Libre", en: "Free" } },
+    { id: "apps", start: 0x102000, end: 0x121FFF, kind: "apps", target: "apps", short: { fr: "Apps 1–16", en: "Apps 1–16" } },
+    { id: "apps-reserve", start: 0x122000, end: 0x1DDFFF, kind: "apps-reserve", target: "apps", short: { fr: "Extension Apps", en: "App expansion" } },
+    { id: "sonic-4k", start: 0x1DE000, end: 0x1FFFFF, kind: "sonic", target: "sonic-4k", short: { fr: "Sonic 4K", en: "Sonic 4K" } },
   ],
   sections: [
     {
@@ -111,7 +110,7 @@ const FLASH_MAP = {
         [0x011008, 0x011407, { fr: "Bitmap 128 × 64 monochrome au format ST7565", en: "128 × 64 monochrome bitmap in ST7565 format" }],
         [0x011408, 0x011FFF, { fr: "Reste du secteur logo, réservé", en: "Remainder of the logo sector, reserved" }],
       ],
-      note: { fr: "Fenêtre de calibration réservée : 0x010000–0x0101FF (512 octets).", en: "Reserved calibration window: 0x010000–0x0101FF (512 bytes)." },
+      note: { fr: "Fenêtre de calibration réservée : 0x010000–0x0101FF (512 octets). Le logo actuel occupe le secteur 0x011000.", en: "Reserved calibration window: 0x010000–0x0101FF (512 bytes). The current logo occupies sector 0x011000." },
     },
     {
       id: "slots", wide: true, range: [0x020000, 0x0BFFFF],
@@ -125,14 +124,12 @@ const FLASH_MAP = {
       note: { fr: "Slot 0 = backup du firmware « Main », écrit par le firmware (auto-sauvegarde au 1er boot après un flash normal) et protégé en écriture ; slots 1-4 gérés depuis UV Studio.", en: "Slot 0 = backup of the “Main” firmware, written by the firmware (self-backup on the first boot after a normal flash) and write-protected; slots 1-4 are managed from UV Studio." },
     },
     {
-      id: "voice-log", range: [0x14C000, 0x1E7FFF],
-      title: { fr: "Voix et journal", en: "Voice data and log" },
+      id: "rxtx-log", range: [0x018000, 0x01FFFF],
+      title: { fr: "Journal RX/TX", en: "RX/TX log" },
       rows: [
-        [0x14C000, 0x14C7FF, { fr: "Index des clips vocaux chinois", en: "Chinese voice-clip index" }],
-        [0x14C800, 0x14CFFF, { fr: "Index des clips vocaux anglais", en: "English voice-clip index" }],
-        [0x14D000, 0x1DFFFF, { fr: "Zone des données audio référencées par les index", en: "Audio data area referenced by the indexes" }],
-        [0x1E0000, 0x1E7FFF, { fr: "Journal circulaire RX/TX : 1024 entrées × 32 octets", en: "Circular RX/TX log: 1024 entries × 32 bytes" }],
+        [0x018000, 0x01FFFF, { fr: "Journal circulaire RX/TX : 1024 entrées × 32 octets", en: "Circular RX/TX log: 1024 entries × 32 bytes" }],
       ],
+      note: { fr: "Allocation cible placée juste avant le slot Main afin de préserver une réserve continue pour les logos. La version Fusion actuelle utilise encore 0x1E0000–0x1E7FFF ; le déplacement du firmware doit précéder l’exploitation de la réserve Apps.", en: "Target allocation placed immediately before the Main slot to preserve a contiguous logo reserve. The current Fusion version still uses 0x1E0000–0x1E7FFF; the firmware relocation must land before the app reserve is used." },
     },
     {
       id: "profiles", range: [0x0C0000, 0x100FFF],
@@ -147,26 +144,36 @@ const FLASH_MAP = {
       note: { fr: "Le profil 0 réutilise la zone historique 0x000000 (aucune migration). Chaque slot est lié à son profil (slot 0 → profil 0, « Main »). La calibration reste partagée. Frontière du banking : tout accès physique < 0x010000 est redirigé dans la bank active.", en: "Profile 0 reuses the historical region at 0x000000 (no migration). Each slot is bound to its profile (slot 0 → profile 0, “Main”). Calibration stays shared. Banking boundary: every physical access below 0x010000 is redirected into the active bank." },
     },
     {
-      id: "apps", range: [0x102000, 0x121FFF],
-      title: { fr: "Slots Apps Overlay", en: "Overlay-app slots" },
+      id: "apps", range: [0x102000, 0x1DDFFF],
+      title: { fr: "Apps Overlay et réserve d’extension", en: "Overlay apps and expansion reserve" },
       rows: [
+        [0x102000, 0x121FFF, { fr: "16 slots actuellement exposés par Fusion", en: "16 slots currently exposed by Fusion" }],
+        [0x122000, 0x1DDFFF, { fr: "Réserve contiguë pour 94 slots supplémentaires", en: "Contiguous reserve for 94 additional slots" }],
         ["slot + 0x0000", "0x003F", { fr: "En-tête FAP1 de 64 octets : magic, versions hdr/ABI, taille code, CRC32, offset d’entrée, flags, nom, version, VMA de link", en: "64-byte FAP1 header: magic, hdr/ABI versions, code size, CRC32, entry offset, flags, name, version, link VMA" }],
         ["slot + 0x0040", "0x004F", { fr: "Config de l’app (16 octets max), préservée entre lancements et écrite par le firmware à la sortie", en: "App config (up to 16 bytes), kept across launches and written by the firmware on exit" }],
         ["slot + 0x0050", "0x0FFF", { fr: "Reste du secteur en-tête de 4 Kio, réservé", en: "Remainder of the 4 KiB header sector, reserved" }],
         ["slot + 0x1000", "0x1FFF", { fr: "Secteur code de 4 Kio : blob de l’app (≤ 4 Kio), vérifié par CRC puis copié dans l’overlay RAM pour exécution", en: "4 KiB code sector: app blob (≤ 4 KiB), CRC-checked then copied into the RAM overlay to run" }],
       ],
-      note: { fr: "16 slots de 8 Kio (0x102000–0x121FFF), taillés dans l’espace libre après les marqueurs multiboot. Gérés en UART/USB (commandes 0x073x) depuis UV Studio ; Flash externe uniquement — la Flash interne n’est jamais touchée. Une app est du code natif de confiance, exécuté depuis l’overlay RAM de 4 Kio partagé avec le stub multiboot.", en: "16 slots of 8 KiB (0x102000–0x121FFF), carved from the free space after the multiboot markers. Managed over UART/USB (0x073x commands) from UV Studio; external Flash only — the internal Flash is never touched. An app is trusted native code, run from the 4 KiB RAM overlay shared with the multiboot stub." },
+      note: { fr: "La région continue offre un plafond géométrique de 110 slots de 8 Kio. Fusion et UV Studio n’en exposent actuellement que 16 ; utiliser la réserve demandera une évolution coordonnée des deux projets. Les anciennes données vocales de cette plage peuvent être restaurées par UV Studio si un retour au firmware d’origine l’exige.", en: "The contiguous region has a geometric ceiling of 110 8-KiB slots. Fusion and UV Studio currently expose only 16; using the reserve will require a coordinated update to both projects. Legacy voice data in this range can be restored by UV Studio if returning to the factory firmware requires it." },
     },
     {
-      id: "unused", range: [0x012000, 0x1FFFFF],
+      id: "sonic-4k", range: [0x1DE000, 0x1FFFFF],
+      title: { fr: "Réservation d’interopérabilité — Sonic 4K", en: "Interoperability reservation — Sonic 4K" },
+      rows: [
+        [0x1DE000, 0x1EDFFF, { fr: "4096 canaux mémoire × 16 octets", en: "4096 memory channels × 16 bytes" }],
+        [0x1EE000, 0x1FDFFF, { fr: "Noms des 4096 canaux × 16 octets", en: "4096 channel names × 16 bytes" }],
+        [0x1FE000, 0x1FFFFF, { fr: "Attributs des 4096 canaux × 2 octets", en: "Attributes for 4096 channels × 2 bytes" }],
+      ],
+      note: { fr: "Zone réservée à Sonic 4K à la suite d’un accord de coordination avec Robby. F4HWN ne doit ni l’allouer à ses apps overlay ni y écrire. Le dernier segment contient exactement 4096 attributs : d’éventuels enregistrements supplémentaires, notamment ceux des VFO, doivent rester ailleurs afin de ne pas dépasser 0x1FFFFF.", en: "Area reserved for Sonic 4K following a coordination agreement with Robby. F4HWN must neither allocate it to overlay apps nor write to it. The final segment holds exactly 4096 attributes: any additional records, including VFO records, must remain elsewhere to avoid crossing 0x1FFFFF." },
+    },
+    {
+      id: "unused", range: [0x012000, 0x101FFF],
       title: { fr: "Zones non attribuées", en: "Unallocated areas" },
       rows: [
-        [0x012000, 0x01FFFF, { fr: "Non attribué", en: "Unallocated" }],
+        [0x012000, 0x017FFF, { fr: "Non attribué (24 Kio)", en: "Unallocated (24 KiB)" }],
         [0x101000, 0x101FFF, { fr: "Non attribué (avant la région Apps)", en: "Unallocated (before the Apps region)" }],
-        [0x122000, 0x14BFFF, { fr: "Non attribué par F4HWN", en: "Unallocated by F4HWN" }],
-        [0x1E8000, 0x1FFFFF, { fr: "Non attribué", en: "Unallocated" }],
       ],
-      note: { fr: "« Non attribué » décrit le code F4HWN actuel ; un autre firmware peut employer ces adresses.", en: "“Unallocated” describes the current F4HWN code; another firmware may use these addresses." },
+      note: { fr: "Ces deux fenêtres restent libres dans l’allocation coordonnée.", en: "These two windows remain free in the coordinated allocation." },
     },
   ],
 };
@@ -181,7 +188,7 @@ const I18N = {
     updated: "Mise à jour :",
     sourceTitle: "Sources :",
     sourceIntro: "cette carte est dérivée des constantes et des accès physiques du firmware.",
-    mappingWarning: "La calibration et le logo sont partagés par tous les profils ; les canaux et paramètres sont propres à chaque slot (banks de config par profil). Les slots multiboot ne contiennent que les images de firmware et leurs métadonnées.",
+    mappingWarning: "Cette carte distingue l’usage actuel de Fusion des allocations cibles : 0x012000–0x017FFF reste libre, le journal RX/TX est prévu à 0x018000–0x01FFFF, l’extension Apps s’arrête à 0x1DDFFF, puis Sonic 4K occupe 0x1DE000–0x1FFFFF.",
     address: "Adresses inclusives",
     size: "Taille",
     content: "Contenu",
@@ -190,7 +197,7 @@ const I18N = {
     header: "Secteur header",
     image: "Image",
     spare: "Réserve",
-    legend: { shared: "Données partagées", profile: "Config par profil", slot: "Images multiboot", apps: "Apps overlay", voice: "Données vocales", log: "Journal RX/TX", free: "Non attribué / réservé" },
+    legend: { shared: "Données partagées", profile: "Config par profil", slot: "Images multiboot", apps: "Apps actives", "apps-reserve": "Extension Apps réservée", sonic: "Réservé Sonic 4K", log: "Journal RX/TX", free: "Non attribué" },
   },
   en: {
     eyebrow: "F4HWN · Developer reference",
@@ -201,7 +208,7 @@ const I18N = {
     updated: "Updated:",
     sourceTitle: "Sources:",
     sourceIntro: "this map is derived from the firmware constants and physical accesses.",
-    mappingWarning: "Calibration and logo are shared across all profiles; channels and settings are private to each slot (per-profile config banks). Multiboot slots contain only firmware images and their metadata.",
+    mappingWarning: "This map distinguishes current Fusion use from target allocations: 0x012000–0x017FFF remains free, the RX/TX log is planned at 0x018000–0x01FFFF, app expansion stops at 0x1DDFFF, then Sonic 4K occupies 0x1DE000–0x1FFFFF.",
     address: "Inclusive addresses",
     size: "Size",
     content: "Contents",
@@ -210,7 +217,7 @@ const I18N = {
     header: "Header sector",
     image: "Image",
     spare: "Spare",
-    legend: { shared: "Shared data", profile: "Per-profile config", slot: "Multiboot images", apps: "Overlay apps", voice: "Voice data", log: "RX/TX log", free: "Unallocated / reserved" },
+    legend: { shared: "Shared data", profile: "Per-profile config", slot: "Multiboot images", apps: "Active apps", "apps-reserve": "Reserved app expansion", sonic: "Reserved for Sonic 4K", log: "RX/TX log", free: "Unallocated" },
   },
 };
 
@@ -278,7 +285,7 @@ function renderOverview(language) {
 
   const legend = $("#map-legend");
   legend.replaceChildren();
-  for (const kind of ["shared", "profile", "slot", "apps", "voice", "log", "free"]) {
+  for (const kind of ["shared", "profile", "slot", "apps", "apps-reserve", "sonic", "log", "free"]) {
     const item = make("span", "legend-item");
     item.append(make("i", `legend-swatch kind-${kind}`), document.createTextNode(I18N[language].legend[kind]));
     legend.append(item);

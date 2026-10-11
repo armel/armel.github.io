@@ -3,6 +3,14 @@
 This directory contains a dependency-free, bilingual (French/English) map of
 the 2 MiB PY25Q16 external Flash used by F4HWN.
 
+The map also records the coordinated interoperability allocation with Sonic 4K:
+the F4HWN overlay-app expansion stops at `0x1DDFFF`, and Sonic 4K owns
+`0x1DE000` through `0x1FFFFF`.
+
+In the low shared area, `0x012000` through `0x017FFF` remains unallocated. The
+target RX/TX log allocation occupies `0x018000` through `0x01FFFF`, immediately
+before the Main firmware slot.
+
 Open `index.html` directly, or serve the repository locally:
 
 ```sh
