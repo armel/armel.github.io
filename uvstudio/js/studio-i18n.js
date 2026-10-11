@@ -67,6 +67,10 @@
                 const key = element.getAttribute("data-i18n-aria-label");
                 if (key) element.setAttribute("aria-label", this.t(key));
             });
+            scope.querySelectorAll("[data-i18n-placeholder]").forEach(element => {
+                const key = element.getAttribute("data-i18n-placeholder");
+                if (key) element.setAttribute("placeholder", this.t(key));
+            });
         },
 
         setLanguage(language, options) {

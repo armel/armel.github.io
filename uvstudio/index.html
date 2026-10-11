@@ -4,12 +4,12 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>UV Studio by F4HWN</title>
-<script src="js/studio-version.js?v=1.7.0"></script>
+<script src="js/studio-version.js?v=1.8.0"></script>
 <link rel="icon" type="image/svg+xml" href="assets/uv-studio-radio.svg">
-<link href="css/core.css?v=4" rel="stylesheet">
+<link href="css/core.css?v=5" rel="stylesheet">
 <link href="css/viewer.css?v=13" rel="stylesheet">
-<link href="css/tools.css?v=24" rel="stylesheet">
-<link href="css/studio.css?v=25" rel="stylesheet">
+<link href="css/tools.css?v=31" rel="stylesheet">
+<link href="css/studio.css?v=26" rel="stylesheet">
 </head>
 <body data-theme="light">
 
@@ -475,10 +475,9 @@
                                     <th class="slot-col-idx" data-i18n="slotColIdx">#</th>
                                     <th data-i18n="slotColEdition">Edition</th>
                                     <th data-i18n="slotColVersion">Version</th>
-                                    <th data-i18n="appColUpdate">Update</th>
                                     <th data-i18n="slotColSize">Size</th>
                                     <th data-i18n="slotColState">Status</th>
-                                    <th></th>
+                                    <th data-i18n="appColActions">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="slotsTableBody"></tbody>
@@ -518,62 +517,118 @@
                 </section>
             </div>
 
-            <div class="tool-view" id="apps-content" role="region" hidden>
-                <section class="section">
-                    <p class="tab-description" data-i18n="appsDescription">Install small overlay apps (.app) into the radio's external flash and launch them from the F key + 7 menu. Writing only touches the external flash, so the radio stays usable.</p>
+            <div class="tool-view app-manager" id="apps-content" role="region" hidden>
+                <header class="app-manager-heading">
+                    <div>
+                        <span class="app-manager-eyebrow" data-i18n="appManagerEyebrow">APP MANAGER</span>
+                        <p class="tab-description" data-i18n="appsDescription">Install only the tools you need. Apps are launched from the radio's F + 7 menu.</p>
+                    </div>
+                    <button id="appsRefreshBtn" class="btn app-manager-refresh" type="button">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 1 0 .2 3M20 4v7h-7"/></svg>
+                        <span data-i18n="appsRefresh">Refresh apps</span>
+                    </button>
+                </header>
+
+                <section class="app-device-summary" aria-live="polite">
+                    <div class="app-device-main">
+                        <span class="app-device-icon" aria-hidden="true">▦</span>
+                        <div><strong id="appManagerFirmware" data-i18n="appManagerRadioPending">Waiting for radio…</strong><span id="appManagerCompatibility" data-i18n="appManagerConnectHint">Connect the radio to check compatibility</span></div>
+                    </div>
+                    <div class="app-capacity">
+                        <div class="app-capacity-copy"><strong id="appInstalledCount">0 apps installed</strong><span id="appCapacityText">0 of 16 slots used</span></div>
+                        <div class="app-capacity-track" role="progressbar" aria-valuemin="0" aria-valuemax="16" aria-valuenow="0" id="appCapacityBar"><span></span></div>
+                    </div>
                 </section>
-                <section class="section">
-                    <div class="slots-table-wrap apps-table-wrap">
+
+                <div class="app-manager-tabs" role="tablist" data-i18n-aria-label="appManagerTabsLabel" aria-label="App management">
+                    <button type="button" class="btn app-manager-tab active" id="appInstalledTab" role="tab" aria-selected="true" aria-controls="appInstalledPanel">
+                        <span data-i18n="appManagerInstalled">Installed</span><span class="app-tab-count" id="appInstalledTabCount">0</span>
+                    </button>
+                    <button type="button" class="btn app-manager-tab" id="appCatalogTab" role="tab" aria-selected="false" aria-controls="appCatalogPanel" tabindex="-1">
+                        <span data-i18n="appManagerCatalog">Catalog</span><span class="app-tab-count" id="appCatalogTabCount">—</span>
+                    </button>
+                </div>
+
+                <section class="app-manager-panel active" id="appInstalledPanel" role="tabpanel" aria-labelledby="appInstalledTab">
+                    <div class="app-panel-toolbar">
+                        <div><h2 data-i18n="appManagerOnRadio">On your radio</h2><p data-i18n="appManagerInstalledHint">Only installed apps appear in the radio menu.</p></div>
+                        <label class="app-show-empty" id="appShowEmptyWrap" hidden><input type="checkbox" id="appShowEmptySlots"><span data-i18n="appManagerShowSlots">Show empty slots</span></label>
+                    </div>
+                    <div id="appsTableWrap" class="slots-table-wrap apps-table-wrap">
                         <table class="slots-table" id="appsTable">
                             <thead>
                                 <tr>
                                     <th class="slot-col-idx" data-i18n="slotColIdx">#</th>
                                     <th data-i18n="appColName">Name</th>
                                     <th data-i18n="slotColVersion">Version</th>
-                                    <th data-i18n="appColUpdate">Update</th>
                                     <th data-i18n="appColSize">Size</th>
                                     <th data-i18n="slotColState">Status</th>
-                                    <th></th>
+                                    <th data-i18n="appColActions">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="appsTableBody"></tbody>
                         </table>
-                    </div>
-                    <button id="appsRefreshBtn" class="slots-refresh"><span data-i18n="appsRefresh">Refresh apps</span></button>
-                </section>
-                <section class="section firmware-catalog app-catalog" id="appCatalogSection" aria-labelledby="appCatalogLabel" hidden>
-                    <label id="appCatalogLabel" data-i18n="app_catalog_label">Official overlay apps</label>
-                    <div class="app-catalog-grid">
-                        <div>
-                            <label for="appCatalogVersionSelect" data-i18n="app_catalog_version_label">Firmware version</label>
-                            <select id="appCatalogVersionSelect" class="firmware-catalog-select">
-                                <option value="" disabled selected data-i18n="app_catalog_version_placeholder">— Select a firmware version —</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="appCatalogSelect" data-i18n="app_catalog_app_label">Application</label>
-                            <select id="appCatalogSelect" class="firmware-catalog-select" disabled>
-                                <option value="" disabled selected data-i18n="app_catalog_app_placeholder">— Select an app —</option>
-                            </select>
+                        <div class="app-empty-installed" id="appEmptyInstalled" hidden>
+                            <span id="appEmptyInstalledText" data-i18n="appManagerNoInstalled">No apps installed on this radio.</span>
+                            <div class="app-empty-actions">
+                                <button type="button" class="btn primary" id="appEmptyReadBtn" data-i18n="appsRefresh">Read apps from radio</button>
+                                <button type="button" class="btn" id="appEmptyCatalogBtn" data-i18n="appManagerCatalog">Catalog</button>
+                            </div>
                         </div>
                     </div>
                 </section>
-                <p class="catalog-or" id="appCatalogOr" data-i18n="app_catalog_or" hidden>or load a local file</p>
-                <section class="section" aria-labelledby="labelAppFile">
-                    <label id="labelAppFile" for="appFile" data-i18n="appFileLabel">App file (.app)</label>
-                    <div class="file-input-wrapper">
-                        <input type="file" id="appFile" accept=".app" />
-                        <div class="file-input-label" id="appFileLabel">
-                            <span class="file-name" id="appFileName" data-i18n="fileNoFile">No file selected</span>
-                            <span class="file-button" id="appFileButton" data-i18n="fileChoose">Choose file</span>
+
+                <section class="app-manager-panel" id="appCatalogPanel" role="tabpanel" aria-labelledby="appCatalogTab" hidden>
+                    <section class="firmware-catalog app-catalog" id="appCatalogSection" aria-labelledby="appCatalogLabel" hidden>
+                        <div class="app-catalog-toolbar">
+                            <label class="app-catalog-search" for="appCatalogSearch">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                                <input id="appCatalogSearch" type="search" data-i18n-placeholder="appManagerSearch" placeholder="Search apps…" autocomplete="off" />
+                            </label>
+                            <div class="app-version-picker">
+                                <label id="appCatalogLabel" for="appCatalogVersionSelect" data-i18n="app_catalog_version_label">Firmware version</label>
+                                <select id="appCatalogVersionSelect" class="firmware-catalog-select">
+                                    <option value="" disabled selected data-i18n="app_catalog_version_placeholder">— Select a firmware version —</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    <p class="slot-meta" id="appMeta" aria-live="polite"></p>
-                    <div class="slots-write-row">
-                        <label for="appTarget" data-i18n="appTargetLabel">Target slot</label>
-                        <select id="appTarget"></select>
-                        <button id="appInstallBtn" disabled aria-live="polite"><span data-i18n="appInstallBtn">Install app</span></button>
-                    </div>
+                        <div class="app-category-filters" id="appCategoryFilters" role="group" data-i18n-aria-label="appManagerCategories" aria-label="Categories">
+                            <button type="button" class="btn app-category active" data-category="all" data-i18n="appCategoryAll">All</button>
+                            <button type="button" class="btn app-category" data-category="radio" data-i18n="appCategoryRadio">Radio &amp; signals</button>
+                            <button type="button" class="btn app-category" data-category="tools" data-i18n="appCategoryTools">Tools</button>
+                            <button type="button" class="btn app-category" data-category="games" data-i18n="appCategoryGames">Games</button>
+                            <button type="button" class="btn app-category" data-category="demos" data-i18n="appCategoryDemos">Demos</button>
+                            <button type="button" class="btn app-category" data-category="other" data-i18n="appCategoryOther" hidden>Other</button>
+                        </div>
+                        <div class="app-catalog-summary"><strong id="appCatalogResultCount">—</strong><span id="appCatalogFirmwareHint"></span></div>
+                        <div class="app-catalog-cards" id="appCatalogCards"></div>
+                        <div class="app-catalog-empty" id="appCatalogEmpty" hidden data-i18n="appManagerNoResults">No apps match this search.</div>
+                        <select id="appCatalogSelect" class="sr-only" aria-hidden="true" tabindex="-1" disabled>
+                            <option value="" disabled selected data-i18n="app_catalog_app_placeholder">— Select an app —</option>
+                        </select>
+                    </section>
+
+                    <details class="app-local-install">
+                        <summary><span data-i18n="appManagerLocalInstall">Install a local app</span><code>.app</code></summary>
+                        <div class="app-local-install-body">
+                            <section class="section" aria-labelledby="labelAppFile">
+                                <label id="labelAppFile" for="appFile" data-i18n="appFileLabel">App file (.app)</label>
+                                <div class="file-input-wrapper">
+                                    <input type="file" id="appFile" accept=".app" />
+                                    <div class="file-input-label" id="appFileLabel">
+                                        <span class="file-name" id="appFileName" data-i18n="fileNoFile">No file selected</span>
+                                        <span class="file-button" id="appFileButton" data-i18n="fileChoose">Choose file</span>
+                                    </div>
+                                </div>
+                                <p class="slot-meta" id="appMeta" aria-live="polite"></p>
+                                <div class="slots-write-row">
+                                    <label for="appTarget" data-i18n="appTargetLabel">Target slot</label>
+                                    <select id="appTarget"></select>
+                                    <button id="appInstallBtn" disabled aria-live="polite"><span data-i18n="appInstallBtn">Install app</span></button>
+                                </div>
+                            </section>
+                        </div>
+                    </details>
                 </section>
             </div>
 
@@ -590,7 +645,10 @@
                 <div class="log" id="log" aria-live="polite"></div>
             </section>
 
-            <aside class="info-box" id="infoBox"><strong>Note:</strong> This application requires Chrome/Edge/Opera or Firefox 151+ on desktop.</aside>
+            <details class="info-box info-box-details">
+                <summary data-i18n="studio_about_compatibility">Compatibility</summary>
+                <div id="infoBox"><strong>Note:</strong> This application requires Chrome/Edge/Opera or Firefox 151+ on desktop.</div>
+            </details>
           </div>
         </section>
 
@@ -774,25 +832,25 @@
 </div>
 
 <!-- ═══════════ Scripts (all local, file://-friendly) ═══════════ -->
-<script src="locales/en.js?v=52"></script>
-<script src="locales/fr.js?v=52"></script>
-<script src="locales/it.js?v=52"></script>
-<script src="locales/es.js?v=52"></script>
-<script src="locales/de.js?v=52"></script>
-<script src="locales/pt.js?v=52"></script>
-<script src="locales/ru.js?v=52"></script>
-<script src="locales/pl.js?v=52"></script>
-<script src="locales/zh.js?v=52"></script>
-<script src="locales/nl.js?v=52"></script>
+<script src="locales/en.js?v=55"></script>
+<script src="locales/fr.js?v=55"></script>
+<script src="locales/it.js?v=55"></script>
+<script src="locales/es.js?v=55"></script>
+<script src="locales/de.js?v=55"></script>
+<script src="locales/pt.js?v=55"></script>
+<script src="locales/ru.js?v=55"></script>
+<script src="locales/pl.js?v=55"></script>
+<script src="locales/zh.js?v=55"></script>
+<script src="locales/nl.js?v=55"></script>
 <script src="js/studio-preferences.js?v=1"></script>
-<script src="js/studio-i18n.js?v=4"></script>
+<script src="js/studio-i18n.js?v=5"></script>
 <script src="js/studio-serial.js?v=2"></script>
 <script src="js/rf-log.js?v=4"></script>
-    <script src="js/k5viewer.js?v=31"></script>
+    <script src="js/k5viewer.js?v=32"></script>
 <script src="js/keypad-detach.js?v=1"></script>
-<script src="js/flash.js?v=44"></script>
+<script src="js/flash.js?v=51"></script>
 <script src="js/flash-catalog.js?v=18"></script>
-<script src="js/app-catalog.js?v=4"></script>
+<script src="js/app-catalog.js?v=5"></script>
 <script src="js/studio.js?v=18"></script>
 <script src="js/studio-flash-counter.js?v=2"></script>
 </body>

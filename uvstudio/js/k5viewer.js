@@ -1748,8 +1748,8 @@ if (!('serial' in navigator)) {
     showNotification('web_serial_not_supported', {}, 'error');
     if (connectionBtn) connectionBtn.disabled = true;
 } else {
-    // Show initial notification only if Web Serial is supported
-    showNotification('app_loaded', {}, 'info');
+    // The ready state is already visible in the top bar; avoid covering the UI
+    // with a redundant toast every time UV Studio loads.
 }
 
 // Initialize app

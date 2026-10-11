@@ -163,6 +163,7 @@ body {
     letter-spacing: 0.02em;
     padding: 2px 5px;
 }
+.nav-item-labs:not(.active) .tag { display: none; }
 .nav-item:hover { background: color-mix(in oklab, var(--text) 6%, transparent); color: var(--text); }
 .nav-item:disabled {
     cursor: not-allowed;
@@ -197,6 +198,18 @@ body {
 
 /* k5viewer toasts: move to bottom-right so they don't cover the action bar */
 .notifications { top: auto; bottom: 20px; }
+
+@media (max-width: 640px) {
+    .notifications {
+        top: 66px;
+        right: 12px;
+        bottom: auto;
+        left: 12px;
+        align-items: stretch;
+        pointer-events: none;
+    }
+    .notification { max-width: none; padding: 9px 12px; }
+}
 
 /* Viewer sub-views: Live Viewer (screen + keypad) vs RF Log */
 .viewer-sub { display: none; }

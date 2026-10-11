@@ -127,6 +127,18 @@ body {
     box-shadow: 0 4px 12px rgba(59,130,246,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
     transform: translateY(-1px);
 }
+[data-theme="dark"] .btn.danger {
+    background: linear-gradient(160deg, #ef4444 0%, #dc2626 100%);
+    border-color: #f87171;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(239,68,68,0.32), inset 0 1px 0 rgba(255,255,255,0.14);
+}
+[data-theme="dark"] .btn.danger:hover:not(:disabled) {
+    background: linear-gradient(160deg, #f87171 0%, #ef4444 100%);
+    border-color: #fca5a5;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(239,68,68,0.42), inset 0 1px 0 rgba(255,255,255,0.18);
+}
 
 /* Select */
 select {

@@ -31,11 +31,36 @@ test('lists app files alphabetically and ignores unrelated archive entries', () 
   assert.equal(catalog.formatAppLabel(apps[0]), 'Beacon · 1.0 KB');
 });
 
+test('adds presentation metadata without changing the app binary format', () => {
+  assert.deepEqual(catalog.appDetails('CWDecode.app'), {
+    id: 'cwdecode',
+    category: 'radio',
+    description: 'Decode Morse code in real time.',
+    descriptionFr: 'Décodage du Morse en temps réel.',
+    label: 'CW Decode'
+  });
+  assert.equal(catalog.appDetails('Tetris.app').category, 'games');
+  assert.equal(catalog.appDetails('Spectrum3D.app').category, 'radio');
+  assert.equal(catalog.appDetails('FoxHunt.app').category, 'radio');
+  assert.equal(catalog.appDetails('EPIRB406.app').category, 'radio');
+  assert.equal(catalog.appDetails('SigFinder.app').category, 'radio');
+  assert.equal(catalog.appDetails('FutureApp.app').category, 'other');
+  assert.equal(catalog.appCatalogId('Spectrum-3D.app'), 'spectrum3d');
+});
+
 test('targets the stable versioned apps archive on GitHub', () => {
   assert.equal(
     catalog.contentsURL('archive/apps/v6.0.0'),
     'https://api.github.com/repos/armel/uv-k1-k5v3-firmware-custom/contents/archive/apps/v6.0.0?ref=main'
   );
+});
+
+test('keeps the current app catalog available when the GitHub API is unavailable', () => {
+  const apps = catalog.fallbackApps();
+  assert.equal(apps.length, 21);
+  assert.equal(apps[0].label, 'APRS RX');
+  assert.match(apps[0].url, /raw\.githubusercontent\.com\/.*\/v6\.1\.0\/APRSRX\.app$/);
+  assert.deepEqual(catalog.fallbackApps({ version: '6.0.0', path: 'archive/apps/v6.0.0' }), []);
 });
 
 test('reads the app identity and version from a FAP1 header', () => {
@@ -49,4 +74,38 @@ test('reads the app identity and version from a FAP1 header', () => {
     version: '1.4.2'
   });
   assert.equal(catalog.parseAppHeader(Buffer.alloc(64)), null);
+});
+
+test('derives catalog actions from the installed and available versions', () => {
+  assert.equal(catalog.catalogAppState(null, { version: '1.2.0' }), 'install');
+  assert.equal(
+    catalog.catalogAppState({ version: '1.1.0' }, { version: '1.2.0' }),
+    'update'
+  );
+  assert.equal(
+    catalog.catalogAppState({ version: '1.2.0' }, { version: '1.2.0' }),
+    'current'
+  );
+  assert.equal(
+    catalog.catalogAppState({ version: '1.3.0' }, { version: '1.2.0' }),
+    'current'
+  );
+});
+
+test('compares app versions numerically and treats a release as newer than its prerelease', () => {
+  assert.equal(catalog.compareAppVersions('0.9', '0.10'), -1);
+  assert.equal(catalog.compareAppVersions('1.0-rc1', '1.0'), -1);
+  assert.equal(catalog.compareAppVersions('1.0', '1.0.0'), 0);
+});
+
+test('provides dedicated SVG pictograms for every catalog app and keeps a monogram fallback', () => {
+  [
+    'aprsrx', 'aprstx', 'beacon', 'beam', 'breakout', 'broadcastfm',
+    'cwdecode', 'cwkeyer', 'cube3d', 'epirb406', 'foxhunt', 'minesweeper',
+    'plasma', 'rapidroll', 'sigfinder', 'snake', 'spaceimpact', 'spectrum3d',
+    'sstv', 'systeminfo', 'tetris'
+  ].forEach(id => {
+    assert.match(catalog.appIconSVG(id), /<(?:path|circle)/);
+  });
+  assert.equal(catalog.appIconSVG('futureapp'), '');
 });
