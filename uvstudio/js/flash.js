@@ -3173,9 +3173,13 @@ const MSG_APP_ERASE = 0x0732, MSG_APP_ERASE_RESP = 0x0733;
 const MSG_APP_WRITE = 0x0734, MSG_APP_WRITE_RESP = 0x0735;
 const MSG_APP_VALIDATE = 0x0736, MSG_APP_VALIDATE_RESP = 0x0737;
 
-// APP_ERR_* (0..8) -> i18n status keys.
+// APP_ERR_* (0..9) -> i18n status keys.
 const APP_STATUS_KEY = ['appStateValid', 'appStateBadSlot', 'appStateEmpty', 'appStateAbi',
-  'appStateIncomplete', 'appStateBadSize', 'appStateCrc', 'appStateVma', 'appStateAuth'];
+  'appStateIncomplete', 'appStateBadSize', 'appStateCrc', 'appStateVma', 'appStateAuth',
+  'appStateCap'];
+// APP_ERR_ABI and APP_ERR_CAP: the image is intact, only the running firmware
+// cannot launch it (it says why on the radio). Not an install failure.
+const APP_STATUS_INCOMPATIBLE = new Set([3, 9]);
 function appStatusText(code) { return t(APP_STATUS_KEY[code] || 'slotStateError'); }
 
 function appVersionParts(value) {
@@ -3564,6 +3568,18 @@ async function appWriteChunkRetry(slot, offset, ts, chunk) {
 async function appValidate(slot) {
   return (await slotCommand(MSG_APP_VALIDATE, Uint8Array.of(slot), MSG_APP_VALIDATE_RESP, 20000))[1];
 }
+// Slot info only tells that an app is there. Ask the firmware whether it can
+// launch it (ABI, API level, capabilities): the same check as on the radio.
+// info.compat holds that APP_ERR_* verdict, 0 when launchable or unknown.
+async function appCheckCompat(info) {
+  if (!info || info.status !== 0) return info;
+  try { info.compat = await appValidate(info.slot); }
+  catch (e) {
+    if (e?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e;
+    info.compat = 0;
+  }
+  return info;
+}
 
 function appSlotAddress(slot) {
   return APP_REGION_BASE + slot * APP_SLOT_STRIDE;
@@ -3633,6 +3649,8 @@ function appRenderRow(slot, info) {
     delete row.dataset.appName;
     delete row.dataset.appVersion;
   }
+  if (valid && info.compat) row.dataset.appCompat = String(info.compat);
+  else delete row.dataset.appCompat;
   if (info) {
     row.dataset.appStatus = String(info.status);
     appSlotStatuses.set(slot, info.status);
@@ -3668,11 +3686,13 @@ function appRenderRowState(row) {
     return;
   }
   const status = Number(row.dataset.appStatus);
-  const mismatch = status === 0 && appHasFirmwareMismatch(row);
-  stateCell.textContent = mismatch
-    ? t('appStateFirmwareMismatch', appCurrentFirmwareVersion)
-    : appStatusText(status);
-  stateCell.className = 'slot-state ' + (mismatch ? 'bad' : (status === 0 ? 'ok' : (status === 2 ? 'empty' : 'bad')));
+  // The firmware's own verdict comes first; the catalog only knows published apps.
+  const compat = status === 0 ? Number(row.dataset.appCompat || 0) : 0;
+  const mismatch = status === 0 && !compat && appHasFirmwareMismatch(row);
+  stateCell.textContent = compat
+    ? appStatusText(compat)
+    : (mismatch ? t('appStateFirmwareMismatch', appCurrentFirmwareVersion) : appStatusText(status));
+  stateCell.className = 'slot-state ' + (compat || mismatch ? 'bad' : (status === 0 ? 'ok' : (status === 2 ? 'empty' : 'bad')));
 }
 
 function appRenderUpdateIndicator(row) {
@@ -3812,9 +3832,9 @@ async function appRefreshFlow() {
     if (!firstInfo) return;                    // unsupported firmware -> modal shown
 
     log(t('appsScanning'), 'info');
-    appRenderRow(APP_SLOT_FIRST, firstInfo);   // already read by the probe
+    appRenderRow(APP_SLOT_FIRST, await appCheckCompat(firstInfo));   // already read by the probe
     for (let s = APP_SLOT_FIRST + 1; s < appActiveSlotCount; s++) {
-      try { appRenderRow(s, await appInfo(s)); }
+      try { appRenderRow(s, await appCheckCompat(await appInfo(s))); }
       catch (e) {
         if (e?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e;
         appRenderRow(s, { slot: s, status: 6, hdr: null });
@@ -3930,10 +3950,13 @@ async function appInstallFlow({ onProgress } = {}) {
     reportProgress(97); await waitForProgressPaint();
     log(t('appVerifying', appSlotLabel(slot)), 'info');
     const vs = await appValidate(slot);
-    if (vs !== 0) throw new Error('verify: ' + appStatusText(vs));
+    if (vs !== 0 && !APP_STATUS_INCOMPATIBLE.has(vs)) throw new Error('verify: ' + appStatusText(vs));
     reportProgress(100);
-    log(t('appInstalled', appSlotLabel(slot)), 'success');
-    appRenderRow(slot, await appInfo(slot));
+    if (vs === 0) log(t('appInstalled', appSlotLabel(slot)), 'success');
+    else log(t('appInstalledIncompatible', appSlotLabel(slot), appStatusText(vs)), 'warning');
+    const installed = await appInfo(slot);
+    installed.compat = vs;                 // just validated: no second round trip
+    appRenderRow(slot, installed);
     appResetOrder();
     appUpdateManagerSummary();
     appSelectFirstEmptySlot();
@@ -4005,7 +4028,7 @@ async function appRewriteOrderFlow(moves, validateTargets, operation, doneKey) {
 
     for (const target of validateTargets) {
       const status = await appValidate(target);
-      if (status !== 0) throw new Error(appStatusText(status));
+      if (status !== 0 && !APP_STATUS_INCOMPATIBLE.has(status)) throw new Error(appStatusText(status));
     }
     updateProgress(100);
     refreshNeeded = true;

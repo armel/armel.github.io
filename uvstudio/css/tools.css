@@ -480,6 +480,11 @@
   color: var(--accent);
 }
 
+#pane-tools .log-entry.warning {
+  color: var(--warning, #c77700);
+  font-weight: 600;
+}
+
 /* ---------- Info block ---------- */
 #pane-tools .info-box {
   background: var(--bg);
