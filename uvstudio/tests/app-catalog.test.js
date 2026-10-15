@@ -28,7 +28,9 @@ test('lists app files alphabetically and ignores unrelated archive entries', () 
   ]);
 
   assert.deepEqual(apps.map(app => app.label), ['Beacon', 'Fox Hunt']);
-  assert.equal(catalog.formatAppLabel(apps[0]), 'Beacon · 1.0 KB');
+  // The listing size counts header + code + assets: no size until the header is parsed.
+  assert.equal(catalog.formatAppLabel(apps[0]), 'Beacon');
+  assert.equal(catalog.formatAppLabel(apps[0], { codeSize: 3584, assetSize: 384 }), 'Beacon · 3.5 KB');
 });
 
 test('adds presentation metadata without changing the app binary format', () => {
@@ -60,6 +62,14 @@ test('adds presentation metadata without changing the app binary format', () => 
     label: 'ToneCall'
   });
   assert.equal(catalog.appDetails('ACARSRX.app').author, 'armel');
+  assert.deepEqual(catalog.appDetails('FlashMap.app'), {
+    id: 'flashmap',
+    category: 'tools',
+    description: 'Browse the external flash map: firmware slots, apps, active state and a hex viewer.',
+    author: 'armel',
+    descriptionFr: 'Carte de la flash externe : slots firmware, apps, état actif et visualiseur hexadécimal.',
+    label: 'Flash Map'
+  });
   assert.equal(catalog.appDetails('APRSDIGI.app').label, 'APRS DIGI');
   assert.equal(catalog.appCatalogId('Spectrum-3D.app'), 'spectrum3d');
 });
@@ -126,7 +136,7 @@ test('compares app versions numerically and treats a release as newer than its p
 test('provides dedicated SVG pictograms for every catalog app and keeps a monogram fallback', () => {
   [
     'acarsrx', 'aprsdigi', 'aprsedit', 'aprsrx', 'aprstx', 'atisrx', 'beacon', 'beam', 'breakout', 'broadcastfm',
-    'cwdecode', 'cwkeyer', 'cube3d', 'epirb406', 'foxhunt', 'minesweeper',
+    'cwdecode', 'cwkeyer', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'minesweeper',
     'plasma', 'pocsagrx', 'rapidroll', 'sigfinder', 'snake', 'sokoban', 'sondem20', 'spaceimpact',
     'spectrum3d', 'sstv', 'systeminfo', 'tetris', 'tonecall'
   ].forEach(id => {

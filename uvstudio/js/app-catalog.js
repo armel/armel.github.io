@@ -58,6 +58,7 @@
     cwkeyer:     ['radio', 'Morse keyer with adjustable speed and tone.'],
     cube3d:      ['demos', 'Animated 3D graphics demonstration.'],
     epirb406:    ['radio', 'Analyze and decode 406 MHz beacon frames.'],
+    flashmap:    ['tools', 'Browse the external flash map: firmware slots, apps, active state and a hex viewer.'],
     foxhunt:     ['radio', 'Assist with radio direction finding.'],
     minesweeper: ['games', 'The classic mine-clearing puzzle.'],
     plasma:      ['demos', 'Animated plasma graphics demonstration.'],
@@ -89,6 +90,7 @@
     cwkeyer: 'Manipulateur Morse à vitesse et tonalité réglables.',
     cube3d: 'Démonstration graphique 3D animée.',
     epirb406: 'Analyse et décodage des trames de balises 406 MHz.',
+    flashmap: 'Carte de la flash externe : slots firmware, apps, état actif et visualiseur hexadécimal.',
     foxhunt: 'Assistance à la radiogoniométrie.',
     minesweeper: 'Le classique jeu de déminage.',
     plasma: 'Démonstration graphique plasma animée.',
@@ -109,7 +111,7 @@
     acarsrx: 'ACARS RX', aprsdigi: 'APRS DIGI', aprsedit: 'APRS Edit',
     aprsrx: 'APRS RX', aprstx: 'APRS TX', atisrx: 'ATIS RX', broadcastfm: 'Broadcast FM',
     cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cube3d: 'Cube 3D',
-    epirb406: 'EPIRB 406', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem20: 'Sonde M20',
+    epirb406: 'EPIRB 406', flashmap: 'Flash Map', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem20: 'Sonde M20',
     spaceimpact: 'Space Impact',
     spectrum3d: 'Spectrum 3D', systeminfo: 'System Info', tonecall: 'ToneCall'
   };
@@ -133,6 +135,7 @@
     cwkeyer: '<path d="M3 20h18M10 20v-6M6 11.5l12 2M17.5 20v-5"/><circle cx="4.5" cy="11.2" r="1.7"/><circle cx="10" cy="14" r="1.15"/><circle cx="17.5" cy="14" r=".8"/>',
     cube3d: '<path d="m12 3.5 7 4v8l-7 4-7-4v-8zm0 0v8m7-4-7 4-7-4m7 4v8"/>',
     epirb406: '<path d="M12 6V2M8.5 7.5A5.5 5.5 0 0 0 6 11m9.5-3.5A5.5 5.5 0 0 1 18 11M10 7h4l2 5v5a4 4 0 0 1-8 0v-5zM8 13h8M10 10h4M4 21c1.3-1 2.7-1 4 0s2.7 1 4 0 2.7-1 4 0 2.7 1 4 0"/>',
+    flashmap: '<rect x="4" y="3" width="10" height="18" rx="1.5"/><path d="M4 8h10M4 12.5h10M4 16.5h10M17 5.5h3.5M17 10.2h2.5M17 14.5h3.5M17 18.8h2"/><path d="M6 5h6v1.4H6zM6 14.1h6v.9H6z" fill="currentColor" stroke="none"/>',
     foxhunt: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2.5v3m0 13v3m-9.5-9.5h3m13 0h3m-7-2.5L18 6l-3.5 3.5z"/>',
     minesweeper: '<path d="M4.5 4.5h15v15h-15zm5 0v15m5-15v15m-10-10h15m-15 5h15"/><circle cx="12" cy="12" r="1.65"/><path d="M12 8.8v1m0 4.4v1m-3.2-3.2h1m4.4 0h1"/>',
     plasma: '<path d="M3 7c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 5 21 6M3 12c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 10 21 11M3 17c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 15 21 16"/>',
@@ -286,14 +289,16 @@
       .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
   }
 
-  function formatAppLabel(app) {
-    if (!Number.isFinite(app.size)) return app.label;
-    return `${app.label} · ${(app.size / 1024).toFixed(1)} KB`;
-  }
-
   function formatByteSize(size) {
     const bytes = Number.isFinite(size) && size > 0 ? size : 0;
     return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
+  // The listing's file size counts header + code + assets; the binary is the
+  // header's code_size alone, so sizes wait for the parsed header.
+  function formatAppLabel(app, metadata) {
+    if (!Number.isFinite(metadata?.codeSize)) return app.label;
+    return `${app.label} · ${formatByteSize(metadata.codeSize)}`;
   }
 
   function parseAppHeader(buffer) {
@@ -572,13 +577,15 @@
           : (metadata?.version ? `v${metadata.version.replace(/^v/i, '')}` : currentVersionEntry?.version || '—');
         const size = document.createElement('span');
         size.className = 'app-catalog-size';
-        const assets = Number.isFinite(metadata?.assetSize)
-          ? ` (+${formatByteSize(metadata.assetSize)})`
-          : '';
-        size.textContent = Number.isFinite(app.size) ? `${(app.size / 1024).toFixed(1)} KB${assets}` : '—';
+        const hasCode = Number.isFinite(metadata?.codeSize);
+        const hasAssets = Number.isFinite(metadata?.assetSize) && metadata.assetSize > 0;
+        const assets = hasAssets ? ` (+${formatByteSize(metadata.assetSize)})` : '';
+        size.textContent = hasCode ? `${formatByteSize(metadata.codeSize)}${assets}` : '—';
         version.title = t('slotColVersion');
-        size.title = Number.isFinite(metadata?.assetSize)
-          ? `${t('appColSize')} · ${t('appSizeAssets', formatByteSize(metadata.assetSize))}`
+        size.title = hasCode
+          ? [t('appSizeCode', formatByteSize(metadata.codeSize)),
+             hasAssets ? t('appSizeAssets', formatByteSize(metadata.assetSize)) : ''
+            ].filter(Boolean).join(' · ')
           : t('appColSize');
         meta.append(version, size);
         if (app.author) {
@@ -751,6 +758,7 @@
         if (seq !== metadataLoadSeq) return;
         if (currentVersionEntry?.version === versionEntry.version) {
           currentMetadata = new Map(metadata.map(app => [appCatalogId(app.filename || app.name), app]));
+          refreshAppOptionLabels();
           renderCatalogCards();
         }
         window.dispatchEvent(new CustomEvent('uvstudio:appcatalogversions', {
@@ -781,6 +789,13 @@
       } catch (error) {
         // Compatibility information is supplementary; keep the radio scan usable.
       }
+    }
+
+    function refreshAppOptionLabels() {
+      appSelect.querySelectorAll('option[data-app-name]').forEach(option => {
+        const app = currentApps.find(item => item.name === option.dataset.appName);
+        if (app) option.textContent = formatAppLabel(app, currentMetadata.get(appCatalogId(app.name)));
+      });
     }
 
     async function loadApps(versionEntry) {
