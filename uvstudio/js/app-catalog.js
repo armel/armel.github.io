@@ -16,7 +16,11 @@
   'use strict';
 
   const REPO = 'armel/uv-k1-k5v3-firmware-custom';
-  const BRANCH = 'main';
+  // main, or the development branch when the hidden developer switch is on.
+  const BRANCH = (typeof globalThis !== 'undefined' && globalThis.UVStudioPreferences &&
+    typeof globalThis.UVStudioPreferences.catalogBranch === 'function')
+    ? globalThis.UVStudioPreferences.catalogBranch()
+    : 'main';
   const APPS_PATH = 'archive/apps';
   const API_ROOT = `https://api.github.com/repos/${REPO}/contents`;
   const RAW_ROOT = `https://raw.githubusercontent.com/${REPO}/${BRANCH}`;
@@ -42,8 +46,10 @@
   const APP_DETAILS = {
     acarsrx:     ['radio', 'Receive and decode ACARS aircraft messages.'],
     aprsdigi:    ['radio', 'Relay APRS packets as a digipeater.'],
+    aprsedit:    ['radio', 'Edit the APRS TX beacon: callsign, position, symbol and comment.'],
     aprsrx:      ['radio', 'Receive and decode APRS packets.'],
     aprstx:      ['radio', 'Transmit APRS beacons from the radio.'],
+    atisrx:      ['radio', 'Identify inland-waterway boats from their ATIS signal.'],
     beacon:      ['radio', 'Send a configurable radio beacon.'],
     beam:        ['tools', 'Transfer a channel between compatible radios.'],
     breakout:    ['games', 'A compact version of the classic arcade game.'],
@@ -55,20 +61,26 @@
     foxhunt:     ['radio', 'Assist with radio direction finding.'],
     minesweeper: ['games', 'The classic mine-clearing puzzle.'],
     plasma:      ['demos', 'Animated plasma graphics demonstration.'],
+    pocsagrx:    ['radio', 'Receive POCSAG pager messages (DAPNET).'],
     rapidroll:   ['games', 'Fast vertical arcade game.'],
     sigfinder:   ['radio', 'Find signal direction and strength.'],
     snake:       ['games', 'Classic Snake for the radio keypad.'],
+    sokoban:     ['games', 'The classic box-pushing puzzle.'],
+    sondem20:    ['radio', 'Decode Meteomodem M20 radiosondes: ID, position, altitude, temperature.'],
     spaceimpact: ['games', 'Side-scrolling space arcade game.'],
     spectrum3d:  ['radio', 'Experimental 3D spectrum visualization.'],
     sstv:        ['radio', 'Receive SSTV images on the radio display.'],
     systeminfo:  ['tools', 'Inspect firmware, memory and device information.'],
-    tetris:      ['games', 'The classic falling-block puzzle.']
+    tetris:      ['games', 'The classic falling-block puzzle.'],
+    tonecall:    ['radio', 'Send configurable ZVEI or CCIR selective calling tone sequences.']
   };
   const APP_DESCRIPTIONS_FR = {
     acarsrx: 'Réception et décodage des messages ACARS des avions.',
     aprsdigi: 'Relais des paquets APRS en digipeater.',
+    aprsedit: 'Édition de la balise d’APRS TX : indicatif, position, symbole et commentaire.',
     aprsrx: 'Réception et décodage des paquets APRS.',
     aprstx: 'Émission de balises APRS depuis la radio.',
+    atisrx: 'Identification des bateaux fluviaux par leur signal ATIS.',
     beacon: 'Émission d’une balise radio configurable.',
     beam: 'Transfert d’un canal entre radios compatibles.',
     breakout: 'Une version compacte du jeu d’arcade classique.',
@@ -80,21 +92,26 @@
     foxhunt: 'Assistance à la radiogoniométrie.',
     minesweeper: 'Le classique jeu de déminage.',
     plasma: 'Démonstration graphique plasma animée.',
+    pocsagrx: 'Réception des messages de radiomessagerie POCSAG (DAPNET).',
     rapidroll: 'Jeu d’arcade vertical rapide.',
     sigfinder: 'Recherche de la direction et du niveau d’un signal.',
     snake: 'Le classique Snake adapté au clavier de la radio.',
+    sokoban: 'Le classique jeu de caisses à pousser.',
+    sondem20: 'Décodage des radiosondes Meteomodem M20 : identifiant, position, altitude, température.',
     spaceimpact: 'Jeu d’arcade spatial à défilement horizontal.',
     spectrum3d: 'Visualisation expérimentale du spectre en 3D.',
     sstv: 'Réception d’images SSTV sur l’écran de la radio.',
     systeminfo: 'Informations sur le firmware, la mémoire et la radio.',
-    tetris: 'Le classique jeu de blocs qui tombent.'
+    tetris: 'Le classique jeu de blocs qui tombent.',
+    tonecall: 'Émission de séquences d’appel sélectif ZVEI ou CCIR configurables.'
   };
   const APP_DISPLAY_NAMES = {
-    acarsrx: 'ACARS RX', aprsdigi: 'APRS DIGI',
-    aprsrx: 'APRS RX', aprstx: 'APRS TX', broadcastfm: 'Broadcast FM',
+    acarsrx: 'ACARS RX', aprsdigi: 'APRS DIGI', aprsedit: 'APRS Edit',
+    aprsrx: 'APRS RX', aprstx: 'APRS TX', atisrx: 'ATIS RX', broadcastfm: 'Broadcast FM',
     cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cube3d: 'Cube 3D',
-    epirb406: 'EPIRB 406', sigfinder: 'Signal Finder', spaceimpact: 'Space Impact',
-    spectrum3d: 'Spectrum 3D', systeminfo: 'System Info'
+    epirb406: 'EPIRB 406', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem20: 'Sonde M20',
+    spaceimpact: 'Space Impact',
+    spectrum3d: 'Spectrum 3D', systeminfo: 'System Info', tonecall: 'ToneCall'
   };
   const APP_ACTION_ICONS = {
     install: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
@@ -104,8 +121,10 @@
   const APP_ICONS = {
     acarsrx: '<path d="M12 3v16m0-11 7 5v1.5l-7-2.5m0-4-7 5v1.5l7-2.5m-3 8.5 3-1.5 3 1.5"/>',
     aprsdigi: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M15 14V4m-2 2.5 2-2.5 2 2.5M19.5 4v10m-2-2.5 2 2.5 2-2.5"/>',
+    aprsedit: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M19.5 4 21 5.5l-5 5-2 .5.5-2zM14 14h7"/>',
     aprsrx: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M17.5 4v10m-3-3 3 3 3-3"/>',
     aprstx: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M17.5 14V4m-3 3 3-3 3 3"/>',
+    atisrx: '<path d="M3 13.5h18l-2.5 4.5h-13zM7.5 13.5v-4h6l2.5 4M10.5 9.5V4.5M13.5 3.5a3.5 3.5 0 0 1 0 4M16 2a6.5 6.5 0 0 1 0 7M3 21.5c1.5-1 3-1 4.5 0s3 1 4.5 0 3-1 4.5 0 3 1 4.5 0"/>',
     beacon: '<path d="M12 20V10m-4 10h8m-6-4 2-6 2 6M8.2 9a5.2 5.2 0 0 1 7.6 0M5.5 6.5a9 9 0 0 1 13 0"/><circle cx="12" cy="7.5" r="1.2"/>',
     beam: '<rect x="3.5" y="6" width="5" height="12" rx="1.2"/><rect x="15.5" y="6" width="5" height="12" rx="1.2"/><path d="M5 9h2m10 0h2M10 10h4m-2-2 2 2-2 2m2 2h-4m2 2-2-2 2-2"/>',
     breakout: '<rect x="3" y="4" width="4.5" height="3" rx=".4"/><rect x="9.75" y="4" width="4.5" height="3" rx=".4"/><rect x="16.5" y="4" width="4.5" height="3" rx=".4"/><rect x="6.4" y="9" width="4.5" height="3" rx=".4"/><rect x="13.1" y="9" width="4.5" height="3" rx=".4"/><circle cx="12" cy="15" r="1.2"/><path d="M7.5 20h9v-2h-9z"/>',
@@ -117,14 +136,18 @@
     foxhunt: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2.5v3m0 13v3m-9.5-9.5h3m13 0h3m-7-2.5L18 6l-3.5 3.5z"/>',
     minesweeper: '<path d="M4.5 4.5h15v15h-15zm5 0v15m5-15v15m-10-10h15m-15 5h15"/><circle cx="12" cy="12" r="1.65"/><path d="M12 8.8v1m0 4.4v1m-3.2-3.2h1m4.4 0h1"/>',
     plasma: '<path d="M3 7c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 5 21 6M3 12c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 10 21 11M3 17c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 15 21 16"/>',
+    pocsagrx: '<rect x="3.5" y="9" width="17" height="11.5" rx="2"/><rect x="6.5" y="11.5" width="11" height="4" rx=".6"/><path d="M7 18h2.5m2 0h2.5M17 18h.1M8.8 6.2a4.6 4.6 0 0 1 6.4 0M6.3 3.6a8.2 8.2 0 0 1 11.4 0"/>',
     rapidroll: '<circle cx="12" cy="5.5" r="2.2"/><path d="M3.5 10.5h7m3 4h7m-13 4h8M10 9l2 2 2-2"/>',
     sigfinder: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v2m0 13v2m-8.5-8.5h2m13 0h2M12 5l2 7-2 7-2-7z"/><path d="m12 5 2 7h-4z" fill="currentColor" stroke="none"/>',
     snake: '<path d="M5 17h5a2 2 0 0 0 2-2v-5a2 2 0 0 1 2-2h3"/><circle cx="18.3" cy="8" r="1.9"/><circle cx="18.8" cy="7.5" r=".3" fill="currentColor" stroke="none"/><path d="M5 17l-1.5-1.5M5 17l-1.5 1.5"/>',
+    sokoban: '<circle cx="6.8" cy="5.9" r="1.8"/><path d="M6.3 8.2 5 14l-2 5.5M5 14l2.6 5.5M6 10.5l4.5 1.3"/><rect x="10.5" y="9.5" width="10" height="10" rx=".8"/><rect x="13.25" y="12.25" width="4.5" height="4.5" rx=".4"/>',
+    sondem20: '<path d="M12 2.5A4.5 4.5 0 0 1 16.5 7c0 2.7-2.6 4.6-4.5 5.5-1.9-.9-4.5-2.8-4.5-5.5A4.5 4.5 0 0 1 12 2.5zm0 10v4"/><rect x="10" y="16.5" width="4" height="4" rx=".5"/><path d="M16.5 16a3 3 0 0 1 0 5M19 14.5a6 6 0 0 1 0 8M7.5 16a3 3 0 0 0 0 5M5 14.5a6 6 0 0 0 0 8"/>',
     spaceimpact: '<path d="M3.5 12 9 8.2l7 .8 4.5 3-4.5 3-7 .8zM9 8.2 7 5.5m2 10.3L7 18.5M16 9v6"/><path d="M2.5 8h2m-2 8h2"/>',
     spectrum3d: '<path d="m4 18 5 2 11-5-5-2zM6 16V9m3 8V6m3 9V4m3 10V8m3 7v-5M4 18l5 2m0 0 11-5"/>',
     sstv: '<rect x="3.5" y="7" width="17" height="12" rx="2"/><path d="m8 7-3-4m11 4 3-4M7 16l3-3 2.5 2 2.5-3 2 2.5M8 21h8"/><circle cx="16.5" cy="10.5" r="1"/>',
     systeminfo: '<rect x="7" y="7" width="10" height="10" rx="1.2"/><rect x="10" y="10" width="4" height="4" rx=".5"/><path d="M9 3v4m3-4v4m3-4v4M9 17v4m3-4v4m3-4v4M3 9h4m-4 3h4m-4 3h4m10-6h4m-4 3h4m-4 3h4"/>',
-    tetris: '<path d="M5 5h4v4H5zm4 0h4v4H9zm0 4h4v4H9zm4 4h4v4h-4zm4 0h4v4h-4zm-4 4h4v4h-4z"/>'
+    tetris: '<path d="M5 5h4v4H5zm4 0h4v4H9zm0 4h4v4H9zm4 4h4v4h-4zm4 0h4v4h-4zm-4 4h4v4h-4z"/>',
+    tonecall: '<rect x="3.5" y="4" width="9" height="16" rx="1.5"/><path d="M6 7h4M6 17h4M15 8.5c2 1.8 2 5.2 0 7M18 5.5c4 3.5 4 9.5 0 13"/><circle cx="8" cy="12" r="1.5"/>'
   };
 
   function appCatalogId(filename) {
@@ -149,7 +172,10 @@
     epirb406:    'jdenoy',
     minesweeper: 'Sarijen',
     sigfinder:   'jdenoy',
-    snake:       'mrkusypl'
+    snake:       'mrkusypl',
+    sokoban:     'BI8SYN',
+    sondem20:    'laurentneg',
+    tonecall:    'jdenoy'
   };
 
   function appDetails(filename) {
@@ -265,9 +291,14 @@
     return `${app.label} · ${(app.size / 1024).toFixed(1)} KB`;
   }
 
+  function formatByteSize(size) {
+    const bytes = Number.isFinite(size) && size > 0 ? size : 0;
+    return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
   function parseAppHeader(buffer) {
     const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-    if (bytes.byteLength < 52) return null;
+    if (bytes.byteLength < 64) return null;
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     if (view.getUint32(0, true) !== 0x31504146) return null; // "FAP1"
     const readString = (offset, length) => {
@@ -279,7 +310,12 @@
       }
       return value;
     };
-    return { name: readString(20, 16), version: readString(36, 16) };
+    return {
+      name: readString(20, 16),
+      version: readString(36, 16),
+      codeSize: view.getUint32(8, true),
+      assetSize: view.getUint16(60, true)
+    };
   }
 
   async function readAppMetadata(app) {
@@ -306,6 +342,9 @@
     const emptyEl = document.getElementById('appCatalogEmpty');
     const catalogTabEl = document.getElementById('appCatalogTab');
     const catalogTabCountEl = document.getElementById('appCatalogTabCount');
+    const localBuildEl = document.getElementById('appCatalogLocalBuild');
+    const localBuildButton = document.getElementById('appCatalogLocalBuildButton');
+    const localBuildChangeButton = document.getElementById('appCatalogLocalBuildChange');
     if (!section || !versionSelect || !appSelect) return;
 
     let versions = [];
@@ -532,9 +571,15 @@
           ? `v${installed.version.replace(/^v/i, '')} → v${metadata.version.replace(/^v/i, '')}`
           : (metadata?.version ? `v${metadata.version.replace(/^v/i, '')}` : currentVersionEntry?.version || '—');
         const size = document.createElement('span');
-        size.textContent = Number.isFinite(app.size) ? `${(app.size / 1024).toFixed(1)} KB` : '—';
+        size.className = 'app-catalog-size';
+        const assets = Number.isFinite(metadata?.assetSize)
+          ? ` (+${formatByteSize(metadata.assetSize)})`
+          : '';
+        size.textContent = Number.isFinite(app.size) ? `${(app.size / 1024).toFixed(1)} KB${assets}` : '—';
         version.title = t('slotColVersion');
-        size.title = t('appColSize');
+        size.title = Number.isFinite(metadata?.assetSize)
+          ? `${t('appColSize')} · ${t('appSizeAssets', formatByteSize(metadata.assetSize))}`
+          : t('appColSize');
         meta.append(version, size);
         if (app.author) {
           const author = document.createElement('span');
@@ -602,7 +647,75 @@
       applyCatalogFilter();
     }
 
+    // Developer mode: a local build folder (build/Apps) offered separately
+    // from released versions, so freshly compiled apps install without a push.
+    const LOCAL_VERSION = { version: 'local', directory: 'local', path: '', local: true };
+    const LOCAL_DIRECTORY_DB = 'uvstudio-app-catalog';
+    const LOCAL_DIRECTORY_STORE = 'directories';
+    const LOCAL_DIRECTORY_KEY = 'local-build';
+    let localDirectory = null;
+    let localItems = [];
+
+    function openLocalDirectoryDB() {
+      if (!window.indexedDB) return Promise.resolve(null);
+      return new Promise((resolve, reject) => {
+        const request = window.indexedDB.open(LOCAL_DIRECTORY_DB, 1);
+        request.onupgradeneeded = () => {
+          if (!request.result.objectStoreNames.contains(LOCAL_DIRECTORY_STORE)) {
+            request.result.createObjectStore(LOCAL_DIRECTORY_STORE);
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function localDirectoryStore(mode, operation) {
+      const db = await openLocalDirectoryDB();
+      if (!db) return null;
+      try {
+        return await new Promise((resolve, reject) => {
+          const transaction = db.transaction(LOCAL_DIRECTORY_STORE, mode);
+          const request = operation(transaction.objectStore(LOCAL_DIRECTORY_STORE));
+          request.onsuccess = () => resolve(request.result || null);
+          request.onerror = () => reject(request.error);
+          transaction.onabort = () => reject(transaction.error);
+        });
+      } finally {
+        db.close();
+      }
+    }
+
+    function restoreLocalDirectory() {
+      return localDirectoryStore('readonly', store => store.get(LOCAL_DIRECTORY_KEY))
+        .then(handle => { localDirectory = handle; updateLocalBuildButton(); })
+        .catch(() => {});
+    }
+
+    function rememberLocalDirectory(handle) {
+      return localDirectoryStore('readwrite', store => store.put(handle, LOCAL_DIRECTORY_KEY))
+        .catch(() => {});
+    }
+
+    async function allowLocalDirectory(handle, requestAccess) {
+      if (!handle || typeof handle.queryPermission !== 'function') return true;
+      const options = { mode: 'read' };
+      let permission = await handle.queryPermission(options);
+      if (permission !== 'granted' && requestAccess && typeof handle.requestPermission === 'function') {
+        permission = await handle.requestPermission(options);
+      }
+      return permission === 'granted';
+    }
+
+    function updateLocalBuildButton(active = currentVersionEntry?.local === true) {
+      if (!localBuildButton) return;
+      localBuildButton.textContent = t('appLocalBuild');
+      localBuildButton.classList.toggle('active', active);
+      if (localBuildChangeButton) localBuildChangeButton.hidden = !localDirectory;
+    }
+
     async function fetchApps(versionEntry) {
+      if (versionEntry.local) return listApps(localItems);
       try {
         const response = await fetch(contentsURL(versionEntry.path), { cache: 'no-cache' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -724,9 +837,59 @@
       }
     }
 
+    // Read (again) every .app of the chosen folder; File objects are snapshots,
+    // so each scan picks up the latest build.
+    async function scanLocalBuild(choose) {
+      if (choose || !localDirectory) {
+        localDirectory = await window.showDirectoryPicker({ id: 'uvstudio-apps', mode: 'read' });
+        await rememberLocalDirectory(localDirectory);
+      } else if (!await allowLocalDirectory(localDirectory, true)) {
+        throw new Error('Local build folder access was not granted');
+      }
+      updateLocalBuildButton();
+      const items = [];
+      for await (const entry of localDirectory.values()) {
+        if (entry.kind !== 'file' || !/\.app$/i.test(entry.name)) continue;
+        const file = await entry.getFile();
+        items.push({ type: 'file', name: entry.name, size: file.size,
+                     download_url: URL.createObjectURL(file) });
+      }
+      localItems.forEach(item => URL.revokeObjectURL(item.download_url));
+      localItems = items;
+      metadataCache.delete(LOCAL_VERSION.version);
+      if (!loaded) await load();
+      versionSelect.value = '';
+      const flash = window.UVStudioFlash;
+      if (flash && typeof flash.clearAppFromCatalog === 'function') flash.clearAppFromCatalog();
+      const apps = await loadApps(LOCAL_VERSION);
+      updateLocalBuildButton(true);
+      showCatalog();
+      if (apps) void publishLatestAppVersions(LOCAL_VERSION, apps);
+    }
+
+    const preferences = window.UVStudioPreferences;
+    if (preferences && typeof preferences.devCatalog === 'function' && preferences.devCatalog() &&
+        typeof window.showDirectoryPicker === 'function' && localBuildEl && localBuildButton && localBuildChangeButton) {
+      localBuildEl.hidden = false;
+      localBuildButton.title = 'Rescan the selected local build folder.';
+      localBuildChangeButton.title = 'Choose another local build folder.';
+      const localRestore = restoreLocalDirectory();
+      localBuildButton.addEventListener('click', () => {
+        localRestore.then(() => scanLocalBuild(false)).catch(error => {
+          if (!error || error.name !== 'AbortError') console.error('Local build folder:', error);
+        });
+      });
+      localBuildChangeButton.addEventListener('click', () => {
+        localRestore.then(() => scanLocalBuild(true)).catch(error => {
+          if (!error || error.name !== 'AbortError') console.error('Local build folder:', error);
+        });
+      });
+    }
+
     versionSelect.addEventListener('change', () => {
       const selected = versions.find(entry => entry.directory === versionSelect.value);
       if (!selected) return;
+      updateLocalBuildButton(false);
       const flash = window.UVStudioFlash;
       if (flash && typeof flash.clearAppFromCatalog === 'function') flash.clearAppFromCatalog();
       loadApps(selected).then(apps => {
@@ -781,7 +944,8 @@
       requestedFirmwareVersion = String(event.detail?.firmwareVersion || '');
       if (loaded) {
         const matching = versions.find(entry => entry.version === requestedFirmwareVersion);
-        if (matching && versionSelect.value !== matching.directory) {
+        // A radio scan must not take the developer away from the local build.
+        if (matching && versionSelect.value !== matching.directory && !currentVersionEntry?.local) {
           versionSelect.value = matching.directory;
           loadApps(matching).then(apps => {
             if (apps) void publishLatestAppVersions(matching, apps);
@@ -800,6 +964,7 @@
       if (appPlaceholder) appPlaceholder.textContent = t('app_catalog_app_placeholder');
       if (selectedVersion) versionSelect.value = selectedVersion;
       if (selectedApp) appSelect.value = selectedApp;
+      updateLocalBuildButton();
       renderCatalogCards();
     });
 
@@ -827,6 +992,7 @@
     contentsURL,
     displayAppName,
     formatAppLabel,
+    formatByteSize,
     fallbackApps,
     listApps,
     listVersions,

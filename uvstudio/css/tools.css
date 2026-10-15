@@ -643,6 +643,15 @@
   font-family: var(--font-mono);
   font-size: 13px;
 }
+#pane-tools .apps-table-wrap .slot-size span {
+  display: block;
+  line-height: 1.15;
+}
+#pane-tools .apps-table-wrap .slot-asset-size {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
 #pane-tools .slots-table button.btn {
   display: inline-flex;
   align-items: center;
@@ -1031,6 +1040,35 @@
   color: var(--text-secondary);
   font-size: 11px;
 }
+#pane-tools .app-local-build-source {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+#pane-tools .app-local-build-source[hidden] {
+  display: none;
+}
+#pane-tools .app-local-build-button {
+  width: auto;
+  min-width: 0;
+  flex: 1;
+  justify-content: flex-start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#pane-tools .app-local-build-change {
+  width: auto;
+  flex: 0 0 auto;
+}
+#pane-tools .app-local-build-change[hidden] {
+  display: none;
+}
+#pane-tools .app-local-build-button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 10%, var(--surface));
+}
 #pane-tools .app-version-picker .firmware-catalog-select {
   height: 42px;
   padding-block: 0;
@@ -1166,6 +1204,7 @@
   font-family: var(--font-mono);
   font-size: 9.5px;
 }
+#pane-tools .app-catalog-size { white-space: nowrap; }
 #pane-tools .app-catalog-actions {
   position: relative;
   display: flex;
@@ -1332,7 +1371,7 @@
   #pane-tools .slots-table .slot-idx { grid-area: idx; align-items: flex-start; color: var(--accent); font-weight: 700; }
   #pane-tools .slots-table .slot-name { grid-area: name; color: var(--text); font-weight: 700; }
   #pane-tools .slots-table .slot-version { grid-area: version; color: var(--text-secondary); }
-  #pane-tools .slots-table .slot-size { grid-area: size; justify-content: flex-end; color: var(--text-muted); font-size: 11px; }
+  #pane-tools .slots-table .slot-size { grid-area: size; align-items: flex-end; justify-content: center; flex-direction: column; color: var(--text-muted); font-size: 11px; }
   #pane-tools .slots-table td:has(.slot-state) { grid-area: state; justify-content: flex-end; }
   #pane-tools .slots-table .slot-actions { grid-area: actions; min-width: 0; justify-content: flex-start; text-align: left; }
   #pane-tools .slots-table .slot-actions-group { justify-content: flex-start; flex-wrap: wrap; }

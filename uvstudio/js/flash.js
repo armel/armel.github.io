@@ -3232,6 +3232,13 @@ const appsTableBody  = document.getElementById('appsTableBody');
 const appMetaEl      = document.getElementById('appMeta');
 const appsTableWrap  = document.getElementById('appsTableWrap');
 const appRefreshBtn = document.getElementById('appRefreshBtn');
+const appDeleteAllBtn = document.getElementById('appDeleteAllBtn');
+const appDeleteAllModal = document.getElementById('appDeleteAllModal');
+const appDeleteAllTitle = document.getElementById('appDeleteAllTitle');
+const appDeleteAllBody = document.getElementById('appDeleteAllBody');
+const appDeleteAllClose = document.getElementById('appDeleteAllClose');
+const appDeleteAllCancelBtn = document.getElementById('appDeleteAllCancelBtn');
+const appDeleteAllConfirmBtn = document.getElementById('appDeleteAllConfirmBtn');
 const appRenumberBtn = document.getElementById('appRenumberBtn');
 const appOrderActions = document.getElementById('appOrderActions');
 const appOrderApplyBtn = document.getElementById('appOrderApplyBtn');
@@ -3641,13 +3648,16 @@ function appRenderRow(slot, info) {
   row.classList.toggle('app-slot-empty', Boolean(info && info.status === 2));
   row.querySelector('.slot-name').textContent = valid ? (hdr.name || '—') : '—';
   row.querySelector('.slot-version-value').textContent = valid ? (hdr.version || '—') : '—';
-  row.querySelector('.slot-size').textContent = valid ? `${(hdr.codeSize / 1024).toFixed(1)} KB` : '—';
   if (valid) {
     row.dataset.appName = hdr.name || '';
     row.dataset.appVersion = hdr.version || '';
+    row.dataset.appCodeSize = String(hdr.codeSize || 0);
+    row.dataset.appAssetSize = String(hdr.assetSize || 0);
   } else {
     delete row.dataset.appName;
     delete row.dataset.appVersion;
+    delete row.dataset.appCodeSize;
+    delete row.dataset.appAssetSize;
   }
   if (valid && info.compat) row.dataset.appCompat = String(info.compat);
   else delete row.dataset.appCompat;
@@ -3658,6 +3668,7 @@ function appRenderRow(slot, info) {
     delete row.dataset.appStatus;
     appSlotStatuses.delete(slot);
   }
+  appRenderRowSize(row);
   appRenderRowState(row);
   const del = row.querySelector('.app-act-delete');
   if (del) {
@@ -3665,6 +3676,24 @@ function appRenderRow(slot, info) {
     del.disabled = !valid;
   }
   appRenderUpdateIndicator(row);
+}
+
+function appFormatBytes(size) {
+  const bytes = Number.isFinite(size) && size > 0 ? size : 0;
+  return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
+}
+
+function appRenderRowSize(row) {
+  const code = row.querySelector('.slot-code-size');
+  const assets = row.querySelector('.slot-asset-size');
+  if (!code || !assets) return;
+  if (!row.dataset.appName) {
+    code.textContent = '—';
+    assets.textContent = '';
+    return;
+  }
+  code.textContent = t('appSizeCode', appFormatBytes(Number(row.dataset.appCodeSize)));
+  assets.textContent = t('appSizeAssets', appFormatBytes(Number(row.dataset.appAssetSize)));
 }
 
 function appHasFirmwareMismatch(row) {
@@ -3720,6 +3749,7 @@ function appRenderUpdateIndicator(row) {
 function appRefreshUpdateIndicators() {
   if (!appsTableBody) return;
   appsTableBody.querySelectorAll('tr[data-slot]').forEach(row => {
+    appRenderRowSize(row);
     appRenderRowState(row);
     appRenderUpdateIndicator(row);
   });
@@ -3736,7 +3766,7 @@ function appBuildTable() {
       `<td class="slot-idx">${appSlotLabel(s)}</td>` +
       `<td class="slot-name">—</td>` +
       `<td class="slot-version"><span class="slot-version-value">—</span></td>` +
-      `<td class="slot-size">—</td>` +
+      `<td class="slot-size"><span class="slot-code-size">—</span><span class="slot-asset-size"></span></td>` +
       `<td><span class="slot-state">—</span></td>` +
       `<td class="slot-actions"><div class="slot-actions-group"></div></td>`;
     const del = document.createElement('button');
@@ -3851,6 +3881,54 @@ async function appRefreshFlow() {
   }
 }
 
+let appDeleteAllResolve = null;
+let appDeleteAllFocusOrigin = null;
+
+function closeAppDeleteAllModal(confirmed) {
+  if (!appDeleteAllModal?.classList.contains('show')) return;
+  const resolve = appDeleteAllResolve;
+  const focusTarget = appDeleteAllFocusOrigin;
+  appDeleteAllResolve = null;
+  appDeleteAllFocusOrigin = null;
+  appDeleteAllModal.classList.remove('show');
+  appDeleteAllModal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  if (focusTarget && document.contains(focusTarget)) {
+    focusTarget.focus({ preventScroll: true });
+  }
+  if (resolve) resolve(Boolean(confirmed));
+}
+
+function confirmAppDeleteAll(count) {
+  if (!appDeleteAllModal || appDeleteAllResolve) return Promise.resolve(false);
+  appDeleteAllFocusOrigin = document.activeElement;
+  if (appDeleteAllTitle) appDeleteAllTitle.textContent = t('appDeleteAllTitle');
+  if (appDeleteAllBody) appDeleteAllBody.textContent = t('appDeleteAllConfirm', count);
+  appDeleteAllModal.classList.add('show');
+  appDeleteAllModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => appDeleteAllCancelBtn?.focus());
+  return new Promise(resolve => { appDeleteAllResolve = resolve; });
+}
+
+if (appDeleteAllClose) {
+  appDeleteAllClose.addEventListener('click', () => closeAppDeleteAllModal(false));
+}
+if (appDeleteAllCancelBtn) {
+  appDeleteAllCancelBtn.addEventListener('click', () => closeAppDeleteAllModal(false));
+}
+if (appDeleteAllConfirmBtn) {
+  appDeleteAllConfirmBtn.addEventListener('click', () => closeAppDeleteAllModal(true));
+}
+if (appDeleteAllModal) {
+  appDeleteAllModal.addEventListener('click', event => {
+    if (event.target === appDeleteAllModal) closeAppDeleteAllModal(false);
+  });
+  appDeleteAllModal.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeAppDeleteAllModal(false);
+  });
+}
+
 async function appDeleteFlow(slot) {
   if (appOrderIsDirty()) {
     log(t('appOrderApplyFirst'), 'error');
@@ -3874,6 +3952,48 @@ async function appDeleteFlow(slot) {
   } catch (e) {
     log(t('appsError', e?.message ?? String(e)), 'error');
   } finally {
+    await finishAppOperation(op);
+  }
+}
+
+async function appDeleteAllFlow() {
+  if (appOrderIsDirty()) {
+    log(t('appOrderApplyFirst'), 'error');
+    return;
+  }
+  if (appSlotStatuses.size !== appActiveSlotCount) return;
+  const slots = [...appSlotStatuses.entries()]
+    .filter(([, status]) => status === 0)
+    .map(([slot]) => slot)
+    .sort((a, b) => a - b);
+  if (!slots.length || !await confirmAppDeleteAll(slots.length)) return;
+
+  const op = beginToolsOperation('apps-delete-all', true);
+  if (!op) return;
+  updateAppButtons();
+  if (progressContainer) progressContainer.style.display = 'block';
+  updateProgress(0);
+  try {
+    if (!port) await connect();
+    readBuffer = []; await sleep(500);
+    const dev = await requestDeviceInfo();
+    if (!(await appsProbe(dev))) return;
+    for (let index = 0; index < slots.length; index++) {
+      const slot = slots[index];
+      log(t('appErasing', appSlotLabel(slot)), 'info');
+      const status = await appErase(slot, dev.timestamp);
+      if (status !== 0) throw new Error(appStatusText(status));
+      appRenderRow(slot, await appInfo(slot));
+      updateProgress(Math.round((index + 1) * 100 / slots.length));
+    }
+    log(t('appDeleteAllDone'), 'success');
+  } catch (error) {
+    log(t('appsError', error?.message ?? String(error)), 'error');
+  } finally {
+    appResetOrder();
+    appUpdateManagerSummary();
+    appSelectFirstEmptySlot();
+    setTimeout(() => { if (progressContainer) progressContainer.style.display = 'none'; }, 1200);
     await finishAppOperation(op);
   }
 }
@@ -4069,8 +4189,11 @@ async function appRenumberFlow() {
 function updateAppButtons() {
   const busy = appUpdateDownloadPending || Boolean(activeOperationToken);
   const orderDirty = appOrderIsDirty();
+  const inventoryReady = appSlotStatuses.size === appActiveSlotCount;
+  const installed = inventoryReady && [...appSlotStatuses.values()].some(status => status === 0);
   if (appInstallBtn) appInstallBtn.disabled = !serialSupported || busy || orderDirty || !appImage || appSlotStatuses.size !== appActiveSlotCount;
   if (appRefreshBtn) appRefreshBtn.disabled = !serialSupported || busy || orderDirty;
+  if (appDeleteAllBtn) appDeleteAllBtn.disabled = !serialSupported || busy || orderDirty || !installed;
   if (appsTableBody) {
     appsTableBody.querySelectorAll('.app-act-delete').forEach(button => {
       button.disabled = busy || orderDirty || !button.closest('tr')?.dataset.appName;
@@ -4121,7 +4244,8 @@ async function loadAppFromURL(url, catalogName = 'application.app') {
   appImageLoadAbort = controller;
   try {
     const urlObj = new URL(url);
-    if (urlObj.protocol !== 'https:') throw new Error('HTTPS required');
+    // blob: is a file of the developer's local build folder, read by this page.
+    if (urlObj.protocol !== 'https:' && urlObj.protocol !== 'blob:') throw new Error('HTTPS required');
     const response = await fetch(urlObj.toString(), {
       cache: 'no-cache',
       mode: 'cors',
@@ -4212,6 +4336,7 @@ if (appFileInput) {
 }
 if (appInstallBtn) appInstallBtn.addEventListener('click', () => { void appInstallFlow(); });
 if (appRefreshBtn) appRefreshBtn.addEventListener('click', () => { void appRefreshFlow(); });
+if (appDeleteAllBtn) appDeleteAllBtn.addEventListener('click', () => { void appDeleteAllFlow(); });
 if (appRenumberBtn) appRenumberBtn.addEventListener('click', () => { void appRenumberFlow(); });
 if (appOrderApplyBtn) appOrderApplyBtn.addEventListener('click', () => { void appApplyOrderFlow(); });
 if (appOrderCancelBtn) appOrderCancelBtn.addEventListener('click', appCancelOrder);

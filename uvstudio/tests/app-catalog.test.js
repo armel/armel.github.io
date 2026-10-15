@@ -51,6 +51,14 @@ test('adds presentation metadata without changing the app binary format', () => 
   assert.equal(catalog.appDetails('Minesweeper.app').author, 'Sarijen');
   assert.equal(catalog.appDetails('EPIRB406.app').author, 'jdenoy');
   assert.equal(catalog.appDetails('SigFinder.app').author, 'jdenoy');
+  assert.deepEqual(catalog.appDetails('ToneCall.app'), {
+    id: 'tonecall',
+    category: 'radio',
+    description: 'Send configurable ZVEI or CCIR selective calling tone sequences.',
+    author: 'jdenoy',
+    descriptionFr: 'Émission de séquences d’appel sélectif ZVEI ou CCIR configurables.',
+    label: 'ToneCall'
+  });
   assert.equal(catalog.appDetails('ACARSRX.app').author, 'armel');
   assert.equal(catalog.appDetails('APRSDIGI.app').label, 'APRS DIGI');
   assert.equal(catalog.appCatalogId('Spectrum-3D.app'), 'spectrum3d');
@@ -74,14 +82,23 @@ test('keeps the current app catalog available when the GitHub API is unavailable
 test('reads the app identity and version from a FAP1 header', () => {
   const header = Buffer.alloc(64);
   header.writeUInt32LE(0x31504146, 0);
+  header.writeUInt32LE(3584, 8);
   header.write('Beacon', 20, 'ascii');
   header.write('1.4.2', 36, 'ascii');
+  header.writeUInt16LE(384, 60);
 
   assert.deepEqual(catalog.parseAppHeader(header), {
     name: 'Beacon',
-    version: '1.4.2'
+    version: '1.4.2',
+    codeSize: 3584,
+    assetSize: 384
   });
   assert.equal(catalog.parseAppHeader(Buffer.alloc(64)), null);
+});
+
+test('formats catalog asset sizes without rounding small assets to zero', () => {
+  assert.equal(catalog.formatByteSize(240), '240 B');
+  assert.equal(catalog.formatByteSize(1536), '1.5 KB');
 });
 
 test('derives catalog actions from the installed and available versions', () => {
@@ -108,10 +125,10 @@ test('compares app versions numerically and treats a release as newer than its p
 
 test('provides dedicated SVG pictograms for every catalog app and keeps a monogram fallback', () => {
   [
-    'acarsrx', 'aprsdigi', 'aprsrx', 'aprstx', 'beacon', 'beam', 'breakout', 'broadcastfm',
+    'acarsrx', 'aprsdigi', 'aprsedit', 'aprsrx', 'aprstx', 'atisrx', 'beacon', 'beam', 'breakout', 'broadcastfm',
     'cwdecode', 'cwkeyer', 'cube3d', 'epirb406', 'foxhunt', 'minesweeper',
-    'plasma', 'rapidroll', 'sigfinder', 'snake', 'spaceimpact', 'spectrum3d',
-    'sstv', 'systeminfo', 'tetris'
+    'plasma', 'pocsagrx', 'rapidroll', 'sigfinder', 'snake', 'sokoban', 'sondem20', 'spaceimpact',
+    'spectrum3d', 'sstv', 'systeminfo', 'tetris', 'tonecall'
   ].forEach(id => {
     assert.match(catalog.appIconSVG(id), /<(?:path|circle)/);
   });

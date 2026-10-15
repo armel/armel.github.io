@@ -303,4 +303,41 @@
     applyBranding();
     renderSerialStatus(lastSerialSnapshot);
     void activate(initial.item, { action: initial.action, route: initial.requestedRoute });
+
+    /* Hidden developer switch: the Konami code (up up down down left right
+       left right B A) toggles the catalogs between main and the development
+       branch, then reloads. A badge stays on screen while it is on, so a
+       development catalog is never mistaken for the published one. */
+    (function () {
+        if (!preferences || typeof preferences.devCatalog !== "function") return;
+        const sequence = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown",
+            "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
+        let position = 0;
+        const toggle = () => {
+            preferences.setDevCatalog(!preferences.devCatalog());
+            window.location.reload();
+        };
+        document.addEventListener("keydown", event => {
+            const target = event.target;
+            if (target && (target.isContentEditable ||
+                /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName || ""))) {
+                position = 0;
+                return;
+            }
+            const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+            position = key === sequence[position] ? position + 1
+                : (key === sequence[0] ? 1 : 0);
+            if (position === sequence.length) toggle();
+        });
+        if (!preferences.devCatalog()) return;
+        const badge = document.createElement("button");
+        badge.type = "button";
+        badge.textContent = "DEV catalog \u00b7 " + preferences.catalogBranch();
+        badge.title = "Catalogs are read from the development branch. Click to go back to main.";
+        badge.style.cssText = "position:fixed;right:12px;bottom:12px;z-index:9999;" +
+            "padding:6px 10px;border:0;border-radius:6px;background:#c77700;color:#fff;" +
+            "font:600 12px/1.2 system-ui,sans-serif;cursor:pointer;";
+        badge.addEventListener("click", toggle);
+        document.body.appendChild(badge);
+    })();
 })();

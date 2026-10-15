@@ -20,7 +20,11 @@
 
   const REPO = 'armel/uv-k1-k5v3-firmware-custom';
   const ARCHIVE_PATH = 'archive';
-  const STABLE_BRANCH = 'main';
+  // main, or the development branch when the hidden developer switch is on.
+  const STABLE_BRANCH = (typeof globalThis !== 'undefined' && globalThis.UVStudioPreferences &&
+    typeof globalThis.UVStudioPreferences.catalogBranch === 'function')
+    ? globalThis.UVStudioPreferences.catalogBranch()
+    : 'main';
   const API_URL =
     `https://api.github.com/repos/${REPO}/contents/${ARCHIVE_PATH}` +
     `?ref=${encodeURIComponent(STABLE_BRANCH)}`;
