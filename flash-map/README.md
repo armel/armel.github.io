@@ -8,8 +8,8 @@ the F4HWN overlay-app expansion stops at `0x1DDFFF`, and Sonic 4K owns
 `0x1DE000` through `0x1FFFFF`.
 
 In the low shared area, `0x012000` through `0x017FFF` remains unallocated. The
-target RX/TX log allocation occupies `0x018000` through `0x01FFFF`, immediately
-before the Main firmware slot.
+RX/TX log occupies `0x018000` through `0x01FFFF`, immediately before the Main
+firmware slot. Firmware v6.1.0 and earlier used `0x1E0000` through `0x1E7FFF`.
 
 Open `index.html` directly, or serve the repository locally:
 
