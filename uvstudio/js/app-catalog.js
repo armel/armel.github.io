@@ -67,6 +67,7 @@
     sigfinder:   ['radio', 'Find signal direction and strength.'],
     snake:       ['games', 'Classic Snake for the radio keypad.'],
     sokoban:     ['games', 'The classic box-pushing puzzle.'],
+    sondem10:    ['radio', 'Decode Meteomodem M10 radiosondes: ID, position, altitude.'],
     sondem20:    ['radio', 'Decode Meteomodem M20 radiosondes: ID, position, altitude, temperature.'],
     spaceimpact: ['games', 'Side-scrolling space arcade game.'],
     spectrum3d:  ['radio', 'Experimental 3D spectrum visualization.'],
@@ -99,6 +100,7 @@
     sigfinder: 'Recherche de la direction et du niveau d’un signal.',
     snake: 'Le classique Snake adapté au clavier de la radio.',
     sokoban: 'Le classique jeu de caisses à pousser.',
+    sondem10: 'Décodage des radiosondes Meteomodem M10 : identifiant, position, altitude.',
     sondem20: 'Décodage des radiosondes Meteomodem M20 : identifiant, position, altitude, température.',
     spaceimpact: 'Jeu d’arcade spatial à défilement horizontal.',
     spectrum3d: 'Visualisation expérimentale du spectre en 3D.',
@@ -111,7 +113,7 @@
     acarsrx: 'ACARS RX', aprsdigi: 'APRS DIGI', aprsedit: 'APRS Edit',
     aprsrx: 'APRS RX', aprstx: 'APRS TX', atisrx: 'ATIS RX', broadcastfm: 'Broadcast FM',
     cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cube3d: 'Cube 3D',
-    epirb406: 'EPIRB 406', flashmap: 'Flash Map', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem20: 'Sonde M20',
+    epirb406: 'EPIRB 406', flashmap: 'Flash Map', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20',
     spaceimpact: 'Space Impact',
     spectrum3d: 'Spectrum 3D', systeminfo: 'System Info', tonecall: 'ToneCall'
   };
@@ -144,6 +146,7 @@
     sigfinder: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v2m0 13v2m-8.5-8.5h2m13 0h2M12 5l2 7-2 7-2-7z"/><path d="m12 5 2 7h-4z" fill="currentColor" stroke="none"/>',
     snake: '<path d="M5 17h5a2 2 0 0 0 2-2v-5a2 2 0 0 1 2-2h3"/><circle cx="18.3" cy="8" r="1.9"/><circle cx="18.8" cy="7.5" r=".3" fill="currentColor" stroke="none"/><path d="M5 17l-1.5-1.5M5 17l-1.5 1.5"/>',
     sokoban: '<circle cx="6.8" cy="5.9" r="1.8"/><path d="M6.3 8.2 5 14l-2 5.5M5 14l2.6 5.5M6 10.5l4.5 1.3"/><rect x="10.5" y="9.5" width="10" height="10" rx=".8"/><rect x="13.25" y="12.25" width="4.5" height="4.5" rx=".4"/>',
+    sondem10: '<path d="M12 2.5A4.5 4.5 0 0 1 16.5 7c0 2.7-2.6 4.6-4.5 5.5-1.9-.9-4.5-2.8-4.5-5.5A4.5 4.5 0 0 1 12 2.5zm0 10v4"/><rect x="10" y="16.5" width="4" height="4" rx=".5"/><path d="M16.5 16a3 3 0 0 1 0 5M19 14.5a6 6 0 0 1 0 8M7.5 16a3 3 0 0 0 0 5M5 14.5a6 6 0 0 0 0 8"/>',
     sondem20: '<path d="M12 2.5A4.5 4.5 0 0 1 16.5 7c0 2.7-2.6 4.6-4.5 5.5-1.9-.9-4.5-2.8-4.5-5.5A4.5 4.5 0 0 1 12 2.5zm0 10v4"/><rect x="10" y="16.5" width="4" height="4" rx=".5"/><path d="M16.5 16a3 3 0 0 1 0 5M19 14.5a6 6 0 0 1 0 8M7.5 16a3 3 0 0 0 0 5M5 14.5a6 6 0 0 0 0 8"/>',
     spaceimpact: '<path d="M3.5 12 9 8.2l7 .8 4.5 3-4.5 3-7 .8zM9 8.2 7 5.5m2 10.3L7 18.5M16 9v6"/><path d="M2.5 8h2m-2 8h2"/>',
     spectrum3d: '<path d="m4 18 5 2 11-5-5-2zM6 16V9m3 8V6m3 9V4m3 10V8m3 7v-5M4 18l5 2m0 0 11-5"/>',

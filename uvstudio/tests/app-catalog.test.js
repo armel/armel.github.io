@@ -53,6 +53,14 @@ test('adds presentation metadata without changing the app binary format', () => 
   assert.equal(catalog.appDetails('Minesweeper.app').author, 'Sarijen');
   assert.equal(catalog.appDetails('EPIRB406.app').author, 'jdenoy');
   assert.equal(catalog.appDetails('SigFinder.app').author, 'jdenoy');
+  assert.deepEqual(catalog.appDetails('SondeM10.app'), {
+    id: 'sondem10',
+    category: 'radio',
+    description: 'Decode Meteomodem M10 radiosondes: ID, position, altitude.',
+    author: 'armel',
+    descriptionFr: 'Décodage des radiosondes Meteomodem M10 : identifiant, position, altitude.',
+    label: 'Sonde M10'
+  });
   assert.deepEqual(catalog.appDetails('ToneCall.app'), {
     id: 'tonecall',
     category: 'radio',
@@ -137,7 +145,7 @@ test('provides dedicated SVG pictograms for every catalog app and keeps a monogr
   [
     'acarsrx', 'aprsdigi', 'aprsedit', 'aprsrx', 'aprstx', 'atisrx', 'beacon', 'beam', 'breakout', 'broadcastfm',
     'cwdecode', 'cwkeyer', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'minesweeper',
-    'plasma', 'pocsagrx', 'rapidroll', 'sigfinder', 'snake', 'sokoban', 'sondem20', 'spaceimpact',
+    'plasma', 'pocsagrx', 'rapidroll', 'sigfinder', 'snake', 'sokoban', 'sondem10', 'sondem20', 'spaceimpact',
     'spectrum3d', 'sstv', 'systeminfo', 'tetris', 'tonecall'
   ].forEach(id => {
     assert.match(catalog.appIconSVG(id), /<(?:path|circle)/);
