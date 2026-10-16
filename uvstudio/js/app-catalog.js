@@ -595,10 +595,10 @@
           author.title = t('studio_about_author');
           meta.appendChild(author);
         }
-        content.append(title, description, meta);
-
         const actions = document.createElement('div');
         actions.className = 'app-catalog-actions';
+        let updateAction = null;
+        let removeAction = null;
         if (!installed) {
           const install = document.createElement('button');
           install.type = 'button';
@@ -615,7 +615,8 @@
             const update = document.createElement('button');
             update.type = 'button';
             update.className = 'btn app-catalog-action app-catalog-update';
-            setCatalogActionContent(update, 'update', t('appUpdateAction', metadata.version.replace(/^v/i, '')));
+            setCatalogActionContent(update, 'update', t('appUpdateShort'));
+            update.title = t('appUpdateAction', metadata.version.replace(/^v/i, ''));
             update.disabled = catalogOperationPending || !inventoryReady;
             update.addEventListener('click', () => {
               const flash = window.UVStudioFlash;
@@ -626,6 +627,7 @@
                 );
               }
             });
+            updateAction = update;
             actions.appendChild(update);
           }
           const remove = document.createElement('button');
@@ -639,12 +641,27 @@
               void runCatalogOperation(() => flash.deleteAppSlot(installed.slot));
             }
           });
+          removeAction = remove;
           actions.appendChild(remove);
         }
-        if (catalogProgress?.id === appCatalogId(app.name)) {
-          actions.appendChild(createCatalogProgress(catalogProgress.shown));
+        const progress = catalogProgress?.id === appCatalogId(app.name)
+          ? createCatalogProgress(catalogProgress.shown)
+          : null;
+        if (state === 'update' && updateAction && removeAction) {
+          const headerRow = document.createElement('div');
+          headerRow.className = 'app-catalog-header-row';
+          headerRow.append(title, updateAction);
+          const descriptionRow = document.createElement('div');
+          descriptionRow.className = 'app-catalog-description-row';
+          descriptionRow.append(description, removeAction);
+          content.append(headerRow, descriptionRow, meta);
+          if (progress) content.appendChild(progress);
+          card.append(icon, content);
+        } else {
+          content.append(title, description, meta);
+          if (progress) actions.appendChild(progress);
+          card.append(icon, content, actions);
         }
-        card.append(icon, content, actions);
         cardsEl.appendChild(card);
       });
       if (catalogTabCountEl) catalogTabCountEl.textContent = String(currentApps.length);

@@ -192,9 +192,12 @@ test('provides a catalog and compact installed-app manager without new firmware 
   assert.match(appCatalogSource, /flash\.deleteAppSlot\(installed\.slot\)/);
   assert.match(appCatalogSource, /className = 'btn app-catalog-action app-catalog-install'/);
   assert.match(appCatalogSource, /setCatalogActionContent\(install, 'install', t\('appInstallBtn'\)\)/);
-  assert.match(appCatalogSource, /setCatalogActionContent\(update, 'update', t\('appUpdateAction', metadata\.version\.replace/);
+  assert.match(appCatalogSource, /setCatalogActionContent\(update, 'update', t\('appUpdateShort'\)\)/);
+  assert.match(appCatalogSource, /headerRow\.append\(title, updateAction\)/);
+  assert.match(appCatalogSource, /descriptionRow\.append\(description, removeAction\)/);
   assert.match(appCatalogSource, /setCatalogActionContent\(remove, 'delete', t\('appDelete'\)\)/);
-  assert.match(toolsCss, /\.app-catalog-actions \.app-catalog-action svg\s*\{[^}]*width:\s*17px[^}]*stroke-width:\s*2/s);
+  assert.match(toolsCss, /\.app-catalog-card \.app-catalog-action svg\s*\{[^}]*width:\s*17px[^}]*stroke-width:\s*2/s);
+  assert.match(toolsCss, /\.app-catalog-header-row,[\s\S]*\.app-catalog-description-row\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto/);
   assert.doesNotMatch(toolsCss, /\.app-catalog-delete\.btn\s*\{[^}]*linear-gradient/s);
   assert.match(toolsCss, /\.app-catalog-icon\s*\{[^}]*color:\s*var\(--text-secondary\)[^}]*background:\s*color-mix\(in oklab, currentColor 5%/s);
   assert.match(toolsCss, /\.app-catalog-card\[data-category="radio"\]\s*\{\s*--app-category-color:\s*#3b82f6/);
@@ -234,7 +237,7 @@ test('reorders complete app slots through the existing raw flash protocol', () =
   assert.match(toolsCss, /\.app-renumber-button\[hidden\]\s*\{\s*display:\s*none/);
   assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*overflow-anchor:\s*none/s);
   assert.match(toolsCss, /tr\.app-order-drop-before td\s*\{[^}]*box-shadow/s);
-  assert.match(html, /css\/tools\.css\?v=55/);
+  assert.match(html, /css\/tools\.css\?v=56/);
   assert.match(html, /js\/flash\.js\?v=83/);
   assert.doesNotMatch(flashSource, /app-order-(?:up|down)/);
   assert.doesNotMatch(flashSource, /function appMoveInOrder/);
