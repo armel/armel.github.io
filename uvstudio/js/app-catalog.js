@@ -161,11 +161,24 @@
     return APP_ICONS[String(id)] || '';
   }
 
-  function setCatalogActionContent(button, icon, label) {
+  // `sizers` are every label an action button can show in the current
+  // language, stacked invisibly under the real one: all buttons then share the
+  // width of the longest label, so the action column is identical on every card.
+  function setCatalogActionContent(button, icon, label, sizers = []) {
     button.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${APP_ACTION_ICONS[icon] || ''}</svg>`;
+    const labels = document.createElement('span');
+    labels.className = 'app-catalog-action-label';
     const text = document.createElement('span');
     text.textContent = label;
-    button.appendChild(text);
+    labels.appendChild(text);
+    sizers.forEach(value => {
+      const sizer = document.createElement('span');
+      sizer.className = 'app-catalog-action-sizer';
+      sizer.setAttribute('aria-hidden', 'true');
+      sizer.textContent = value;
+      labels.appendChild(sizer);
+    });
+    button.appendChild(labels);
   }
 
   // Apps listed in APP_DETAILS are by DEFAULT_APP_AUTHOR unless stated here;
@@ -367,7 +380,7 @@
     let freeSlots = 0;
     let installedApps = new Map();
     let catalogOperationPending = false;
-    let catalogProgress = null;   // { id, percent, shown } while a card installs/updates
+    let catalogProgress = null;   // { id, percent, shown, ... } while a card installs/updates
     const metadataCache = new Map();
 
     function t(key, ...values) {
@@ -445,14 +458,31 @@
     async function runCatalogOperation(operation, progressApp) {
       if (catalogOperationPending) return;
       catalogOperationPending = true;
-      catalogProgress = progressApp ? { id: appCatalogId(progressApp.name), percent: 0, shown: 0 } : null;
+      const progressId = progressApp ? appCatalogId(progressApp.name) : '';
+      const installedSnapshot = progressId ? installedApps.get(progressId) : null;
+      catalogProgress = progressApp ? {
+        id: progressId,
+        percent: 0,
+        shown: 0,
+        installedSnapshot: installedSnapshot ? { ...installedSnapshot } : null,
+        operationDone: false,
+        fillDone: false,
+        holdTimer: 0
+      } : null;
       renderCatalogCards();
+      let succeeded = false;
       try {
         await operation();
+        succeeded = true;
       } finally {
-        catalogOperationPending = false;
-        // On success the gauge finishes filling, then removes itself.
-        if (catalogProgress?.percent !== 100) catalogProgress = null;
+        const progress = catalogProgress;
+        if (!succeeded || !progress || progress.percent !== 100) {
+          catalogProgress = null;
+          catalogOperationPending = false;
+        } else {
+          progress.operationDone = true;
+          finishCatalogProgress(progress);
+        }
         renderCatalogCards();
       }
     }
@@ -479,6 +509,16 @@
     const CATALOG_PROGRESS_FILL_MS = 900;
     const CATALOG_PROGRESS_HOLD_MS = 700;
 
+    function finishCatalogProgress(progress) {
+      if (!progress.operationDone || !progress.fillDone || progress.holdTimer) return;
+      progress.holdTimer = setTimeout(() => {
+        if (catalogProgress !== progress) return;
+        catalogProgress = null;
+        catalogOperationPending = false;
+        renderCatalogCards();
+      }, CATALOG_PROGRESS_HOLD_MS);
+    }
+
     function animateCatalogProgress(progress, last) {
       requestAnimationFrame(now => {
         if (catalogProgress !== progress) return;
@@ -487,11 +527,9 @@
         const bar = cardsEl?.querySelector('.app-catalog-progress');
         if (bar) setCatalogProgressValue(bar, progress.shown);
         if (progress.shown >= 100) {
-          setTimeout(() => {
-            if (catalogProgress !== progress) return;
-            catalogProgress = null;
-            cardsEl?.querySelector('.app-catalog-progress')?.remove();
-          }, CATALOG_PROGRESS_HOLD_MS);
+          progress.animating = false;
+          progress.fillDone = true;
+          finishCatalogProgress(progress);
         } else if (progress.shown < progress.percent) {
           animateCatalogProgress(progress, now);
         } else {
@@ -535,9 +573,21 @@
         });
       }
       cardsEl.textContent = '';
+      const longestVersion = currentApps
+        .map(app => String(currentMetadata.get(appCatalogId(app.name))?.version || '').replace(/^v/i, ''))
+        .reduce((longest, version) => (version.length > longest.length ? version : longest), '0.0');
+      const actionSizers = [
+        t('appInstallBtn'),
+        t('appDelete'),
+        `${t('appUpdateShort')} → ${longestVersion}`
+      ];
       currentApps.forEach(app => {
-        const metadata = currentMetadata.get(appCatalogId(app.name));
-        const installed = installedApps.get(appCatalogId(app.name));
+        const appId = appCatalogId(app.name);
+        const metadata = currentMetadata.get(appId);
+        const progressState = catalogProgress?.id === appId ? catalogProgress : null;
+        const installed = progressState
+          ? progressState.installedSnapshot
+          : installedApps.get(appId);
         const state = catalogAppState(installed, metadata);
         const card = document.createElement('article');
         card.className = 'app-catalog-card';
@@ -556,6 +606,7 @@
         title.className = 'app-catalog-title';
         const name = document.createElement('strong');
         name.textContent = app.label;
+        name.title = app.label;
         const tag = document.createElement('span');
         tag.className = 'app-catalog-tag';
         tag.textContent = categoryLabel(app.category);
@@ -569,6 +620,7 @@
         const description = document.createElement('p');
         description.className = 'app-catalog-description';
         description.textContent = descriptionText;
+        description.title = descriptionText;
         const meta = document.createElement('div');
         meta.className = 'app-catalog-meta';
         const version = document.createElement('span');
@@ -597,13 +649,11 @@
         }
         const actions = document.createElement('div');
         actions.className = 'app-catalog-actions';
-        let updateAction = null;
-        let removeAction = null;
         if (!installed) {
           const install = document.createElement('button');
           install.type = 'button';
           install.className = 'btn app-catalog-action app-catalog-install';
-          setCatalogActionContent(install, 'install', t('appInstallBtn'));
+          setCatalogActionContent(install, 'install', t('appInstallBtn'), actionSizers);
           install.disabled = catalogOperationPending || !inventoryReady || freeSlots === 0;
           install.title = !inventoryReady
             ? t('appManagerScanBeforeInstall')
@@ -615,8 +665,9 @@
             const update = document.createElement('button');
             update.type = 'button';
             update.className = 'btn app-catalog-action app-catalog-update';
-            setCatalogActionContent(update, 'update', t('appUpdateShort'));
-            update.title = t('appUpdateAction', metadata.version.replace(/^v/i, ''));
+            const updateVersion = metadata.version.replace(/^v/i, '');
+            setCatalogActionContent(update, 'update', `${t('appUpdateShort')} → ${updateVersion}`, actionSizers);
+            update.title = t('appUpdateAction', updateVersion);
             update.disabled = catalogOperationPending || !inventoryReady;
             update.addEventListener('click', () => {
               const flash = window.UVStudioFlash;
@@ -627,13 +678,12 @@
                 );
               }
             });
-            updateAction = update;
             actions.appendChild(update);
           }
           const remove = document.createElement('button');
           remove.type = 'button';
           remove.className = 'btn app-catalog-action app-catalog-delete';
-          setCatalogActionContent(remove, 'delete', t('appDelete'));
+          setCatalogActionContent(remove, 'delete', t('appDelete'), actionSizers);
           remove.disabled = catalogOperationPending || !inventoryReady;
           remove.addEventListener('click', () => {
             const flash = window.UVStudioFlash;
@@ -641,26 +691,14 @@
               void runCatalogOperation(() => flash.deleteAppSlot(installed.slot));
             }
           });
-          removeAction = remove;
           actions.appendChild(remove);
         }
-        const progress = catalogProgress?.id === appCatalogId(app.name)
-          ? createCatalogProgress(catalogProgress.shown)
-          : null;
-        if (state === 'update' && updateAction && removeAction) {
-          const headerRow = document.createElement('div');
-          headerRow.className = 'app-catalog-header-row';
-          headerRow.append(title, updateAction);
-          const descriptionRow = document.createElement('div');
-          descriptionRow.className = 'app-catalog-description-row';
-          descriptionRow.append(description, removeAction);
-          content.append(headerRow, descriptionRow, meta);
-          if (progress) content.appendChild(progress);
-          card.append(icon, content);
-        } else {
-          content.append(title, description, meta);
-          if (progress) actions.appendChild(progress);
-          card.append(icon, content, actions);
+        content.append(title, description, meta);
+        card.append(icon, content, actions);
+        // Same layout for every state: the gauge rides the card's bottom edge.
+        if (progressState) {
+          card.classList.add('is-busy');
+          card.appendChild(createCatalogProgress(progressState.shown));
         }
         cardsEl.appendChild(card);
       });

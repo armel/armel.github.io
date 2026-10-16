@@ -319,7 +319,7 @@ window.UVSTUDIO_LOCALES.fr = {
   "appDeleteAllConfirm": "Les {0} applications installées seront définitivement supprimées de la radio. Continuer ?",
   "appDeleteAllDone": "Toutes les applications ont été supprimées.",
   "appUpdateAction": "Mettre à jour vers {0}",
-  "appUpdateShort": "Mettre à jour",
+  "appUpdateShort": "Mise à jour",
   "appDetected": "Détecté : {0} · {1} · {2} Ko",
   "appTooBig": "Cette app dépasse la taille de l'overlay de 4 Kio.",
   "appBadFile": "Fichier .app invalide (en-tête incorrect).",
