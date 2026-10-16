@@ -3243,6 +3243,8 @@ const appRenumberBtn = document.getElementById('appRenumberBtn');
 const appOrderActions = document.getElementById('appOrderActions');
 const appOrderApplyBtn = document.getElementById('appOrderApplyBtn');
 const appOrderCancelBtn = document.getElementById('appOrderCancelBtn');
+// Shown when the Catalog tab is requested while a new order is pending.
+const appOrderNotice = document.getElementById('appOrderNotice');
 const appEmptyInstalled = document.getElementById('appEmptyInstalled');
 const appEmptyInstalledText = document.getElementById('appEmptyInstalledText');
 const appInstalledCount = document.getElementById('appInstalledCount');
@@ -4100,6 +4102,7 @@ function appUpdateOrderControls() {
   if (appOrderActions) appOrderActions.hidden = !dirty;
   if (appOrderApplyBtn) appOrderApplyBtn.disabled = busy || !dirty;
   if (appOrderCancelBtn) appOrderCancelBtn.disabled = busy || !dirty;
+  if (appOrderNotice && !dirty) appOrderNotice.hidden = true;
 
   if (!appsTableBody) return;
   appsTableBody.querySelectorAll('tr[data-slot]').forEach(row => {
@@ -4267,6 +4270,10 @@ async function loadAppFromURL(url, catalogName = 'application.app') {
 }
 
 async function installAppFromURL(url, catalogName = 'application.app', options = {}) {
+  if (appOrderIsDirty()) {
+    log(t('appOrderApplyFirst'), 'error');
+    return false;
+  }
   if (appSlotStatuses.size !== appActiveSlotCount || ![...appSlotStatuses.values()].some(status => status === 2)) {
     log(t('appManagerNoFreeSlot'), 'error');
     return false;
@@ -4280,6 +4287,10 @@ async function installAppFromURL(url, catalogName = 'application.app', options =
 
 async function updateAppFromURL(slot, url, catalogName = 'application.app', options = {}) {
   if (!Number.isInteger(slot) || appSlotStatuses.get(slot) !== 0) return false;
+  if (appOrderIsDirty()) {
+    log(t('appOrderApplyFirst'), 'error');
+    return false;
+  }
   if (appUpdateDownloadPending || activeOperationToken) return false;
 
   appUpdateDownloadPending = true;
@@ -4341,7 +4352,14 @@ if (appRenumberBtn) appRenumberBtn.addEventListener('click', () => { void appRen
 if (appOrderApplyBtn) appOrderApplyBtn.addEventListener('click', () => { void appApplyOrderFlow(); });
 if (appOrderCancelBtn) appOrderCancelBtn.addEventListener('click', appCancelOrder);
 if (appInstalledTab) appInstalledTab.addEventListener('click', () => appManagerSelectPanel('installed'));
-if (appCatalogTab) appCatalogTab.addEventListener('click', () => appManagerSelectPanel('catalog'));
+// A pending order belongs to the Installed list: settle it there first.
+if (appCatalogTab) appCatalogTab.addEventListener('click', () => {
+  if (appOrderIsDirty()) {
+    if (appOrderNotice) appOrderNotice.hidden = false;
+    return;
+  }
+  appManagerSelectPanel('catalog');
+});
 appBuildTable();
 appResetOrder();
 appUpdateManagerSummary();

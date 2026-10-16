@@ -882,12 +882,18 @@
   background: linear-gradient(90deg, #3b82f6, #2563eb);
   transition: width 0.2s ease;
 }
+#pane-tools .app-manager-tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 17px;
+}
 #pane-tools .app-manager-tabs {
   display: flex;
+  flex: 0 0 auto;
   width: min(100%, 420px);
   gap: 4px;
   padding: 4px;
-  margin-bottom: 17px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--bg);
@@ -948,6 +954,19 @@
 }
 #pane-tools .app-panel-actions { flex-wrap: wrap; }
 #pane-tools .app-order-actions[hidden] { display: none; }
+/* Next to the tabs, when Catalog is requested while a new order is pending */
+#pane-tools .app-order-notice {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 46px;
+  margin: 0;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+#pane-tools .app-order-notice[hidden] { display: none; }
 #pane-tools .app-renumber-button[hidden] { display: none; }
 #pane-tools .app-panel-actions > .btn,
 #pane-tools .app-order-actions .btn {
@@ -1377,6 +1396,7 @@
   #pane-tools .app-capacity { grid-template-columns: 1fr 1fr; }
   #pane-tools .app-capacity-copy { text-align: left; }
   #pane-tools .app-capacity-track { width: 100%; }
+  #pane-tools .app-manager-tabs-row { flex-wrap: wrap; }
   #pane-tools .app-manager-tabs { width: 100%; }
   #pane-tools .app-panel-toolbar { align-items: flex-start; flex-wrap: wrap; }
   #pane-tools .app-panel-actions { align-items: center; flex-direction: row; margin-left: auto; }

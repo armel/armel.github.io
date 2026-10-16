@@ -538,13 +538,16 @@
                     </div>
                 </section>
 
-                <div class="app-manager-tabs" role="tablist" data-i18n-aria-label="appManagerTabsLabel" aria-label="App management">
-                    <button type="button" class="btn app-manager-tab active" id="appInstalledTab" role="tab" aria-selected="true" aria-controls="appInstalledPanel">
-                        <span data-i18n="appManagerInstalled">Installed</span><span class="app-tab-count" id="appInstalledTabCount">0</span>
-                    </button>
-                    <button type="button" class="btn app-manager-tab" id="appCatalogTab" role="tab" aria-selected="false" aria-controls="appCatalogPanel" tabindex="-1">
-                        <span data-i18n="appManagerCatalog">Catalog</span><span class="app-tab-count" id="appCatalogTabCount">—</span>
-                    </button>
+                <div class="app-manager-tabs-row">
+                    <div class="app-manager-tabs" role="tablist" data-i18n-aria-label="appManagerTabsLabel" aria-label="App management">
+                        <button type="button" class="btn app-manager-tab active" id="appInstalledTab" role="tab" aria-selected="true" aria-controls="appInstalledPanel">
+                            <span data-i18n="appManagerInstalled">Installed</span><span class="app-tab-count" id="appInstalledTabCount">0</span>
+                        </button>
+                        <button type="button" class="btn app-manager-tab" id="appCatalogTab" role="tab" aria-selected="false" aria-controls="appCatalogPanel" tabindex="-1">
+                            <span data-i18n="appManagerCatalog">Catalog</span><span class="app-tab-count" id="appCatalogTabCount">—</span>
+                        </button>
+                    </div>
+                    <div class="info-box app-order-notice" id="appOrderNotice" role="status" hidden data-i18n="appOrderApplyFirst">Apply or cancel the new app order before continuing.</div>
                 </div>
 
                 <section class="app-manager-panel active" id="appInstalledPanel" role="tabpanel" aria-labelledby="appInstalledTab">
@@ -872,7 +875,7 @@
 <script src="js/rf-log.js?v=4"></script>
     <script src="js/k5viewer.js?v=32"></script>
 <script src="js/keypad-detach.js?v=1"></script>
-<script src="js/flash.js?v=83"></script>
+<script src="js/flash.js?v=84"></script>
 <script src="js/flash-catalog.js?v=19"></script>
 <script src="js/app-catalog.js?v=19"></script>
 <script src="js/studio.js?v=19"></script>

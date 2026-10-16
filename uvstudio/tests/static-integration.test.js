@@ -199,6 +199,14 @@ test('provides a catalog and compact installed-app manager without new firmware 
   assert.match(appCatalogSource, /card\.appendChild\(createCatalogProgress\(progressState\.shown\)\)/);
   assert.doesNotMatch(appCatalogSource, /primarySlot|secondarySlot/);
   assert.match(appCatalogSource, /setCatalogActionContent\(remove, 'delete', t\('appDelete'\), actionSizers\)/);
+  assert.match(html, /id="appOrderNotice"[^>]*hidden data-i18n="appOrderApplyFirst"/);
+  assert.ok(html.indexOf('id="appCatalogTab"') < html.indexOf('id="appOrderNotice"'));
+  assert.ok(html.indexOf('id="appOrderNotice"') < html.indexOf('id="appInstalledPanel"'));
+  assert.match(toolsCss, /\.app-manager-tabs-row\s*\{[^}]*display:\s*flex/);
+  assert.match(flashSource, /appCatalogTab\.addEventListener\('click', \(\) => \{\s*if \(appOrderIsDirty\(\)\) \{\s*if \(appOrderNotice\) appOrderNotice\.hidden = false;\s*return;/);
+  assert.match(flashSource, /if \(appOrderNotice && !dirty\) appOrderNotice\.hidden = true/);
+  assert.match(flashSource, /async function installAppFromURL\([^)]*\) \{\s*if \(appOrderIsDirty\(\)\)/);
+  assert.doesNotMatch(appCatalogSource, /orderPending|uvstudio:apporder/);
   assert.match(toolsCss, /\.app-catalog-card \.app-catalog-action svg\s*\{[^}]*width:\s*17px[^}]*stroke-width:\s*2/s);
   assert.match(toolsCss, /\.app-catalog-progress\s*\{[^}]*position:\s*absolute[^}]*right:\s*14px[^}]*bottom:\s*6px[^}]*left:\s*14px/s);
   assert.match(toolsCss, /\.app-catalog-card\s*\{[^}]*position:\s*relative[^}]*grid-template-columns:\s*38px minmax\(0, 1fr\) auto/s);
@@ -244,7 +252,7 @@ test('reorders complete app slots through the existing raw flash protocol', () =
   assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*overflow-anchor:\s*none/s);
   assert.match(toolsCss, /tr\.app-order-drop-before td\s*\{[^}]*box-shadow/s);
   assert.match(html, /css\/tools\.css\?v=57/);
-  assert.match(html, /js\/flash\.js\?v=83/);
+  assert.match(html, /js\/flash\.js\?v=84/);
   assert.doesNotMatch(flashSource, /app-order-(?:up|down)/);
   assert.doesNotMatch(flashSource, /function appMoveInOrder/);
 
