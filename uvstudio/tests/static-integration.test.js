@@ -679,6 +679,49 @@ test('keeps locale dictionaries on the same key set', () => {
   });
 });
 
+test('keeps app management and catalog descriptions translated in every locale', () => {
+  const localeDir = path.join(root, 'locales');
+  const files = fs.readdirSync(localeDir).filter(file => /^[a-z]{2}\.js$/.test(file));
+  const dictionaries = Object.fromEntries(files.map(file => {
+    const context = { window: {} };
+    vm.runInNewContext(fs.readFileSync(path.join(localeDir, file), 'utf8'), context);
+    return [file.slice(0, 2), context.window.UVSTUDIO_LOCALES[file.slice(0, 2)]];
+  }));
+  const english = dictionaries.en;
+  const languageInvariants = { de: new Set(['appColName']) };
+  const required = [
+    'appsDescription', 'appColName', 'appFileLabel', 'appTargetLabel',
+    'appInstallBtn', 'appDelete', 'appDetected', 'appTooBig', 'appBadFile',
+    'appsScanning', 'appsScanDone', 'appsError', 'appInstalling', 'appInstalled',
+    'appInstalledIncompatible', 'appErasing', 'appErased', 'appVerifying',
+    'appStateValid', 'appStateBadSlot', 'appStateEmpty', 'appStateAbi',
+    'appStateIncomplete', 'appStateBadSize', 'appStateCrc', 'appStateVma',
+    'appStateAuth', 'appStateCap', 'infoBoxApps', 'appManagerEyebrow',
+    'appManagerRadioPending', 'appManagerConnectHint', 'appManagerTabsLabel',
+    'appManagerInstalled', 'appManagerCatalog', 'appManagerOnRadio',
+    'appManagerInstalledHint', 'appManagerCategories', 'appCategoryAll',
+    'appCategoryRadio', 'appCategoryTools', 'appCategoryGames', 'appCategoryDemos',
+    'appManagerSearch', 'appManagerNoResults', 'appManagerLocalInstall',
+    'appManagerNoInstalled', 'appManagerInstalledCount', 'appManagerCapacity',
+    'appManagerCheckingCompatibility', 'appManagerCatalogCompatible',
+    'appManagerCatalogUnavailable', 'appManagerResultCount', 'appManagerForFirmware',
+    'appManagerScanBeforeInstall', 'appManagerNoFreeSlot',
+    ...Object.keys(english).filter(key => key.startsWith('appDescription_'))
+  ];
+  Object.entries(dictionaries).forEach(([language, dictionary]) => {
+    if (language === 'en') return;
+    required.forEach(key => {
+      assert.ok(dictionary[key], `${language}:${key}`);
+      if (!languageInvariants[language]?.has(key))
+        assert.notEqual(dictionary[key], english[key], `${language}:${key} still English`);
+    });
+    Object.keys(english).forEach(key => {
+      const placeholders = value => [...String(value).matchAll(/\{[^}]+\}/g)].map(match => match[0]).sort();
+      assert.deepEqual(placeholders(dictionary[key]), placeholders(english[key]), `${language}:${key} placeholders`);
+    });
+  });
+});
+
 test('uses one consistent vocabulary for maintenance actions in every locale', () => {
   const localeDir = path.join(root, 'locales');
   const files = fs.readdirSync(localeDir).filter(file => /^[a-z]{2}\.js$/.test(file));

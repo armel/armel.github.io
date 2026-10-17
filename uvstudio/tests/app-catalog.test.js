@@ -38,8 +38,8 @@ test('adds presentation metadata without changing the app binary format', () => 
     id: 'cwdecode',
     category: 'radio',
     description: 'Decode Morse code in real time.',
+    descriptionKey: 'appDescription_cwdecode',
     author: 'armel',
-    descriptionFr: 'Décodage du Morse en temps réel.',
     label: 'CW Decode'
   });
   assert.equal(catalog.appDetails('Tetris.app').category, 'games');
@@ -56,17 +56,26 @@ test('adds presentation metadata without changing the app binary format', () => 
   assert.deepEqual(catalog.appDetails('SondeM10.app'), {
     id: 'sondem10',
     category: 'radio',
-    description: 'Decode Meteomodem M10 radiosondes: ID, position, altitude.',
+    description: 'Decode Meteomodem M10 radiosondes: ID, position, altitude, temperature.',
+    descriptionKey: 'appDescription_sondem10',
     author: 'armel',
-    descriptionFr: 'Décodage des radiosondes Meteomodem M10 : identifiant, position, altitude.',
     label: 'Sonde M10'
   });
+  assert.deepEqual(catalog.appDetails('SondeRS41.app'), {
+    id: 'sonders41',
+    category: 'radio',
+    description: 'Decode Vaisala RS41 radiosondes: ID, position, altitude, vertical speed, satellite count.',
+    descriptionKey: 'appDescription_sonders41',
+    author: 'armel',
+    label: 'Sonde RS41'
+  });
+  assert.equal(catalog.appIconSVG('sonders41'), catalog.appIconSVG('sondem10'));
   assert.deepEqual(catalog.appDetails('ToneCall.app'), {
     id: 'tonecall',
     category: 'radio',
     description: 'Send configurable ZVEI or CCIR selective calling tone sequences.',
+    descriptionKey: 'appDescription_tonecall',
     author: 'jdenoy',
-    descriptionFr: 'Émission de séquences d’appel sélectif ZVEI ou CCIR configurables.',
     label: 'ToneCall'
   });
   assert.equal(catalog.appDetails('ACARSRX.app').author, 'armel');
@@ -74,8 +83,8 @@ test('adds presentation metadata without changing the app binary format', () => 
     id: 'flashmap',
     category: 'tools',
     description: 'Browse the external flash map: firmware slots, apps, active state and a hex viewer.',
+    descriptionKey: 'appDescription_flashmap',
     author: 'armel',
-    descriptionFr: 'Carte de la flash externe : slots firmware, apps, état actif et visualiseur hexadécimal.',
     label: 'Flash Map'
   });
   assert.equal(catalog.appDetails('APRSDIGI.app').label, 'APRS DIGI');
@@ -145,7 +154,7 @@ test('provides dedicated SVG pictograms for every catalog app and keeps a monogr
   [
     'acarsrx', 'aprsdigi', 'aprsedit', 'aprsrx', 'aprstx', 'atisrx', 'beacon', 'beam', 'breakout', 'broadcastfm',
     'cwdecode', 'cwkeyer', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'minesweeper',
-    'plasma', 'pocsagrx', 'rapidroll', 'sigfinder', 'snake', 'sokoban', 'sondem10', 'sondem20', 'spaceimpact',
+    'plasma', 'pocsagrx', 'rapidroll', 'sigfinder', 'snake', 'sokoban', 'sondem10', 'sondem20', 'sonders41', 'spaceimpact',
     'spectrum3d', 'sstv', 'systeminfo', 'tetris', 'tonecall'
   ].forEach(id => {
     assert.match(catalog.appIconSVG(id), /<(?:path|circle)/);
