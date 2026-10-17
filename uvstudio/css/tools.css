@@ -882,12 +882,18 @@
   background: linear-gradient(90deg, #3b82f6, #2563eb);
   transition: width 0.2s ease;
 }
+#pane-tools .app-manager-tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 17px;
+}
 #pane-tools .app-manager-tabs {
   display: flex;
+  flex: 0 0 auto;
   width: min(100%, 420px);
   gap: 4px;
   padding: 4px;
-  margin-bottom: 17px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--bg);
@@ -948,6 +954,19 @@
 }
 #pane-tools .app-panel-actions { flex-wrap: wrap; }
 #pane-tools .app-order-actions[hidden] { display: none; }
+/* Next to the tabs, when Catalog is requested while a new order is pending */
+#pane-tools .app-order-notice {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 46px;
+  margin: 0;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+#pane-tools .app-order-notice[hidden] { display: none; }
 #pane-tools .app-renumber-button[hidden] { display: none; }
 #pane-tools .app-panel-actions > .btn,
 #pane-tools .app-order-actions .btn {
@@ -1115,15 +1134,21 @@
 #pane-tools .app-catalog-summary strong { color: var(--text-secondary); }
 #pane-tools .app-catalog-cards {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr));
   gap: 10px;
 }
+/* Every card has the same footprint whatever its state (install, update,
+   up to date): fixed-width action column, one-line title and meta, two-line
+   description. The action column takes the width of the longest action label
+   in the current language. The progress gauge has a fixed spot near the
+   card's bottom edge. */
 #pane-tools .app-catalog-card {
   --app-category-color: #64748b;
+  position: relative;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 11px;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 11px;
@@ -1138,8 +1163,12 @@
 #pane-tools .app-catalog-card:hover {
   border-color: color-mix(in oklab, var(--accent) 34%, var(--border));
 }
+#pane-tools .app-catalog-card.is-busy {
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+}
 #pane-tools .app-catalog-card[hidden] { display: none; }
 #pane-tools .app-catalog-icon {
+  align-self: start;
   display: grid;
   place-items: center;
   width: 38px;
@@ -1165,11 +1194,21 @@
 #pane-tools .app-catalog-title {
   display: flex;
   align-items: center;
+  min-width: 0;
+  height: 20px;
   gap: 7px;
   margin-bottom: 4px;
 }
-#pane-tools .app-catalog-title strong { font-size: 13.5px; }
+#pane-tools .app-catalog-title strong {
+  overflow: hidden;
+  min-width: 0;
+  font-size: 13.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 #pane-tools .app-catalog-tag {
+  flex: 0 100 auto;
+  min-width: 0;
   overflow: hidden;
   padding: 2px 6px;
   border: 1px solid color-mix(in oklab, var(--app-category-color) 22%, var(--border));
@@ -1191,35 +1230,49 @@
   font-weight: 700;
 }
 #pane-tools .app-catalog-description {
-  min-height: 33px;
+  display: -webkit-box;
+  overflow: hidden;
+  height: calc(2 * 1.45em);
+  margin: 0;
   color: var(--text-secondary);
   font-size: 11.5px;
   line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 #pane-tools .app-catalog-meta {
   display: flex;
+  overflow: hidden;
+  height: 14px;
   gap: 10px;
   margin-top: 7px;
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 9.5px;
+  line-height: 14px;
+  white-space: nowrap;
 }
-#pane-tools .app-catalog-size { white-space: nowrap; }
+#pane-tools .app-catalog-meta span { flex: 0 0 auto; }
+#pane-tools .app-catalog-meta .app-catalog-author {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 #pane-tools .app-catalog-actions {
-  position: relative;
   display: flex;
-  align-self: center;
-  align-items: center;
-  justify-content: flex-end;
+  flex-direction: column;
+  justify-content: center;
   gap: 6px;
 }
-#pane-tools .app-catalog-actions .btn {
-  align-self: center;
-  width: auto;
+#pane-tools .app-catalog-card .app-catalog-action {
+  justify-content: flex-start;
+  width: 100%;
   min-width: 0;
   height: 32px;
-  padding: 5px 9px;
-  gap: 6px;
+  padding: 5px 10px;
+  gap: 7px;
   color: var(--text-secondary);
   border-color: var(--border);
   background: var(--bg);
@@ -1228,15 +1281,27 @@
   font-weight: 600;
   transform: none;
 }
-/* Mini gauge under the card's buttons while it installs/updates */
+#pane-tools .app-catalog-action-label {
+  display: grid;
+  min-width: 0;
+}
+#pane-tools .app-catalog-action-label > span {
+  grid-area: 1 / 1;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+}
+#pane-tools .app-catalog-action-sizer { visibility: hidden; }
+/* Install/update gauge: same spot for every state, just above the card's
+   bottom edge and aligned with its padding */
 #pane-tools .app-catalog-progress {
   position: absolute;
-  top: calc(100% + 5px);
-  left: 0;
-  right: 0;
-  height: 4px;
+  right: 14px;
+  bottom: 6px;
+  left: 14px;
+  height: 3px;
   border-radius: 2px;
-  background: var(--border);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
   overflow: hidden;
 }
 #pane-tools .app-catalog-progress-fill {
@@ -1245,7 +1310,7 @@
   border-radius: inherit;
   background: linear-gradient(90deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
 }
-#pane-tools .app-catalog-actions .app-catalog-action svg {
+#pane-tools .app-catalog-card .app-catalog-action svg {
   width: 17px;
   height: 17px;
   flex: 0 0 auto;
@@ -1255,19 +1320,19 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-#pane-tools .app-catalog-actions .app-catalog-action:hover:not(:disabled) {
+#pane-tools .app-catalog-card .app-catalog-action:hover:not(:disabled) {
   color: var(--text);
   border-color: color-mix(in oklab, var(--text) 16%, var(--border));
   background: color-mix(in oklab, var(--text) 5%, var(--surface));
   box-shadow: none;
   transform: none;
 }
-#pane-tools .app-catalog-actions .app-catalog-delete:hover:not(:disabled) {
+#pane-tools .app-catalog-card .app-catalog-delete:hover:not(:disabled) {
   color: #dc2626;
   border-color: color-mix(in oklab, #ef4444 32%, var(--border));
   background: color-mix(in oklab, #ef4444 7%, var(--surface));
 }
-[data-theme="dark"] #pane-tools .app-catalog-actions .app-catalog-delete:hover:not(:disabled) {
+[data-theme="dark"] #pane-tools .app-catalog-card .app-catalog-delete:hover:not(:disabled) {
   color: #f87171;
 }
 #pane-tools .app-catalog-empty {
@@ -1287,7 +1352,7 @@
 [data-theme="dark"] #pane-tools .app-empty-installed {
   color: #a8b4c5;
 }
-[data-theme="dark"] #pane-tools .app-catalog-actions .btn:disabled { opacity: 0.68; }
+[data-theme="dark"] #pane-tools .app-catalog-card .app-catalog-action:disabled { opacity: 0.68; }
 #pane-tools .app-local-install {
   margin-top: 15px;
   border: 1px solid var(--border);
@@ -1322,7 +1387,6 @@
 #pane-tools .app-local-install-body .section { margin-bottom: 0; }
 
 @media (max-width: 900px) {
-  #pane-tools .app-catalog-cards { grid-template-columns: 1fr; }
   #pane-tools .app-capacity { grid-template-columns: auto 120px; }
   #pane-tools .app-capacity-track { width: 120px; }
 }
@@ -1332,12 +1396,15 @@
   #pane-tools .app-capacity { grid-template-columns: 1fr 1fr; }
   #pane-tools .app-capacity-copy { text-align: left; }
   #pane-tools .app-capacity-track { width: 100%; }
+  #pane-tools .app-manager-tabs-row { flex-wrap: wrap; }
   #pane-tools .app-manager-tabs { width: 100%; }
   #pane-tools .app-panel-toolbar { align-items: flex-start; flex-wrap: wrap; }
   #pane-tools .app-panel-actions { align-items: center; flex-direction: row; margin-left: auto; }
   #pane-tools .app-catalog-toolbar { grid-template-columns: 1fr; }
   #pane-tools .app-catalog-card { grid-template-columns: 38px minmax(0, 1fr); }
-  #pane-tools .app-catalog-actions { grid-column: 2; justify-self: start; flex-wrap: wrap; justify-content: flex-start; }
+  #pane-tools .app-catalog-actions { grid-column: 1 / -1; flex-direction: row; justify-content: flex-end; width: auto; }
+  #pane-tools .app-catalog-card .app-catalog-action { flex: 0 0 auto; width: auto; }
+  #pane-tools .app-catalog-action-sizer { display: none; }
 
   #pane-tools .slots-table-wrap { overflow: visible; border: 0; }
   #pane-tools .apps-table-wrap { max-height: none; scrollbar-gutter: auto; }

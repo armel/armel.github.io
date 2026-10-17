@@ -187,14 +187,31 @@ test('provides a catalog and compact installed-app manager without new firmware 
   assert.match(appCatalogSource, /catalogAppState\(installed, metadata\)/);
   assert.match(appCatalogSource, /` \(\+\$\{formatByteSize\(metadata\.assetSize\)\}\)`/);
   assert.match(appCatalogSource, /appSizeAssets.*formatByteSize\(metadata\.assetSize\)/s);
-  assert.match(toolsCss, /\.app-catalog-size\s*\{[^}]*white-space:\s*nowrap/);
+  assert.match(toolsCss, /\.app-catalog-meta\s*\{[^}]*height:\s*14px[^}]*white-space:\s*nowrap/s);
   assert.match(appCatalogSource, /flash\.updateAppFromURL\(installed\.slot/);
   assert.match(appCatalogSource, /flash\.deleteAppSlot\(installed\.slot\)/);
   assert.match(appCatalogSource, /className = 'btn app-catalog-action app-catalog-install'/);
-  assert.match(appCatalogSource, /setCatalogActionContent\(install, 'install', t\('appInstallBtn'\)\)/);
-  assert.match(appCatalogSource, /setCatalogActionContent\(update, 'update', t\('appUpdateAction', metadata\.version\.replace/);
-  assert.match(appCatalogSource, /setCatalogActionContent\(remove, 'delete', t\('appDelete'\)\)/);
-  assert.match(toolsCss, /\.app-catalog-actions \.app-catalog-action svg\s*\{[^}]*width:\s*17px[^}]*stroke-width:\s*2/s);
+  assert.match(appCatalogSource, /setCatalogActionContent\(install, 'install', t\('appInstallBtn'\), actionSizers\)/);
+  assert.match(appCatalogSource, /setCatalogActionContent\(update, 'update', `\$\{t\('appUpdateShort'\)\} → \$\{updateVersion\}`, actionSizers\)/);
+  assert.match(appCatalogSource, /const actionSizers = \[\s*t\('appInstallBtn'\),\s*t\('appDelete'\),\s*`\$\{t\('appUpdateShort'\)\} → \$\{longestVersion\}`/);
+  assert.match(toolsCss, /\.app-catalog-action-sizer\s*\{\s*visibility:\s*hidden/);
+  assert.match(appCatalogSource, /update\.title = t\('appUpdateAction', updateVersion\)/);
+  assert.match(appCatalogSource, /card\.appendChild\(createCatalogProgress\(progressState\.shown\)\)/);
+  assert.doesNotMatch(appCatalogSource, /primarySlot|secondarySlot/);
+  assert.match(appCatalogSource, /setCatalogActionContent\(remove, 'delete', t\('appDelete'\), actionSizers\)/);
+  assert.match(html, /id="appOrderNotice"[^>]*hidden data-i18n="appOrderApplyFirst"/);
+  assert.ok(html.indexOf('id="appCatalogTab"') < html.indexOf('id="appOrderNotice"'));
+  assert.ok(html.indexOf('id="appOrderNotice"') < html.indexOf('id="appInstalledPanel"'));
+  assert.match(toolsCss, /\.app-manager-tabs-row\s*\{[^}]*display:\s*flex/);
+  assert.match(flashSource, /appCatalogTab\.addEventListener\('click', \(\) => \{\s*if \(appOrderIsDirty\(\)\) \{\s*if \(appOrderNotice\) appOrderNotice\.hidden = false;\s*return;/);
+  assert.match(flashSource, /if \(appOrderNotice && !dirty\) appOrderNotice\.hidden = true/);
+  assert.match(flashSource, /async function installAppFromURL\([^)]*\) \{\s*if \(appOrderIsDirty\(\)\)/);
+  assert.doesNotMatch(appCatalogSource, /orderPending|uvstudio:apporder/);
+  assert.match(toolsCss, /\.app-catalog-card \.app-catalog-action svg\s*\{[^}]*width:\s*17px[^}]*stroke-width:\s*2/s);
+  assert.match(toolsCss, /\.app-catalog-progress\s*\{[^}]*position:\s*absolute[^}]*right:\s*14px[^}]*bottom:\s*6px[^}]*left:\s*14px/s);
+  assert.match(toolsCss, /\.app-catalog-card\s*\{[^}]*position:\s*relative[^}]*grid-template-columns:\s*38px minmax\(0, 1fr\) auto/s);
+  assert.match(toolsCss, /\.app-catalog-actions\s*\{[^}]*flex-direction:\s*column/s);
+  assert.match(toolsCss, /\.app-catalog-description\s*\{[^}]*height:\s*calc\(2 \* 1\.45em\)[^}]*-webkit-line-clamp:\s*2/s);
   assert.doesNotMatch(toolsCss, /\.app-catalog-delete\.btn\s*\{[^}]*linear-gradient/s);
   assert.match(toolsCss, /\.app-catalog-icon\s*\{[^}]*color:\s*var\(--text-secondary\)[^}]*background:\s*color-mix\(in oklab, currentColor 5%/s);
   assert.match(toolsCss, /\.app-catalog-card\[data-category="radio"\]\s*\{\s*--app-category-color:\s*#3b82f6/);
@@ -234,8 +251,8 @@ test('reorders complete app slots through the existing raw flash protocol', () =
   assert.match(toolsCss, /\.app-renumber-button\[hidden\]\s*\{\s*display:\s*none/);
   assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*overflow-anchor:\s*none/s);
   assert.match(toolsCss, /tr\.app-order-drop-before td\s*\{[^}]*box-shadow/s);
-  assert.match(html, /css\/tools\.css\?v=55/);
-  assert.match(html, /js\/flash\.js\?v=83/);
+  assert.match(html, /css\/tools\.css\?v=57/);
+  assert.match(html, /js\/flash\.js\?v=84/);
   assert.doesNotMatch(flashSource, /app-order-(?:up|down)/);
   assert.doesNotMatch(flashSource, /function appMoveInOrder/);
 
@@ -659,6 +676,49 @@ test('keeps locale dictionaries on the same key set', () => {
   const expected = Object.keys(dictionaries[0].dictionary).sort();
   dictionaries.forEach(({ file, dictionary }) => {
     assert.deepEqual(Object.keys(dictionary).sort(), expected, file);
+  });
+});
+
+test('keeps app management and catalog descriptions translated in every locale', () => {
+  const localeDir = path.join(root, 'locales');
+  const files = fs.readdirSync(localeDir).filter(file => /^[a-z]{2}\.js$/.test(file));
+  const dictionaries = Object.fromEntries(files.map(file => {
+    const context = { window: {} };
+    vm.runInNewContext(fs.readFileSync(path.join(localeDir, file), 'utf8'), context);
+    return [file.slice(0, 2), context.window.UVSTUDIO_LOCALES[file.slice(0, 2)]];
+  }));
+  const english = dictionaries.en;
+  const languageInvariants = { de: new Set(['appColName']) };
+  const required = [
+    'appsDescription', 'appColName', 'appFileLabel', 'appTargetLabel',
+    'appInstallBtn', 'appDelete', 'appDetected', 'appTooBig', 'appBadFile',
+    'appsScanning', 'appsScanDone', 'appsError', 'appInstalling', 'appInstalled',
+    'appInstalledIncompatible', 'appErasing', 'appErased', 'appVerifying',
+    'appStateValid', 'appStateBadSlot', 'appStateEmpty', 'appStateAbi',
+    'appStateIncomplete', 'appStateBadSize', 'appStateCrc', 'appStateVma',
+    'appStateAuth', 'appStateCap', 'infoBoxApps', 'appManagerEyebrow',
+    'appManagerRadioPending', 'appManagerConnectHint', 'appManagerTabsLabel',
+    'appManagerInstalled', 'appManagerCatalog', 'appManagerOnRadio',
+    'appManagerInstalledHint', 'appManagerCategories', 'appCategoryAll',
+    'appCategoryRadio', 'appCategoryTools', 'appCategoryGames', 'appCategoryDemos',
+    'appManagerSearch', 'appManagerNoResults', 'appManagerLocalInstall',
+    'appManagerNoInstalled', 'appManagerInstalledCount', 'appManagerCapacity',
+    'appManagerCheckingCompatibility', 'appManagerCatalogCompatible',
+    'appManagerCatalogUnavailable', 'appManagerResultCount', 'appManagerForFirmware',
+    'appManagerScanBeforeInstall', 'appManagerNoFreeSlot',
+    ...Object.keys(english).filter(key => key.startsWith('appDescription_'))
+  ];
+  Object.entries(dictionaries).forEach(([language, dictionary]) => {
+    if (language === 'en') return;
+    required.forEach(key => {
+      assert.ok(dictionary[key], `${language}:${key}`);
+      if (!languageInvariants[language]?.has(key))
+        assert.notEqual(dictionary[key], english[key], `${language}:${key} still English`);
+    });
+    Object.keys(english).forEach(key => {
+      const placeholders = value => [...String(value).matchAll(/\{[^}]+\}/g)].map(match => match[0]).sort();
+      assert.deepEqual(placeholders(dictionary[key]), placeholders(english[key]), `${language}:${key} placeholders`);
+    });
   });
 });
 

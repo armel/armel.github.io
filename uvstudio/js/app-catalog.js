@@ -67,7 +67,9 @@
     sigfinder:   ['radio', 'Find signal direction and strength.'],
     snake:       ['games', 'Classic Snake for the radio keypad.'],
     sokoban:     ['games', 'The classic box-pushing puzzle.'],
+    sondem10:    ['radio', 'Decode Meteomodem M10 radiosondes: ID, position, altitude, temperature.'],
     sondem20:    ['radio', 'Decode Meteomodem M20 radiosondes: ID, position, altitude, temperature.'],
+    sonders41:   ['radio', 'Decode Vaisala RS41 radiosondes: ID, position, altitude, vertical speed, satellite count.'],
     spaceimpact: ['games', 'Side-scrolling space arcade game.'],
     spectrum3d:  ['radio', 'Experimental 3D spectrum visualization.'],
     sstv:        ['radio', 'Receive SSTV images on the radio display.'],
@@ -75,43 +77,11 @@
     tetris:      ['games', 'The classic falling-block puzzle.'],
     tonecall:    ['radio', 'Send configurable ZVEI or CCIR selective calling tone sequences.']
   };
-  const APP_DESCRIPTIONS_FR = {
-    acarsrx: 'Réception et décodage des messages ACARS des avions.',
-    aprsdigi: 'Relais des paquets APRS en digipeater.',
-    aprsedit: 'Édition de la balise d’APRS TX : indicatif, position, symbole et commentaire.',
-    aprsrx: 'Réception et décodage des paquets APRS.',
-    aprstx: 'Émission de balises APRS depuis la radio.',
-    atisrx: 'Identification des bateaux fluviaux par leur signal ATIS.',
-    beacon: 'Émission d’une balise radio configurable.',
-    beam: 'Transfert d’un canal entre radios compatibles.',
-    breakout: 'Une version compacte du jeu d’arcade classique.',
-    broadcastfm: 'Écoute des stations de radiodiffusion FM.',
-    cwdecode: 'Décodage du Morse en temps réel.',
-    cwkeyer: 'Manipulateur Morse à vitesse et tonalité réglables.',
-    cube3d: 'Démonstration graphique 3D animée.',
-    epirb406: 'Analyse et décodage des trames de balises 406 MHz.',
-    flashmap: 'Carte de la flash externe : slots firmware, apps, état actif et visualiseur hexadécimal.',
-    foxhunt: 'Assistance à la radiogoniométrie.',
-    minesweeper: 'Le classique jeu de déminage.',
-    plasma: 'Démonstration graphique plasma animée.',
-    pocsagrx: 'Réception des messages de radiomessagerie POCSAG (DAPNET).',
-    rapidroll: 'Jeu d’arcade vertical rapide.',
-    sigfinder: 'Recherche de la direction et du niveau d’un signal.',
-    snake: 'Le classique Snake adapté au clavier de la radio.',
-    sokoban: 'Le classique jeu de caisses à pousser.',
-    sondem20: 'Décodage des radiosondes Meteomodem M20 : identifiant, position, altitude, température.',
-    spaceimpact: 'Jeu d’arcade spatial à défilement horizontal.',
-    spectrum3d: 'Visualisation expérimentale du spectre en 3D.',
-    sstv: 'Réception d’images SSTV sur l’écran de la radio.',
-    systeminfo: 'Informations sur le firmware, la mémoire et la radio.',
-    tetris: 'Le classique jeu de blocs qui tombent.',
-    tonecall: 'Émission de séquences d’appel sélectif ZVEI ou CCIR configurables.'
-  };
   const APP_DISPLAY_NAMES = {
     acarsrx: 'ACARS RX', aprsdigi: 'APRS DIGI', aprsedit: 'APRS Edit',
     aprsrx: 'APRS RX', aprstx: 'APRS TX', atisrx: 'ATIS RX', broadcastfm: 'Broadcast FM',
     cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cube3d: 'Cube 3D',
-    epirb406: 'EPIRB 406', flashmap: 'Flash Map', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem20: 'Sonde M20',
+    epirb406: 'EPIRB 406', flashmap: 'Flash Map', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20', sonders41: 'Sonde RS41',
     spaceimpact: 'Space Impact',
     spectrum3d: 'Spectrum 3D', systeminfo: 'System Info', tonecall: 'ToneCall'
   };
@@ -144,7 +114,9 @@
     sigfinder: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v2m0 13v2m-8.5-8.5h2m13 0h2M12 5l2 7-2 7-2-7z"/><path d="m12 5 2 7h-4z" fill="currentColor" stroke="none"/>',
     snake: '<path d="M5 17h5a2 2 0 0 0 2-2v-5a2 2 0 0 1 2-2h3"/><circle cx="18.3" cy="8" r="1.9"/><circle cx="18.8" cy="7.5" r=".3" fill="currentColor" stroke="none"/><path d="M5 17l-1.5-1.5M5 17l-1.5 1.5"/>',
     sokoban: '<circle cx="6.8" cy="5.9" r="1.8"/><path d="M6.3 8.2 5 14l-2 5.5M5 14l2.6 5.5M6 10.5l4.5 1.3"/><rect x="10.5" y="9.5" width="10" height="10" rx=".8"/><rect x="13.25" y="12.25" width="4.5" height="4.5" rx=".4"/>',
+    sondem10: '<path d="M12 2.5A4.5 4.5 0 0 1 16.5 7c0 2.7-2.6 4.6-4.5 5.5-1.9-.9-4.5-2.8-4.5-5.5A4.5 4.5 0 0 1 12 2.5zm0 10v4"/><rect x="10" y="16.5" width="4" height="4" rx=".5"/><path d="M16.5 16a3 3 0 0 1 0 5M19 14.5a6 6 0 0 1 0 8M7.5 16a3 3 0 0 0 0 5M5 14.5a6 6 0 0 0 0 8"/>',
     sondem20: '<path d="M12 2.5A4.5 4.5 0 0 1 16.5 7c0 2.7-2.6 4.6-4.5 5.5-1.9-.9-4.5-2.8-4.5-5.5A4.5 4.5 0 0 1 12 2.5zm0 10v4"/><rect x="10" y="16.5" width="4" height="4" rx=".5"/><path d="M16.5 16a3 3 0 0 1 0 5M19 14.5a6 6 0 0 1 0 8M7.5 16a3 3 0 0 0 0 5M5 14.5a6 6 0 0 0 0 8"/>',
+    sonders41: '<path d="M12 2.5A4.5 4.5 0 0 1 16.5 7c0 2.7-2.6 4.6-4.5 5.5-1.9-.9-4.5-2.8-4.5-5.5A4.5 4.5 0 0 1 12 2.5zm0 10v4"/><rect x="10" y="16.5" width="4" height="4" rx=".5"/><path d="M16.5 16a3 3 0 0 1 0 5M19 14.5a6 6 0 0 1 0 8M7.5 16a3 3 0 0 0 0 5M5 14.5a6 6 0 0 0 0 8"/>',
     spaceimpact: '<path d="M3.5 12 9 8.2l7 .8 4.5 3-4.5 3-7 .8zM9 8.2 7 5.5m2 10.3L7 18.5M16 9v6"/><path d="M2.5 8h2m-2 8h2"/>',
     spectrum3d: '<path d="m4 18 5 2 11-5-5-2zM6 16V9m3 8V6m3 9V4m3 10V8m3 7v-5M4 18l5 2m0 0 11-5"/>',
     sstv: '<rect x="3.5" y="7" width="17" height="12" rx="2"/><path d="m8 7-3-4m11 4 3-4M7 16l3-3 2.5 2 2.5-3 2 2.5M8 21h8"/><circle cx="16.5" cy="10.5" r="1"/>',
@@ -161,11 +133,24 @@
     return APP_ICONS[String(id)] || '';
   }
 
-  function setCatalogActionContent(button, icon, label) {
+  // `sizers` are every label an action button can show in the current
+  // language, stacked invisibly under the real one: all buttons then share the
+  // width of the longest label, so the action column is identical on every card.
+  function setCatalogActionContent(button, icon, label, sizers = []) {
     button.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${APP_ACTION_ICONS[icon] || ''}</svg>`;
+    const labels = document.createElement('span');
+    labels.className = 'app-catalog-action-label';
     const text = document.createElement('span');
     text.textContent = label;
-    button.appendChild(text);
+    labels.appendChild(text);
+    sizers.forEach(value => {
+      const sizer = document.createElement('span');
+      sizer.className = 'app-catalog-action-sizer';
+      sizer.setAttribute('aria-hidden', 'true');
+      sizer.textContent = value;
+      labels.appendChild(sizer);
+    });
+    button.appendChild(labels);
   }
 
   // Apps listed in APP_DETAILS are by DEFAULT_APP_AUTHOR unless stated here;
@@ -188,8 +173,8 @@
       id,
       category: detail[0],
       description: detail[1],
+      descriptionKey: APP_DETAILS[id] ? `appDescription_${id}` : 'appDescription_other',
       author: APP_AUTHORS[id] || (APP_DETAILS[id] ? DEFAULT_APP_AUTHOR : ''),
-      descriptionFr: APP_DESCRIPTIONS_FR[id] || '',
       ...(APP_DISPLAY_NAMES[id] ? { label: APP_DISPLAY_NAMES[id] } : {})
     };
   }
@@ -367,7 +352,7 @@
     let freeSlots = 0;
     let installedApps = new Map();
     let catalogOperationPending = false;
-    let catalogProgress = null;   // { id, percent, shown } while a card installs/updates
+    let catalogProgress = null;   // { id, percent, shown, ... } while a card installs/updates
     const metadataCache = new Map();
 
     function t(key, ...values) {
@@ -445,14 +430,31 @@
     async function runCatalogOperation(operation, progressApp) {
       if (catalogOperationPending) return;
       catalogOperationPending = true;
-      catalogProgress = progressApp ? { id: appCatalogId(progressApp.name), percent: 0, shown: 0 } : null;
+      const progressId = progressApp ? appCatalogId(progressApp.name) : '';
+      const installedSnapshot = progressId ? installedApps.get(progressId) : null;
+      catalogProgress = progressApp ? {
+        id: progressId,
+        percent: 0,
+        shown: 0,
+        installedSnapshot: installedSnapshot ? { ...installedSnapshot } : null,
+        operationDone: false,
+        fillDone: false,
+        holdTimer: 0
+      } : null;
       renderCatalogCards();
+      let succeeded = false;
       try {
         await operation();
+        succeeded = true;
       } finally {
-        catalogOperationPending = false;
-        // On success the gauge finishes filling, then removes itself.
-        if (catalogProgress?.percent !== 100) catalogProgress = null;
+        const progress = catalogProgress;
+        if (!succeeded || !progress || progress.percent !== 100) {
+          catalogProgress = null;
+          catalogOperationPending = false;
+        } else {
+          progress.operationDone = true;
+          finishCatalogProgress(progress);
+        }
         renderCatalogCards();
       }
     }
@@ -479,6 +481,16 @@
     const CATALOG_PROGRESS_FILL_MS = 900;
     const CATALOG_PROGRESS_HOLD_MS = 700;
 
+    function finishCatalogProgress(progress) {
+      if (!progress.operationDone || !progress.fillDone || progress.holdTimer) return;
+      progress.holdTimer = setTimeout(() => {
+        if (catalogProgress !== progress) return;
+        catalogProgress = null;
+        catalogOperationPending = false;
+        renderCatalogCards();
+      }, CATALOG_PROGRESS_HOLD_MS);
+    }
+
     function animateCatalogProgress(progress, last) {
       requestAnimationFrame(now => {
         if (catalogProgress !== progress) return;
@@ -487,11 +499,9 @@
         const bar = cardsEl?.querySelector('.app-catalog-progress');
         if (bar) setCatalogProgressValue(bar, progress.shown);
         if (progress.shown >= 100) {
-          setTimeout(() => {
-            if (catalogProgress !== progress) return;
-            catalogProgress = null;
-            cardsEl?.querySelector('.app-catalog-progress')?.remove();
-          }, CATALOG_PROGRESS_HOLD_MS);
+          progress.animating = false;
+          progress.fillDone = true;
+          finishCatalogProgress(progress);
         } else if (progress.shown < progress.percent) {
           animateCatalogProgress(progress, now);
         } else {
@@ -535,18 +545,31 @@
         });
       }
       cardsEl.textContent = '';
+      const longestVersion = currentApps
+        .map(app => String(currentMetadata.get(appCatalogId(app.name))?.version || '').replace(/^v/i, ''))
+        .reduce((longest, version) => (version.length > longest.length ? version : longest), '0.0');
+      const actionSizers = [
+        t('appInstallBtn'),
+        t('appDelete'),
+        `${t('appUpdateShort')} → ${longestVersion}`
+      ];
       currentApps.forEach(app => {
-        const metadata = currentMetadata.get(appCatalogId(app.name));
-        const installed = installedApps.get(appCatalogId(app.name));
+        const appId = appCatalogId(app.name);
+        const metadata = currentMetadata.get(appId);
+        const progressState = catalogProgress?.id === appId ? catalogProgress : null;
+        const installed = progressState
+          ? progressState.installedSnapshot
+          : installedApps.get(appId);
         const state = catalogAppState(installed, metadata);
         const card = document.createElement('article');
         card.className = 'app-catalog-card';
         card.dataset.category = app.category;
         card.dataset.state = state;
-        const descriptionText = window.uvStudioI18n?.lang === 'fr' && app.descriptionFr
-          ? app.descriptionFr
-          : app.description;
-        card.dataset.search = `${app.label} ${app.description} ${app.descriptionFr || ''} ${app.category} ${app.author ? '@' + app.author : ''}`.toLocaleLowerCase();
+        const translatedDescription = t(app.descriptionKey);
+        const descriptionText = translatedDescription === app.descriptionKey
+          ? app.description
+          : translatedDescription;
+        card.dataset.search = `${app.label} ${descriptionText} ${app.description} ${app.category} ${app.author ? '@' + app.author : ''}`.toLocaleLowerCase();
 
         const icon = createAppIcon(app);
 
@@ -556,6 +579,7 @@
         title.className = 'app-catalog-title';
         const name = document.createElement('strong');
         name.textContent = app.label;
+        name.title = app.label;
         const tag = document.createElement('span');
         tag.className = 'app-catalog-tag';
         tag.textContent = categoryLabel(app.category);
@@ -569,6 +593,7 @@
         const description = document.createElement('p');
         description.className = 'app-catalog-description';
         description.textContent = descriptionText;
+        description.title = descriptionText;
         const meta = document.createElement('div');
         meta.className = 'app-catalog-meta';
         const version = document.createElement('span');
@@ -595,15 +620,13 @@
           author.title = t('studio_about_author');
           meta.appendChild(author);
         }
-        content.append(title, description, meta);
-
         const actions = document.createElement('div');
         actions.className = 'app-catalog-actions';
         if (!installed) {
           const install = document.createElement('button');
           install.type = 'button';
           install.className = 'btn app-catalog-action app-catalog-install';
-          setCatalogActionContent(install, 'install', t('appInstallBtn'));
+          setCatalogActionContent(install, 'install', t('appInstallBtn'), actionSizers);
           install.disabled = catalogOperationPending || !inventoryReady || freeSlots === 0;
           install.title = !inventoryReady
             ? t('appManagerScanBeforeInstall')
@@ -615,7 +638,9 @@
             const update = document.createElement('button');
             update.type = 'button';
             update.className = 'btn app-catalog-action app-catalog-update';
-            setCatalogActionContent(update, 'update', t('appUpdateAction', metadata.version.replace(/^v/i, '')));
+            const updateVersion = metadata.version.replace(/^v/i, '');
+            setCatalogActionContent(update, 'update', `${t('appUpdateShort')} → ${updateVersion}`, actionSizers);
+            update.title = t('appUpdateAction', updateVersion);
             update.disabled = catalogOperationPending || !inventoryReady;
             update.addEventListener('click', () => {
               const flash = window.UVStudioFlash;
@@ -631,7 +656,7 @@
           const remove = document.createElement('button');
           remove.type = 'button';
           remove.className = 'btn app-catalog-action app-catalog-delete';
-          setCatalogActionContent(remove, 'delete', t('appDelete'));
+          setCatalogActionContent(remove, 'delete', t('appDelete'), actionSizers);
           remove.disabled = catalogOperationPending || !inventoryReady;
           remove.addEventListener('click', () => {
             const flash = window.UVStudioFlash;
@@ -641,10 +666,13 @@
           });
           actions.appendChild(remove);
         }
-        if (catalogProgress?.id === appCatalogId(app.name)) {
-          actions.appendChild(createCatalogProgress(catalogProgress.shown));
-        }
+        content.append(title, description, meta);
         card.append(icon, content, actions);
+        // Same layout for every state: the gauge rides the card's bottom edge.
+        if (progressState) {
+          card.classList.add('is-busy');
+          card.appendChild(createCatalogProgress(progressState.shown));
+        }
         cardsEl.appendChild(card);
       });
       if (catalogTabCountEl) catalogTabCountEl.textContent = String(currentApps.length);
