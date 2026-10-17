@@ -502,6 +502,7 @@ window.UVSTUDIO_LOCALES.ru = {
   "appDescription_plasma": "Демонстрация анимированной плазменной графики.",
   "appDescription_pocsagrx": "Принимает сообщения пейджеров POCSAG (DAPNET).",
   "appDescription_rapidroll": "Быстрая вертикальная аркадная игра.",
+  "appDescription_resistor": "Расшифровка цветовой маркировки резисторов: номинал, допуск и ТКС (от 3 до 6 полос).",
   "appDescription_sigfinder": "Определяет направление и уровень сигнала.",
   "appDescription_snake": "Классическая «Змейка» для клавиатуры радиостанции.",
   "appDescription_sokoban": "Классическая головоломка с перемещением ящиков.",

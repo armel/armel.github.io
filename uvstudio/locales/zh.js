@@ -502,6 +502,7 @@ window.UVSTUDIO_LOCALES.zh = {
   "appDescription_plasma": "动态等离子图形演示。",
   "appDescription_pocsagrx": "接收 POCSAG 寻呼消息（DAPNET）。",
   "appDescription_rapidroll": "快节奏纵向街机游戏。",
+  "appDescription_resistor": "读取电阻色环：阻值、误差和温度系数（3 至 6 环）。",
   "appDescription_sigfinder": "查找信号的方向和强度。",
   "appDescription_snake": "适配电台键盘的经典贪吃蛇。",
   "appDescription_sokoban": "经典推箱子益智游戏。",

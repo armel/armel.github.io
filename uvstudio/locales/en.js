@@ -502,6 +502,7 @@ window.UVSTUDIO_LOCALES.en = {
   "appDescription_plasma": "Animated plasma graphics demonstration.",
   "appDescription_pocsagrx": "Receive POCSAG pager messages (DAPNET).",
   "appDescription_rapidroll": "Fast vertical arcade game.",
+  "appDescription_resistor": "Read resistor color codes: value, tolerance and temperature coefficient (3 to 6 bands).",
   "appDescription_sigfinder": "Find signal direction and strength.",
   "appDescription_snake": "Classic Snake for the radio keypad.",
   "appDescription_sokoban": "The classic box-pushing puzzle.",

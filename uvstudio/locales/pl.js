@@ -502,6 +502,7 @@ window.UVSTUDIO_LOCALES.pl = {
   "appDescription_plasma": "Demonstracja animowanej grafiki plazmowej.",
   "appDescription_pocsagrx": "Odbiera wiadomości pagerów POCSAG (DAPNET).",
   "appDescription_rapidroll": "Szybka pionowa gra zręcznościowa.",
+  "appDescription_resistor": "Odczyt kodu barwnego rezystorów: wartość, tolerancja i współczynnik temperaturowy (od 3 do 6 pasków).",
   "appDescription_sigfinder": "Określa kierunek i siłę sygnału.",
   "appDescription_snake": "Klasyczny Snake dostosowany do klawiatury radia.",
   "appDescription_sokoban": "Klasyczna łamigłówka z przesuwaniem skrzyń.",

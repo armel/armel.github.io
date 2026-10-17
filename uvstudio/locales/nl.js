@@ -502,6 +502,7 @@ window.UVSTUDIO_LOCALES.nl = {
   "appDescription_plasma": "Demonstratie van geanimeerde plasmagraphics.",
   "appDescription_pocsagrx": "Ontvangt POCSAG-semafoonberichten (DAPNET).",
   "appDescription_rapidroll": "Snel verticaal arcadespel.",
+  "appDescription_resistor": "Lees de kleurcode van weerstanden: waarde, tolerantie en temperatuurcoëfficiënt (3 tot 6 ringen).",
   "appDescription_sigfinder": "Bepaalt de richting en sterkte van een signaal.",
   "appDescription_snake": "De klassieke Snake voor het radiotoetsenbord.",
   "appDescription_sokoban": "De klassieke puzzel met verschuifbare kisten.",

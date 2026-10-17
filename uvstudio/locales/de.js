@@ -502,6 +502,7 @@ window.UVSTUDIO_LOCALES.de = {
   "appDescription_plasma": "Animierte Plasma-Grafikdemonstration.",
   "appDescription_pocsagrx": "Empfängt POCSAG-Pagernachrichten (DAPNET).",
   "appDescription_rapidroll": "Schnelles vertikales Arcade-Spiel.",
+  "appDescription_resistor": "Farbcode von Widerständen lesen: Wert, Toleranz und Temperaturkoeffizient (3 bis 6 Ringe).",
   "appDescription_sigfinder": "Ermittelt Richtung und Stärke eines Signals.",
   "appDescription_snake": "Das klassische Snake für die Funkgerätetastatur.",
   "appDescription_sokoban": "Das klassische Kistenschiebe-Puzzlespiel.",

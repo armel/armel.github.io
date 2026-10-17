@@ -502,6 +502,7 @@ window.UVSTUDIO_LOCALES.it = {
   "appDescription_plasma": "Dimostrazione grafica con plasma animato.",
   "appDescription_pocsagrx": "Riceve messaggi cercapersone POCSAG (DAPNET).",
   "appDescription_rapidroll": "Gioco arcade verticale e veloce.",
+  "appDescription_resistor": "Legge il codice colori dei resistori: valore, tolleranza e coefficiente di temperatura (da 3 a 6 bande).",
   "appDescription_sigfinder": "Individua direzione e intensità di un segnale.",
   "appDescription_snake": "Il classico Snake adattato alla tastiera della radio.",
   "appDescription_sokoban": "Il classico rompicapo con le casse.",
