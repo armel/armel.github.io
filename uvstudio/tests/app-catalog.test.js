@@ -53,6 +53,22 @@ test('adds presentation metadata without changing the app binary format', () => 
   assert.equal(catalog.appDetails('Minesweeper.app').author, 'Sarijen');
   assert.equal(catalog.appDetails('EPIRB406.app').author, 'jdenoy');
   assert.equal(catalog.appDetails('SigFinder.app').author, 'jdenoy');
+  assert.deepEqual(catalog.appDetails('CWKeyer.app'), {
+    id: 'cwkeyer',
+    category: 'radio',
+    description: "Morse keyer using the radio's PTT and side keys.",
+    descriptionKey: 'appDescription_cwkeyer',
+    author: 'armel',
+    label: 'CW Keyer'
+  });
+  assert.deepEqual(catalog.appDetails('CWUSB.app'), {
+    id: 'cwusb',
+    category: 'radio',
+    description: 'Morse keyer for an external paddle connected through USB-C.',
+    descriptionKey: 'appDescription_cwusb',
+    author: 'jdenoy',
+    label: 'CW USB'
+  });
   assert.deepEqual(catalog.appDetails('SondeM10.app'), {
     id: 'sondem10',
     category: 'radio',
@@ -153,11 +169,12 @@ test('compares app versions numerically and treats a release as newer than its p
 test('provides dedicated SVG pictograms for every catalog app and keeps a monogram fallback', () => {
   [
     'acarsrx', 'aprsdigi', 'aprsedit', 'aprsrx', 'aprstx', 'atisrx', 'beacon', 'beam', 'breakout', 'broadcastfm',
-    'cwdecode', 'cwkeyer', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'minesweeper',
+    'cwdecode', 'cwkeyer', 'cwusb', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'minesweeper',
     'plasma', 'pocsagrx', 'rapidroll', 'resistor', 'sigfinder', 'snake', 'sokoban', 'sondem10', 'sondem20', 'sonders41', 'spaceimpact',
     'spectrum3d', 'sstv', 'systeminfo', 'tetris', 'tonecall'
   ].forEach(id => {
     assert.match(catalog.appIconSVG(id), /<(?:path|circle)/);
   });
+  assert.ok(catalog.appIconSVG('cwusb').startsWith(catalog.appIconSVG('cwkeyer')));
   assert.equal(catalog.appIconSVG('futureapp'), '');
 });
