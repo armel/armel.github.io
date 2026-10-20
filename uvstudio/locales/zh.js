@@ -500,6 +500,7 @@ window.UVSTUDIO_LOCALES.zh = {
   "appDescription_epirb406": "分析并解码 406 MHz 信标帧。",
   "appDescription_flashmap": "浏览外部闪存映射：固件插槽、应用、活动状态和十六进制查看器。",
   "appDescription_foxhunt": "辅助无线电测向。",
+  "appDescription_hellmaze": "恶魔出没的迷宫中的第一人称射击游戏。",
   "appDescription_minesweeper": "经典扫雷游戏。",
   "appDescription_plasma": "动态等离子图形演示。",
   "appDescription_pocsagrx": "接收 POCSAG 寻呼消息（DAPNET）。",

@@ -500,6 +500,7 @@ window.UVSTUDIO_LOCALES.pl = {
   "appDescription_epirb406": "Analizuje i dekoduje ramki radiopław 406 MHz.",
   "appDescription_flashmap": "Wyświetla mapę zewnętrznej pamięci flash: sloty firmware, aplikacje, stan aktywny i podgląd szesnastkowy.",
   "appDescription_foxhunt": "Pomaga w radiolokacji kierunkowej.",
+  "appDescription_hellmaze": "Strzelanka FPP w labiryncie pełnym demonów.",
   "appDescription_minesweeper": "Klasyczna gra w sapera.",
   "appDescription_plasma": "Demonstracja animowanej grafiki plazmowej.",
   "appDescription_pocsagrx": "Odbiera wiadomości pagerów POCSAG (DAPNET).",

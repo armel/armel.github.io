@@ -500,6 +500,7 @@ window.UVSTUDIO_LOCALES.de = {
   "appDescription_epirb406": "Analysiert und decodiert Frames von 406-MHz-Notfunkbaken.",
   "appDescription_flashmap": "Zeigt die externe Flash-Belegung: Firmware-Slots, Apps, aktiven Status und Hex-Ansicht.",
   "appDescription_foxhunt": "Unterstützt bei der Funkpeilung.",
+  "appDescription_hellmaze": "Ego-Shooter in einem von Dämonen heimgesuchten Labyrinth.",
   "appDescription_minesweeper": "Das klassische Minensuchspiel.",
   "appDescription_plasma": "Animierte Plasma-Grafikdemonstration.",
   "appDescription_pocsagrx": "Empfängt POCSAG-Pagernachrichten (DAPNET).",

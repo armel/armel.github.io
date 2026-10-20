@@ -500,6 +500,7 @@ window.UVSTUDIO_LOCALES.it = {
   "appDescription_epirb406": "Analizza e decodifica le trame dei radiofari a 406 MHz.",
   "appDescription_flashmap": "Esplora la mappa della flash esterna: slot firmware, app, stato attivo e visualizzatore esadecimale.",
   "appDescription_foxhunt": "Aiuta nella radiogoniometria.",
+  "appDescription_hellmaze": "Sparatutto in prima persona in un labirinto infestato dai demoni.",
   "appDescription_minesweeper": "Il classico gioco del campo minato.",
   "appDescription_plasma": "Dimostrazione grafica con plasma animato.",
   "appDescription_pocsagrx": "Riceve messaggi cercapersone POCSAG (DAPNET).",

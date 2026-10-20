@@ -500,6 +500,7 @@ window.UVSTUDIO_LOCALES.en = {
   "appDescription_epirb406": "Analyze and decode 406 MHz beacon frames.",
   "appDescription_flashmap": "Browse the external flash map: firmware slots, apps, active state and a hex viewer.",
   "appDescription_foxhunt": "Assist with radio direction finding.",
+  "appDescription_hellmaze": "First-person shooter in a demon-haunted maze.",
   "appDescription_minesweeper": "The classic mine-clearing puzzle.",
   "appDescription_plasma": "Animated plasma graphics demonstration.",
   "appDescription_pocsagrx": "Receive POCSAG pager messages (DAPNET).",

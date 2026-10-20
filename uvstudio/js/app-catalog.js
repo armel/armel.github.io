@@ -62,6 +62,7 @@
     epirb406:    ['radio', 'Analyze and decode 406 MHz beacon frames.'],
     flashmap:    ['tools', 'Browse the external flash map: firmware slots, apps, active state and a hex viewer.'],
     foxhunt:     ['radio', 'Assist with radio direction finding.'],
+    hellmaze:    ['games', 'First-person shooter in a demon-haunted maze.'],
     minesweeper: ['games', 'The classic mine-clearing puzzle.'],
     plasma:      ['demos', 'Animated plasma graphics demonstration.'],
     pocsagrx:    ['radio', 'Receive POCSAG pager messages (DAPNET).'],
@@ -84,7 +85,7 @@
     acarsrx: 'ACARS RX', aisrx: 'AIS RX', aprsdigi: 'APRS DIGI', aprsedit: 'APRS Edit',
     aprsrx: 'APRS RX', aprstx: 'APRS TX', atisrx: 'ATIS RX', broadcastfm: 'Broadcast FM',
     cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cwusb: 'CW USB', cube3d: 'Cube 3D',
-    epirb406: 'EPIRB 406', flashmap: 'Flash Map', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20', sonders41: 'Sonde RS41',
+    epirb406: 'EPIRB 406', flashmap: 'Flash Map', hellmaze: 'Hell Maze', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20', sonders41: 'Sonde RS41',
     spaceimpact: 'Space Impact',
     spectrum3d: 'Spectrum 3D', systeminfo: 'System Info', tonecall: 'ToneCall'
   };
@@ -112,6 +113,7 @@
     epirb406: '<path d="M12 6V2M8.5 7.5A5.5 5.5 0 0 0 6 11m9.5-3.5A5.5 5.5 0 0 1 18 11M10 7h4l2 5v5a4 4 0 0 1-8 0v-5zM8 13h8M10 10h4M4 21c1.3-1 2.7-1 4 0s2.7 1 4 0 2.7-1 4 0 2.7 1 4 0"/>',
     flashmap: '<rect x="4" y="3" width="10" height="18" rx="1.5"/><path d="M4 8h10M4 12.5h10M4 16.5h10M17 5.5h3.5M17 10.2h2.5M17 14.5h3.5M17 18.8h2"/><path d="M6 5h6v1.4H6zM6 14.1h6v.9H6z" fill="currentColor" stroke="none"/>',
     foxhunt: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2.5v3m0 13v3m-9.5-9.5h3m13 0h3m-7-2.5L18 6l-3.5 3.5z"/>',
+    hellmaze: '<path d="M4 16V4h16M20 8v12H4M8 4v8m4-4h8m-8 0v8m-4 0h8m0-4v8"/>',
     minesweeper: '<path d="M4.5 4.5h15v15h-15zm5 0v15m5-15v15m-10-10h15m-15 5h15"/><circle cx="12" cy="12" r="1.65"/><path d="M12 8.8v1m0 4.4v1m-3.2-3.2h1m4.4 0h1"/>',
     plasma: '<path d="M3 7c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 5 21 6M3 12c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 10 21 11M3 17c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 15 21 16"/>',
     pocsagrx: '<rect x="3.5" y="9" width="17" height="11.5" rx="2"/><rect x="6.5" y="11.5" width="11" height="4" rx=".6"/><path d="M7 18h2.5m2 0h2.5M17 18h.1M8.8 6.2a4.6 4.6 0 0 1 6.4 0M6.3 3.6a8.2 8.2 0 0 1 11.4 0"/>',
@@ -165,6 +167,7 @@
   const APP_AUTHORS = {
     cwusb:       'jdenoy',
     epirb406:    'jdenoy',
+    hellmaze:    'jdenoy',
     minesweeper: 'Sarijen',
     sigfinder:   'jdenoy',
     snake:       'mrkusypl',

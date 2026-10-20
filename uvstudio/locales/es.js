@@ -500,6 +500,7 @@ window.UVSTUDIO_LOCALES.es = {
   "appDescription_epirb406": "Analiza y decodifica tramas de balizas de 406 MHz.",
   "appDescription_flashmap": "Explora el mapa de la flash externa: slots de firmware, apps, estado activo y visor hexadecimal.",
   "appDescription_foxhunt": "Ayuda en la radiogoniometría.",
+  "appDescription_hellmaze": "Juego de disparos en primera persona en un laberinto infestado de demonios.",
   "appDescription_minesweeper": "El clásico juego del buscaminas.",
   "appDescription_plasma": "Demostración de gráficos de plasma animados.",
   "appDescription_pocsagrx": "Recibe mensajes de buscapersonas POCSAG (DAPNET).",

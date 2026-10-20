@@ -500,6 +500,7 @@ window.UVSTUDIO_LOCALES.ru = {
   "appDescription_epirb406": "Анализирует и декодирует кадры аварийных маяков 406 МГц.",
   "appDescription_flashmap": "Показывает карту внешней флеш-памяти: слоты прошивок, приложения, активное состояние и HEX-просмотр.",
   "appDescription_foxhunt": "Помогает при радиопеленгации.",
+  "appDescription_hellmaze": "Шутер от первого лица в лабиринте, полном демонов.",
   "appDescription_minesweeper": "Классическая игра «Сапёр».",
   "appDescription_plasma": "Демонстрация анимированной плазменной графики.",
   "appDescription_pocsagrx": "Принимает сообщения пейджеров POCSAG (DAPNET).",

@@ -500,6 +500,7 @@ window.UVSTUDIO_LOCALES.nl = {
   "appDescription_epirb406": "Analyseert en decodeert frames van 406MHz-noodbakens.",
   "appDescription_flashmap": "Bekijkt de externe flashindeling: firmwareslots, apps, actieve status en hexweergave.",
   "appDescription_foxhunt": "Helpt bij radiovossenjacht en peilingen.",
+  "appDescription_hellmaze": "First-person shooter in een door demonen geteisterd doolhof.",
   "appDescription_minesweeper": "Het klassieke mijnenvegerspel.",
   "appDescription_plasma": "Demonstratie van geanimeerde plasmagraphics.",
   "appDescription_pocsagrx": "Ontvangt POCSAG-semafoonberichten (DAPNET).",
