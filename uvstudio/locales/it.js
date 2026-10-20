@@ -483,6 +483,7 @@ window.UVSTUDIO_LOCALES.it = {
   "appManagerScanBeforeInstall": "Aggiorna la radio prima di installare un’app",
   "appManagerNoFreeSlot": "Nessuno slot app libero disponibile.",
   "appDescription_acarsrx": "Riceve e decodifica i messaggi ACARS degli aeromobili.",
+  "appDescription_aisrx": "Riceve i rapporti AIS delle navi: nome, posizione, velocità, rotta, destinazione e dati Inland.",
   "appDescription_aprsdigi": "Ritrasmette i pacchetti APRS come digipeater.",
   "appDescription_aprsedit": "Modifica il beacon APRS TX: nominativo, posizione, simbolo e commento.",
   "appDescription_aprsrx": "Riceve e decodifica i pacchetti APRS.",

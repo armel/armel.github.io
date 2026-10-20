@@ -483,6 +483,7 @@ window.UVSTUDIO_LOCALES.zh = {
   "appManagerScanBeforeInstall": "安装应用前请刷新电台",
   "appManagerNoFreeSlot": "没有可用的应用插槽。",
   "appDescription_acarsrx": "接收并解码飞机的 ACARS 消息。",
+  "appDescription_aisrx": "接收船舶 AIS 报告：船名、位置、航速、航向、目的港及内河（Inland）数据。",
   "appDescription_aprsdigi": "作为数字中继站转发 APRS 数据包。",
   "appDescription_aprsedit": "编辑 APRS TX 信标：呼号、位置、符号和备注。",
   "appDescription_aprsrx": "接收并解码 APRS 数据包。",

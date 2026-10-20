@@ -168,7 +168,7 @@ test('compares app versions numerically and treats a release as newer than its p
 
 test('provides dedicated SVG pictograms for every catalog app and keeps a monogram fallback', () => {
   [
-    'acarsrx', 'aprsdigi', 'aprsedit', 'aprsrx', 'aprstx', 'atisrx', 'beacon', 'beam', 'breakout', 'broadcastfm',
+    'acarsrx', 'aisrx', 'aprsdigi', 'aprsedit', 'aprsrx', 'aprstx', 'atisrx', 'beacon', 'beam', 'breakout', 'broadcastfm',
     'cwdecode', 'cwkeyer', 'cwusb', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'minesweeper',
     'plasma', 'pocsagrx', 'rapidroll', 'resistor', 'sigfinder', 'snake', 'sokoban', 'sondem10', 'sondem20', 'sonders41', 'spaceimpact',
     'spectrum3d', 'sstv', 'systeminfo', 'tetris', 'tonecall'

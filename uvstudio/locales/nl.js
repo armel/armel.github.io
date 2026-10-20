@@ -483,6 +483,7 @@ window.UVSTUDIO_LOCALES.nl = {
   "appManagerScanBeforeInstall": "Vernieuw de radio voordat je een app installeert",
   "appManagerNoFreeSlot": "Er is geen vrij app-slot beschikbaar.",
   "appDescription_acarsrx": "Ontvangt en decodeert ACARS-berichten van vliegtuigen.",
+  "appDescription_aisrx": "Ontvangt AIS-berichten van schepen: naam, positie, snelheid, koers, bestemming en Inland-gegevens.",
   "appDescription_aprsdigi": "Stuurt APRS-pakketten door als digipeater.",
   "appDescription_aprsedit": "Bewerkt het APRS TX-baken: roepnaam, positie, symbool en opmerking.",
   "appDescription_aprsrx": "Ontvangt en decodeert APRS-pakketten.",

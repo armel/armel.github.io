@@ -483,6 +483,7 @@ window.UVSTUDIO_LOCALES.ru = {
   "appManagerScanBeforeInstall": "Обновите данные радиостанции перед установкой приложения",
   "appManagerNoFreeSlot": "Нет свободных слотов для приложений.",
   "appDescription_acarsrx": "Принимает и декодирует авиационные сообщения ACARS.",
+  "appDescription_aisrx": "Принимает сообщения AIS судов: название, позиция, скорость, курс, пункт назначения и данные Inland.",
   "appDescription_aprsdigi": "Ретранслирует пакеты APRS как дигипитер.",
   "appDescription_aprsedit": "Редактирует маяк APRS TX: позывной, координаты, символ и комментарий.",
   "appDescription_aprsrx": "Принимает и декодирует пакеты APRS.",

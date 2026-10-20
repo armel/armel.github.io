@@ -483,6 +483,7 @@ window.UVSTUDIO_LOCALES.en = {
   "appManagerScanBeforeInstall": "Refresh the radio before installing an app",
   "appManagerNoFreeSlot": "No free app slot is available.",
   "appDescription_acarsrx": "Receive and decode ACARS aircraft messages.",
+  "appDescription_aisrx": "Receive AIS ship reports: name, position, speed, course, destination and Inland data.",
   "appDescription_aprsdigi": "Relay APRS packets as a digipeater.",
   "appDescription_aprsedit": "Edit the APRS TX beacon: callsign, position, symbol and comment.",
   "appDescription_aprsrx": "Receive and decode APRS packets.",

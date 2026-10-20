@@ -483,6 +483,7 @@ window.UVSTUDIO_LOCALES.de = {
   "appManagerScanBeforeInstall": "Funkgerät vor der App-Installation aktualisieren",
   "appManagerNoFreeSlot": "Kein freier App-Slot verfügbar.",
   "appDescription_acarsrx": "Empfängt und decodiert ACARS-Nachrichten von Flugzeugen.",
+  "appDescription_aisrx": "Empfängt AIS-Meldungen von Schiffen: Name, Position, Geschwindigkeit, Kurs, Ziel und Inland-Daten.",
   "appDescription_aprsdigi": "Leitet APRS-Pakete als Digipeater weiter.",
   "appDescription_aprsedit": "Bearbeitet die APRS-TX-Bake: Rufzeichen, Position, Symbol und Kommentar.",
   "appDescription_aprsrx": "Empfängt und decodiert APRS-Pakete.",

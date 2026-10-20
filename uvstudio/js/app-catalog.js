@@ -45,6 +45,7 @@
   // manifest without changing the firmware protocol.
   const APP_DETAILS = {
     acarsrx:     ['radio', 'Receive and decode ACARS aircraft messages.'],
+    aisrx:       ['radio', 'Receive AIS ship reports: name, position, speed, course, destination and Inland data.'],
     aprsdigi:    ['radio', 'Relay APRS packets as a digipeater.'],
     aprsedit:    ['radio', 'Edit the APRS TX beacon: callsign, position, symbol and comment.'],
     aprsrx:      ['radio', 'Receive and decode APRS packets.'],
@@ -80,7 +81,7 @@
     tonecall:    ['radio', 'Send configurable ZVEI or CCIR selective calling tone sequences.']
   };
   const APP_DISPLAY_NAMES = {
-    acarsrx: 'ACARS RX', aprsdigi: 'APRS DIGI', aprsedit: 'APRS Edit',
+    acarsrx: 'ACARS RX', aisrx: 'AIS RX', aprsdigi: 'APRS DIGI', aprsedit: 'APRS Edit',
     aprsrx: 'APRS RX', aprstx: 'APRS TX', atisrx: 'ATIS RX', broadcastfm: 'Broadcast FM',
     cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cwusb: 'CW USB', cube3d: 'Cube 3D',
     epirb406: 'EPIRB 406', flashmap: 'Flash Map', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20', sonders41: 'Sonde RS41',
@@ -94,6 +95,7 @@
   };
   const APP_ICONS = {
     acarsrx: '<path d="M12 3v16m0-11 7 5v1.5l-7-2.5m0-4-7 5v1.5l7-2.5m-3 8.5 3-1.5 3 1.5"/>',
+    aisrx: '<path d="M9 18 12 9l3 9-3-1.6zM12 9V3.5M8.7 4.5a4.5 4.5 0 0 0 0 6M15.3 4.5a4.5 4.5 0 0 1 0 6M3 21.5c1.5-1 3-1 4.5 0s3 1 4.5 0 3-1 4.5 0 3 1 4.5 0"/>',
     aprsdigi: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M15 14V4m-2 2.5 2-2.5 2 2.5M19.5 4v10m-2-2.5 2 2.5 2-2.5"/>',
     aprsedit: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M19.5 4 21 5.5l-5 5-2 .5.5-2zM14 14h7"/>',
     aprsrx: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M17.5 4v10m-3-3 3 3 3-3"/>',
