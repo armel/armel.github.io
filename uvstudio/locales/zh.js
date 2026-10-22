@@ -498,6 +498,7 @@ window.UVSTUDIO_LOCALES.zh = {
   "appDescription_broadcastfm": "收听 FM 广播电台。",
   "appDescription_cwdecode": "实时解码摩尔斯电码。",
   "appDescription_cwkeyer": "使用电台 PTT 和侧键的摩尔斯电键。",
+  "appDescription_cwtrainer": "学习和练习摩尔斯电码：自由拍发并实时解码、听抄练习和听后复现练习。",
   "appDescription_cwusb": "使用通过 USB-C 连接的外置双桨电键的摩尔斯电键。",
   "appDescription_cube3d": "动态 3D 图形演示。",
   "appDescription_epirb406": "分析并解码 406 MHz 信标帧。",

@@ -498,6 +498,7 @@ window.UVSTUDIO_LOCALES.nl = {
   "appDescription_broadcastfm": "Luistert naar FM-omroepzenders.",
   "appDescription_cwdecode": "Decodeert morsecode in realtime.",
   "appDescription_cwkeyer": "Morsesleutel met de PTT- en zijknoppen van de portofoon.",
+  "appDescription_cwtrainer": "Leer en oefen morse: vrij seinen met live decodering, luisteroefeningen en naseinen van gehoorde tekens.",
   "appDescription_cwusb": "Morsesleutel voor een externe paddle via USB-C.",
   "appDescription_cube3d": "Demonstratie van geanimeerde 3D-graphics.",
   "appDescription_epirb406": "Analyseert en decodeert frames van 406MHz-noodbakens.",

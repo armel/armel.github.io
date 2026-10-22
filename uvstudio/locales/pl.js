@@ -498,6 +498,7 @@ window.UVSTUDIO_LOCALES.pl = {
   "appDescription_broadcastfm": "Odbiera stacje radiofoniczne FM.",
   "appDescription_cwdecode": "Dekoduje alfabet Morse’a w czasie rzeczywistym.",
   "appDescription_cwkeyer": "Klucz Morse’a obsługiwany przyciskami PTT i bocznymi radiotelefonu.",
+  "appDescription_cwtrainer": "Nauka i ćwiczenie Morse’a: swobodne nadawanie z dekodowaniem na żywo, ćwiczenia odbioru słuchowego i powtarzania.",
   "appDescription_cwusb": "Klucz Morse’a do zewnętrznego manipulatora podłączonego przez USB-C.",
   "appDescription_cube3d": "Demonstracja animowanej grafiki 3D.",
   "appDescription_epirb406": "Analizuje i dekoduje ramki radiopław 406 MHz.",

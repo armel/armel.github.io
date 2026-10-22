@@ -60,6 +60,7 @@
     broadcastfm: ['radio', 'Listen to broadcast FM stations.'],
     cwdecode:    ['radio', 'Decode Morse code in real time.'],
     cwkeyer:     ['radio', "Morse keyer using the radio's PTT and side keys."],
+    cwtrainer:   ['radio', 'Learn and practice Morse code: free keying with live decoding, copy drills and listen-and-repeat exercises.'],
     cwusb:       ['radio', 'Morse keyer for an external paddle connected through USB-C.'],
     cube3d:      ['demos', 'Animated 3D graphics demonstration.'],
     epirb406:    ['radio', 'Analyze and decode 406 MHz beacon frames.'],
@@ -88,7 +89,7 @@
   const APP_DISPLAY_NAMES = {
     acarsrx: 'ACARS RX', afscope: 'AF Scope', afspectro: 'AF Spectro', aisrx: 'AIS RX', aprsdigi: 'APRS DIGI', aprsedit: 'APRS Edit',
     aprsrx: 'APRS RX', aprstx: 'APRS TX', atisdscrx: 'ATIS DSC RX', atisrx: 'ATIS RX', broadcastfm: 'Broadcast FM',
-    cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cwusb: 'CW USB', cube3d: 'Cube 3D',
+    cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cwtrainer: 'CW Trainer', cwusb: 'CW USB', cube3d: 'Cube 3D',
     epirb406: 'EPIRB 406', flashmap: 'Flash Map', hellmaze: 'Hell Maze', kisstnc: 'KISS TNC', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20', sonders41: 'Sonde RS41',
     spaceimpact: 'Space Impact',
     spectrum3d: 'Spectrum 3D', systeminfo: 'System Info', tonecall: 'Tone Call'
@@ -115,6 +116,7 @@
     broadcastfm: '<rect x="3.5" y="7.5" width="17" height="11.5" rx="2"/><path d="m7 7.5 9-4M7 11h7m-7 3h5"/><circle cx="17" cy="13" r="2.2"/><path d="M17 16.5v.1"/>',
     cwdecode: '<circle cx="4" cy="5.5" r="1"/><path d="M7 5.5h4"/><circle cx="14" cy="5.5" r="1"/><path d="M17 5.5h4M12 9v4m-2-2 2 2 2-2M5 16h14M7 19h10M9 22h6"/>',
     cwkeyer: '<path d="M3 20h18M10 20v-6M6 11.5l12 2M17.5 20v-5"/><circle cx="4.5" cy="11.2" r="1.7"/><circle cx="10" cy="14" r="1.15"/><circle cx="17.5" cy="14" r=".8"/>',
+    cwtrainer: '<path d="M4.5 13.5V11a7.5 7.5 0 0 1 15 0v2.5"/><rect x="3" y="13" width="4" height="6.5" rx="1.2"/><rect x="17" y="13" width="4" height="6.5" rx="1.2"/><circle cx="9.6" cy="16.25" r="1" fill="currentColor" stroke="none"/><path d="M12.2 16.25h3"/>',
     cwusb: '<path d="M3 20h18M10 20v-6M6 11.5l12 2M17.5 20v-5"/><circle cx="4.5" cy="11.2" r="1.7"/><circle cx="10" cy="14" r="1.15"/><circle cx="17.5" cy="14" r=".8"/><path d="M9.6 6h11M13.3 6l3.2-3.2h.4M13.3 6l3.2 3.2h1.3"/><circle cx="8.2" cy="6" r="1.45" fill="currentColor" stroke="none"/><circle cx="18" cy="2.8" r="1.1" fill="currentColor" stroke="none"/><rect x="17.8" y="8.1" width="2.2" height="2.2" rx=".15" fill="currentColor" stroke="none"/><path d="m23 6-3-2v4z" fill="currentColor" stroke="none"/>',
     cube3d: '<path d="m12 3.5 7 4v8l-7 4-7-4v-8zm0 0v8m7-4-7 4-7-4m7 4v8"/>',
     epirb406: '<path d="M12 6V2M8.5 7.5A5.5 5.5 0 0 0 6 11m9.5-3.5A5.5 5.5 0 0 1 18 11M10 7h4l2 5v5a4 4 0 0 1-8 0v-5zM8 13h8M10 10h4M4 21c1.3-1 2.7-1 4 0s2.7 1 4 0 2.7-1 4 0 2.7 1 4 0"/>',
@@ -174,6 +176,7 @@
   const DEFAULT_APP_AUTHOR = 'armel';
   const APP_AUTHORS = {
     atisdscrx:   'jdenoy',
+    cwtrainer:   'lemiller-dev',
     cwusb:       'jdenoy',
     epirb406:    'jdenoy',
     hellmaze:    'jdenoy',

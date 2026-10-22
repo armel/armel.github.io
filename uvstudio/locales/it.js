@@ -498,6 +498,7 @@ window.UVSTUDIO_LOCALES.it = {
   "appDescription_broadcastfm": "Ascolta le stazioni radio FM.",
   "appDescription_cwdecode": "Decodifica il codice Morse in tempo reale.",
   "appDescription_cwkeyer": "Manipolatore Morse con i tasti PTT e laterali della radio.",
+  "appDescription_cwtrainer": "Impara e pratica il Morse: manipolazione libera con decodifica in tempo reale, esercizi di ascolto e di ripetizione.",
   "appDescription_cwusb": "Manipolatore Morse per un paddle esterno collegato via USB-C.",
   "appDescription_cube3d": "Dimostrazione grafica 3D animata.",
   "appDescription_epirb406": "Analizza e decodifica le trame dei radiofari a 406 MHz.",
