@@ -92,7 +92,7 @@ test('adds presentation metadata without changing the app binary format', () => 
     description: 'Send configurable ZVEI or CCIR selective calling tone sequences.',
     descriptionKey: 'appDescription_tonecall',
     author: 'jdenoy',
-    label: 'ToneCall'
+    label: 'Tone Call'
   });
   assert.equal(catalog.appDetails('ACARSRX.app').author, 'armel');
   assert.deepEqual(catalog.appDetails('FlashMap.app'), {

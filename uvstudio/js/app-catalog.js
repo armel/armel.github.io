@@ -90,7 +90,7 @@
     cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cwusb: 'CW USB', cube3d: 'Cube 3D',
     epirb406: 'EPIRB 406', flashmap: 'Flash Map', hellmaze: 'Hell Maze', kisstnc: 'KISS TNC', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20', sonders41: 'Sonde RS41',
     spaceimpact: 'Space Impact',
-    spectrum3d: 'Spectrum 3D', systeminfo: 'System Info', tonecall: 'ToneCall'
+    spectrum3d: 'Spectrum 3D', systeminfo: 'System Info', tonecall: 'Tone Call'
   };
   const APP_ACTION_ICONS = {
     install: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
