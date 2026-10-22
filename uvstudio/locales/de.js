@@ -498,6 +498,7 @@ window.UVSTUDIO_LOCALES.de = {
   "appDescription_broadcastfm": "Empfängt UKW-Rundfunksender.",
   "appDescription_cwdecode": "Decodiert Morsecode in Echtzeit.",
   "appDescription_cwkeyer": "Morsegeber mit PTT- und Seitentasten des Funkgeräts.",
+  "appDescription_cwtrainer": "Morse lernen und üben: freies Geben mit Live-Dekodierung, Hörübungen und Nachgeben gehörter Zeichen.",
   "appDescription_cwusb": "Morsegeber für ein externes Paddle am USB-C-Anschluss.",
   "appDescription_cube3d": "Animierte 3D-Grafikdemonstration.",
   "appDescription_epirb406": "Analysiert und decodiert Frames von 406-MHz-Notfunkbaken.",

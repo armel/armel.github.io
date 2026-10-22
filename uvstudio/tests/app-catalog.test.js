@@ -61,6 +61,14 @@ test('adds presentation metadata without changing the app binary format', () => 
     author: 'armel',
     label: 'CW Keyer'
   });
+  assert.deepEqual(catalog.appDetails('CWTrainer.app'), {
+    id: 'cwtrainer',
+    category: 'radio',
+    description: 'Learn and practice Morse code: free keying with live decoding, copy drills and listen-and-repeat exercises.',
+    descriptionKey: 'appDescription_cwtrainer',
+    author: 'lemiller-dev',
+    label: 'CW Trainer'
+  });
   assert.deepEqual(catalog.appDetails('CWUSB.app'), {
     id: 'cwusb',
     category: 'radio',
@@ -177,7 +185,7 @@ test('compares app versions numerically and treats a release as newer than its p
 test('provides dedicated SVG pictograms for every catalog app and keeps a monogram fallback', () => {
   [
     'acarsrx', 'aisrx', 'aprsdigi', 'aprsedit', 'aprsrx', 'aprstx', 'atisdscrx', 'atisrx', 'beacon', 'beam', 'breakout', 'broadcastfm',
-    'cwdecode', 'cwkeyer', 'cwusb', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'hellmaze', 'minesweeper',
+    'cwdecode', 'cwkeyer', 'cwtrainer', 'cwusb', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'hellmaze', 'minesweeper',
     'plasma', 'pocsagrx', 'rapidroll', 'resistor', 'sigfinder', 'snake', 'sokoban', 'sondem10', 'sondem20', 'sonders41', 'spaceimpact',
     'spectrum3d', 'sstv', 'systeminfo', 'tetris', 'tonecall'
   ].forEach(id => {
