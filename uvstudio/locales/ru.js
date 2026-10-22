@@ -490,6 +490,7 @@ window.UVSTUDIO_LOCALES.ru = {
   "appDescription_aprsedit": "Редактирует маяк APRS TX: позывной, координаты, символ и комментарий.",
   "appDescription_aprsrx": "Принимает и декодирует пакеты APRS.",
   "appDescription_aprstx": "Передаёт маяки APRS с радиостанции.",
+  "appDescription_atisdscrx": "Принимает морские вызовы ЦИВ (DSC) на 70-м канале: бедствие, срочность, отправитель и позиция.",
   "appDescription_atisrx": "Определяет суда внутреннего плавания по сигналу ATIS.",
   "appDescription_beacon": "Передаёт настраиваемый радиомаяк.",
   "appDescription_beam": "Передаёт канал между совместимыми радиостанциями.",

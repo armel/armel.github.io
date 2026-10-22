@@ -490,6 +490,7 @@ window.UVSTUDIO_LOCALES.zh = {
   "appDescription_aprsedit": "编辑 APRS TX 信标：呼号、位置、符号和备注。",
   "appDescription_aprsrx": "接收并解码 APRS 数据包。",
   "appDescription_aprstx": "从电台发送 APRS 信标。",
+  "appDescription_atisdscrx": "接收 70 频道的海事 DSC（数字选择性呼叫）呼叫：遇险、紧急、发送方及位置。",
   "appDescription_atisrx": "通过 ATIS 信号识别内河船舶。",
   "appDescription_beacon": "发送可配置的无线电信标。",
   "appDescription_beam": "在兼容电台之间传输信道。",

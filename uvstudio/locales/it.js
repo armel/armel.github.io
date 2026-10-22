@@ -490,6 +490,7 @@ window.UVSTUDIO_LOCALES.it = {
   "appDescription_aprsedit": "Modifica il beacon APRS TX: nominativo, posizione, simbolo e commento.",
   "appDescription_aprsrx": "Riceve e decodifica i pacchetti APRS.",
   "appDescription_aprstx": "Trasmette beacon APRS dalla radio.",
+  "appDescription_atisdscrx": "Riceve le chiamate DSC marittime sul canale 70: soccorso, urgenza, mittente e posizione.",
   "appDescription_atisrx": "Identifica le imbarcazioni fluviali tramite il segnale ATIS.",
   "appDescription_beacon": "Trasmette un beacon radio configurabile.",
   "appDescription_beam": "Trasferisce un canale tra radio compatibili.",

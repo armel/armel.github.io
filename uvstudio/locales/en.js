@@ -490,6 +490,7 @@ window.UVSTUDIO_LOCALES.en = {
   "appDescription_aprsedit": "Edit the APRS TX beacon: callsign, position, symbol and comment.",
   "appDescription_aprsrx": "Receive and decode APRS packets.",
   "appDescription_aprstx": "Transmit APRS beacons from the radio.",
+  "appDescription_atisdscrx": "Receive marine DSC calls on channel 70: distress, urgency, sender and position.",
   "appDescription_atisrx": "Identify inland-waterway boats from their ATIS signal.",
   "appDescription_beacon": "Send a configurable radio beacon.",
   "appDescription_beam": "Transfer a channel between compatible radios.",

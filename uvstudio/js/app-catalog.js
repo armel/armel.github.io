@@ -52,6 +52,7 @@
     aprsedit:    ['radio', 'Edit the APRS TX beacon: callsign, position, symbol and comment.'],
     aprsrx:      ['radio', 'Receive and decode APRS packets.'],
     aprstx:      ['radio', 'Transmit APRS beacons from the radio.'],
+    atisdscrx:   ['radio', 'Receive marine DSC calls on channel 70: distress, urgency, sender and position.'],
     atisrx:      ['radio', 'Identify inland-waterway boats from their ATIS signal.'],
     beacon:      ['radio', 'Send a configurable radio beacon.'],
     beam:        ['tools', 'Transfer a channel between compatible radios.'],
@@ -86,7 +87,7 @@
   };
   const APP_DISPLAY_NAMES = {
     acarsrx: 'ACARS RX', afscope: 'AF Scope', afspectro: 'AF Spectro', aisrx: 'AIS RX', aprsdigi: 'APRS DIGI', aprsedit: 'APRS Edit',
-    aprsrx: 'APRS RX', aprstx: 'APRS TX', atisrx: 'ATIS RX', broadcastfm: 'Broadcast FM',
+    aprsrx: 'APRS RX', aprstx: 'APRS TX', atisdscrx: 'ATIS DSC RX', atisrx: 'ATIS RX', broadcastfm: 'Broadcast FM',
     cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cwusb: 'CW USB', cube3d: 'Cube 3D',
     epirb406: 'EPIRB 406', flashmap: 'Flash Map', hellmaze: 'Hell Maze', kisstnc: 'KISS TNC', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20', sonders41: 'Sonde RS41',
     spaceimpact: 'Space Impact',
@@ -106,6 +107,7 @@
     aprsedit: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M19.5 4 21 5.5l-5 5-2 .5.5-2zM14 14h7"/>',
     aprsrx: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M17.5 4v10m-3-3 3 3 3-3"/>',
     aprstx: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M17.5 14V4m-3 3 3-3 3 3"/>',
+    atisdscrx: '<circle cx="9" cy="15" r="6"/><circle cx="9" cy="15" r="2.6"/><path d="M10.8 13.2l2.4-2.4M7.2 13.2 4.8 10.8M7.2 16.8l-2.4 2.4M10.8 16.8l2.4 2.4M16 4.5a3.5 3.5 0 0 1 3.5 3.5M16 1.5a6.5 6.5 0 0 1 6.5 6.5"/><circle cx="16" cy="8" r="1.1" fill="currentColor" stroke="none"/>',
     atisrx: '<path d="M3 13.5h18l-2.5 4.5h-13zM7.5 13.5v-4h6l2.5 4M10.5 9.5V4.5M13.5 3.5a3.5 3.5 0 0 1 0 4M16 2a6.5 6.5 0 0 1 0 7M3 21.5c1.5-1 3-1 4.5 0s3 1 4.5 0 3-1 4.5 0 3 1 4.5 0"/>',
     beacon: '<path d="M12 20V10m-4 10h8m-6-4 2-6 2 6M8.2 9a5.2 5.2 0 0 1 7.6 0M5.5 6.5a9 9 0 0 1 13 0"/><circle cx="12" cy="7.5" r="1.2"/>',
     beam: '<rect x="3.5" y="6" width="5" height="12" rx="1.2"/><rect x="15.5" y="6" width="5" height="12" rx="1.2"/><path d="M5 9h2m10 0h2M10 10h4m-2-2 2 2-2 2m2 2h-4m2 2-2-2 2-2"/>',
@@ -171,6 +173,7 @@
   // unknown apps get no author rather than a guessed one.
   const DEFAULT_APP_AUTHOR = 'armel';
   const APP_AUTHORS = {
+    atisdscrx:   'jdenoy',
     cwusb:       'jdenoy',
     epirb406:    'jdenoy',
     hellmaze:    'jdenoy',

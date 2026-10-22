@@ -94,6 +94,14 @@ test('adds presentation metadata without changing the app binary format', () => 
     author: 'jdenoy',
     label: 'Tone Call'
   });
+  assert.deepEqual(catalog.appDetails('ATISDSCRX.app'), {
+    id: 'atisdscrx',
+    category: 'radio',
+    description: 'Receive marine DSC calls on channel 70: distress, urgency, sender and position.',
+    descriptionKey: 'appDescription_atisdscrx',
+    author: 'jdenoy',
+    label: 'ATIS DSC RX'
+  });
   assert.equal(catalog.appDetails('ACARSRX.app').author, 'armel');
   assert.deepEqual(catalog.appDetails('FlashMap.app'), {
     id: 'flashmap',
@@ -168,7 +176,7 @@ test('compares app versions numerically and treats a release as newer than its p
 
 test('provides dedicated SVG pictograms for every catalog app and keeps a monogram fallback', () => {
   [
-    'acarsrx', 'aisrx', 'aprsdigi', 'aprsedit', 'aprsrx', 'aprstx', 'atisrx', 'beacon', 'beam', 'breakout', 'broadcastfm',
+    'acarsrx', 'aisrx', 'aprsdigi', 'aprsedit', 'aprsrx', 'aprstx', 'atisdscrx', 'atisrx', 'beacon', 'beam', 'breakout', 'broadcastfm',
     'cwdecode', 'cwkeyer', 'cwusb', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'hellmaze', 'minesweeper',
     'plasma', 'pocsagrx', 'rapidroll', 'resistor', 'sigfinder', 'snake', 'sokoban', 'sondem10', 'sondem20', 'sonders41', 'spaceimpact',
     'spectrum3d', 'sstv', 'systeminfo', 'tetris', 'tonecall'

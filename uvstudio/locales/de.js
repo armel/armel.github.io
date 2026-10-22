@@ -490,6 +490,7 @@ window.UVSTUDIO_LOCALES.de = {
   "appDescription_aprsedit": "Bearbeitet die APRS-TX-Bake: Rufzeichen, Position, Symbol und Kommentar.",
   "appDescription_aprsrx": "Empfängt und decodiert APRS-Pakete.",
   "appDescription_aprstx": "Sendet APRS-Baken über das Funkgerät.",
+  "appDescription_atisdscrx": "Empfängt maritime DSC-Rufe auf Kanal 70: Notfall, Dringlichkeit, Absender und Position.",
   "appDescription_atisrx": "Identifiziert Binnenschiffe anhand ihres ATIS-Signals.",
   "appDescription_beacon": "Sendet eine konfigurierbare Funkbake.",
   "appDescription_beam": "Überträgt einen Kanal zwischen kompatiblen Funkgeräten.",

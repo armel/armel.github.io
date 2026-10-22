@@ -490,6 +490,7 @@ window.UVSTUDIO_LOCALES.es = {
   "appDescription_aprsedit": "Edita la baliza APRS TX: indicativo, posición, símbolo y comentario.",
   "appDescription_aprsrx": "Recibe y decodifica paquetes APRS.",
   "appDescription_aprstx": "Transmite balizas APRS desde la radio.",
+  "appDescription_atisdscrx": "Recibe las llamadas LSD (DSC) marítimas del canal 70: socorro, urgencia, emisor y posición.",
   "appDescription_atisrx": "Identifica embarcaciones fluviales mediante su señal ATIS.",
   "appDescription_beacon": "Transmite una baliza de radio configurable.",
   "appDescription_beam": "Transfiere un canal entre radios compatibles.",

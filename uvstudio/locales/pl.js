@@ -490,6 +490,7 @@ window.UVSTUDIO_LOCALES.pl = {
   "appDescription_aprsedit": "Edytuje beacon APRS TX: znak wywoławczy, pozycję, symbol i komentarz.",
   "appDescription_aprsrx": "Odbiera i dekoduje pakiety APRS.",
   "appDescription_aprstx": "Nadaje beacony APRS z radia.",
+  "appDescription_atisdscrx": "Odbiera morskie wywołania DSC na kanale 70: niebezpieczeństwo, pilność, nadawca i pozycja.",
   "appDescription_atisrx": "Identyfikuje jednostki śródlądowe na podstawie sygnału ATIS.",
   "appDescription_beacon": "Nadaje konfigurowalny beacon radiowy.",
   "appDescription_beam": "Przenosi kanał między zgodnymi radiami.",

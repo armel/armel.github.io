@@ -490,6 +490,7 @@ window.UVSTUDIO_LOCALES.nl = {
   "appDescription_aprsedit": "Bewerkt het APRS TX-baken: roepnaam, positie, symbool en opmerking.",
   "appDescription_aprsrx": "Ontvangt en decodeert APRS-pakketten.",
   "appDescription_aprstx": "Verzendt APRS-bakens vanaf de radio.",
+  "appDescription_atisdscrx": "Ontvangt maritieme DSC-oproepen op kanaal 70: nood, urgentie, afzender en positie.",
   "appDescription_atisrx": "Herkent binnenvaartschepen aan hun ATIS-signaal.",
   "appDescription_beacon": "Verzendt een configureerbaar radiobaken.",
   "appDescription_beam": "Draagt een kanaal over tussen compatibele radio’s.",

@@ -490,6 +490,7 @@ window.UVSTUDIO_LOCALES.fr = {
   "appDescription_aprsedit": "Édition de la balise d’APRS TX : indicatif, position, symbole et commentaire.",
   "appDescription_aprsrx": "Réception et décodage des paquets APRS.",
   "appDescription_aprstx": "Émission de balises APRS depuis la radio.",
+  "appDescription_atisdscrx": "Réception des appels ASN (DSC) marins du canal 70 : détresse, urgence, émetteur et position.",
   "appDescription_atisrx": "Identification des bateaux fluviaux par leur signal ATIS.",
   "appDescription_beacon": "Émission d’une balise radio configurable.",
   "appDescription_beam": "Transfert d’un canal entre radios compatibles.",
