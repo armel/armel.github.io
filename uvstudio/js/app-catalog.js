@@ -45,6 +45,8 @@
   // manifest without changing the firmware protocol.
   const APP_DETAILS = {
     acarsrx:     ['radio', 'Receive and decode ACARS aircraft messages.'],
+    afscope:     ['tools', 'Oscilloscope and tuner for the received audio: waveform, frequency counter and tone needle.'],
+    afspectro:   ['tools', 'Spectrum and sonogram of the received audio: main peaks and the level difference between two tones.'],
     aisrx:       ['radio', 'Receive AIS ship reports: name, position, speed, course, destination and Inland data.'],
     aprsdigi:    ['radio', 'Relay APRS packets as a digipeater.'],
     aprsedit:    ['radio', 'Edit the APRS TX beacon: callsign, position, symbol and comment.'],
@@ -63,6 +65,7 @@
     flashmap:    ['tools', 'Browse the external flash map: firmware slots, apps, active state and a hex viewer.'],
     foxhunt:     ['radio', 'Assist with radio direction finding.'],
     hellmaze:    ['games', 'First-person shooter in a demon-haunted maze.'],
+    kisstnc:     ['tools', 'Use the radio as a KISS TNC over USB-C: APRSdroid or any KISS client, 1200-baud AFSK.'],
     minesweeper: ['games', 'The classic mine-clearing puzzle.'],
     plasma:      ['demos', 'Animated plasma graphics demonstration.'],
     pocsagrx:    ['radio', 'Receive POCSAG pager messages (DAPNET).'],
@@ -82,10 +85,10 @@
     tonecall:    ['radio', 'Send configurable ZVEI or CCIR selective calling tone sequences.']
   };
   const APP_DISPLAY_NAMES = {
-    acarsrx: 'ACARS RX', aisrx: 'AIS RX', aprsdigi: 'APRS DIGI', aprsedit: 'APRS Edit',
+    acarsrx: 'ACARS RX', afscope: 'AF Scope', afspectro: 'AF Spectro', aisrx: 'AIS RX', aprsdigi: 'APRS DIGI', aprsedit: 'APRS Edit',
     aprsrx: 'APRS RX', aprstx: 'APRS TX', atisrx: 'ATIS RX', broadcastfm: 'Broadcast FM',
     cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cwusb: 'CW USB', cube3d: 'Cube 3D',
-    epirb406: 'EPIRB 406', flashmap: 'Flash Map', hellmaze: 'Hell Maze', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20', sonders41: 'Sonde RS41',
+    epirb406: 'EPIRB 406', flashmap: 'Flash Map', hellmaze: 'Hell Maze', kisstnc: 'KISS TNC', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20', sonders41: 'Sonde RS41',
     spaceimpact: 'Space Impact',
     spectrum3d: 'Spectrum 3D', systeminfo: 'System Info', tonecall: 'ToneCall'
   };
@@ -96,6 +99,8 @@
   };
   const APP_ICONS = {
     acarsrx: '<path d="M12 3v16m0-11 7 5v1.5l-7-2.5m0-4-7 5v1.5l7-2.5m-3 8.5 3-1.5 3 1.5"/>',
+    afscope: '<rect x="3" y="4" width="18" height="13" rx="1.5"/><path d="M5.5 10.5c1.1-3.2 2.3-3.2 3.4 0s2.3 3.2 3.4 0 2.3-3.2 3.4 0 1.7 2.4 2.8 1.6M8 21h8M12 17v4"/>',
+    afspectro: '<path d="M3 10.5c1.5 0 2-5.5 3.5-5.5s1.6 4 3 4 1.7-6 3.2-6 1.8 6 3.3 6S18.5 8 21 8M3 14h18M3 17h6.5m3 0H21M3 20h3.5m3 0h4m3 0H21"/>',
     aisrx: '<path d="M9 18 12 9l3 9-3-1.6zM12 9V3.5M8.7 4.5a4.5 4.5 0 0 0 0 6M15.3 4.5a4.5 4.5 0 0 1 0 6M3 21.5c1.5-1 3-1 4.5 0s3 1 4.5 0 3-1 4.5 0 3 1 4.5 0"/>',
     aprsdigi: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M15 14V4m-2 2.5 2-2.5 2 2.5M19.5 4v10m-2-2.5 2 2.5 2-2.5"/>',
     aprsedit: '<path d="M8 20v-8m-3 8h6m-5-4 2-4 2 4M3.5 12a4.8 4.8 0 0 1 9 0M19.5 4 21 5.5l-5 5-2 .5.5-2zM14 14h7"/>',
@@ -114,6 +119,7 @@
     flashmap: '<rect x="4" y="3" width="10" height="18" rx="1.5"/><path d="M4 8h10M4 12.5h10M4 16.5h10M17 5.5h3.5M17 10.2h2.5M17 14.5h3.5M17 18.8h2"/><path d="M6 5h6v1.4H6zM6 14.1h6v.9H6z" fill="currentColor" stroke="none"/>',
     foxhunt: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2.5v3m0 13v3m-9.5-9.5h3m13 0h3m-7-2.5L18 6l-3.5 3.5z"/>',
     hellmaze: '<path d="M4 16V4h16M20 8v12H4M8 4v8m4-4h8m-8 0v8m-4 0h8m0-4v8"/>',
+    kisstnc: '<rect x="3" y="8" width="7" height="13" rx="1.3"/><path d="M5 8V3M5 12h3M5 14.5h3M10 17h2.5a1.5 1.5 0 0 0 1.5-1.5v-3A1.5 1.5 0 0 1 15.5 11"/><rect x="15.5" y="4" width="6" height="12" rx="1.3"/><path d="M17.8 14h1.4"/>',
     minesweeper: '<path d="M4.5 4.5h15v15h-15zm5 0v15m5-15v15m-10-10h15m-15 5h15"/><circle cx="12" cy="12" r="1.65"/><path d="M12 8.8v1m0 4.4v1m-3.2-3.2h1m4.4 0h1"/>',
     plasma: '<path d="M3 7c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 5 21 6M3 12c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 10 21 11M3 17c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 15 21 16"/>',
     pocsagrx: '<rect x="3.5" y="9" width="17" height="11.5" rx="2"/><rect x="6.5" y="11.5" width="11" height="4" rx=".6"/><path d="M7 18h2.5m2 0h2.5M17 18h.1M8.8 6.2a4.6 4.6 0 0 1 6.4 0M6.3 3.6a8.2 8.2 0 0 1 11.4 0"/>',
@@ -168,6 +174,7 @@
     cwusb:       'jdenoy',
     epirb406:    'jdenoy',
     hellmaze:    'jdenoy',
+    kisstnc:     'jdenoy',
     minesweeper: 'Sarijen',
     sigfinder:   'jdenoy',
     snake:       'mrkusypl',
