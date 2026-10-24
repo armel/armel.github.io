@@ -72,6 +72,7 @@
     minesweeper: ['games', 'The classic mine-clearing puzzle.'],
     plasma:      ['demos', 'Animated plasma graphics demonstration.'],
     pocsagrx:    ['radio', 'Receive POCSAG pager messages (DAPNET).'],
+    qrmap:       ['tools', 'Show a position received from another app as a QR code that a phone can scan to open it on a map.'],
     rapidroll:   ['games', 'Fast vertical arcade game.'],
     resistor:    ['tools', 'Read resistor color codes: value, tolerance and temperature coefficient (3 to 6 bands).'],
     sigfinder:   ['radio', 'Find signal direction and strength.'],
@@ -91,7 +92,7 @@
     acarsrx: 'ACARS RX', afscope: 'AF Scope', afspectro: 'AF Spectro', aisrx: 'AIS RX', aprsdigi: 'APRS DIGI', aprsedit: 'APRS Edit',
     aprsrx: 'APRS RX', aprstx: 'APRS TX', atisdscrx: 'ATIS DSC RX', atisrx: 'ATIS RX', broadcastfm: 'Broadcast FM',
     cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cwtrainer: 'CW Trainer', cwusb: 'CW USB', cube3d: 'Cube 3D',
-    epirb406: 'EPIRB 406', flashmap: 'Flash Map', hellmaze: 'Hell Maze', kisstnc: 'KISS TNC', pocsagrx: 'POCSAG RX', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20', sonders41: 'Sonde RS41',
+    epirb406: 'EPIRB 406', flashmap: 'Flash Map', hellmaze: 'Hell Maze', kisstnc: 'KISS TNC', pocsagrx: 'POCSAG RX', qrmap: 'QR Map', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20', sonders41: 'Sonde RS41',
     spaceimpact: 'Space Impact',
     spectrum3d: 'Spectrum 3D', systeminfo: 'System Info', tonecall: 'Tone Call'
   };
@@ -129,6 +130,7 @@
     minesweeper: '<path d="M4.5 4.5h15v15h-15zm5 0v15m5-15v15m-10-10h15m-15 5h15"/><circle cx="12" cy="12" r="1.65"/><path d="M12 8.8v1m0 4.4v1m-3.2-3.2h1m4.4 0h1"/>',
     plasma: '<path d="M3 7c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 5 21 6M3 12c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 10 21 11M3 17c2.2-3 4.5-3 6.7 0s4.5 3 6.7 0S20 15 21 16"/>',
     pocsagrx: '<rect x="3.5" y="9" width="17" height="11.5" rx="2"/><rect x="6.5" y="11.5" width="11" height="4" rx=".6"/><path d="M7 18h2.5m2 0h2.5M17 18h.1M8.8 6.2a4.6 4.6 0 0 1 6.4 0M6.3 3.6a8.2 8.2 0 0 1 11.4 0"/>',
+    qrmap: '<path d="M3 8V4.2C3 3.5 3.5 3 4.2 3H8m8 0h3.8c.7 0 1.2.5 1.2 1.2V8m0 8v3.8c0 .7-.5 1.2-1.2 1.2H16m-8 0H4.2C3.5 21 3 20.5 3 19.8V16"/><path d="M12 6.5a4 4 0 0 1 4 4c0 2.9-4 6.5-4 6.5s-4-3.6-4-6.5a4 4 0 0 1 4-4z"/><circle cx="12" cy="10.5" r="1.3" fill="currentColor" stroke="none"/>',
     rapidroll: '<circle cx="12" cy="5.5" r="2.2"/><path d="M3.5 10.5h7m3 4h7m-13 4h8M10 9l2 2 2-2"/>',
     resistor: '<path d="M1.5 12h2m17 0h2"/><path d="M3.5 10A2.5 2.5 0 0 1 6 7.5h1.5L9 9h6l1.5-1.5H18a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1-2.5 2.5h-1.5L15 15H9l-1.5 1.5H6A2.5 2.5 0 0 1 3.5 14z"/><path d="M6.5 7.5v9m4-7.5v6m2.5-6v6m4.5-7.5v9"/>',
     sigfinder: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v2m0 13v2m-8.5-8.5h2m13 0h2M12 5l2 7-2 7-2-7z"/><path d="m12 5 2 7h-4z" fill="currentColor" stroke="none"/>',
@@ -184,6 +186,7 @@
     hellmaze:    'jdenoy',
     kisstnc:     'jdenoy',
     minesweeper: 'Sarijen',
+    qrmap:       'jdenoy',
     sigfinder:   'jdenoy',
     snake:       'mrkusypl',
     sokoban:     'BI8SYN',

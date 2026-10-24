@@ -512,6 +512,7 @@ window.UVSTUDIO_LOCALES.fr = {
   "appDescription_minesweeper": "Le classique jeu de déminage.",
   "appDescription_plasma": "Démonstration graphique plasma animée.",
   "appDescription_pocsagrx": "Réception des messages de radiomessagerie POCSAG (DAPNET).",
+  "appDescription_qrmap": "Affichage d’une position reçue d’une autre app sous forme de QR code à scanner avec un téléphone pour l’ouvrir sur une carte.",
   "appDescription_rapidroll": "Jeu d’arcade vertical rapide.",
   "appDescription_resistor": "Lecture du code couleur des résistances : valeur, tolérance et coefficient de température (3 à 6 bandes).",
   "appDescription_sigfinder": "Recherche de la direction et du niveau d’un signal.",

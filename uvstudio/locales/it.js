@@ -512,6 +512,7 @@ window.UVSTUDIO_LOCALES.it = {
   "appDescription_minesweeper": "Il classico gioco del campo minato.",
   "appDescription_plasma": "Dimostrazione grafica con plasma animato.",
   "appDescription_pocsagrx": "Riceve messaggi cercapersone POCSAG (DAPNET).",
+  "appDescription_qrmap": "Mostra una posizione ricevuta da un’altra app come codice QR da scansionare con il telefono per aprirla su una mappa.",
   "appDescription_rapidroll": "Gioco arcade verticale e veloce.",
   "appDescription_resistor": "Legge il codice colori dei resistori: valore, tolleranza e coefficiente di temperatura (da 3 a 6 bande).",
   "appDescription_sigfinder": "Individua direzione e intensità di un segnale.",

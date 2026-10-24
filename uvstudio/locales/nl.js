@@ -512,6 +512,7 @@ window.UVSTUDIO_LOCALES.nl = {
   "appDescription_minesweeper": "Het klassieke mijnenvegerspel.",
   "appDescription_plasma": "Demonstratie van geanimeerde plasmagraphics.",
   "appDescription_pocsagrx": "Ontvangt POCSAG-semafoonberichten (DAPNET).",
+  "appDescription_qrmap": "Toont een positie uit een andere app als QR-code, te scannen met een telefoon om de positie op een kaart te openen.",
   "appDescription_rapidroll": "Snel verticaal arcadespel.",
   "appDescription_resistor": "Lees de kleurcode van weerstanden: waarde, tolerantie en temperatuurcoëfficiënt (3 tot 6 ringen).",
   "appDescription_sigfinder": "Bepaalt de richting en sterkte van een signaal.",

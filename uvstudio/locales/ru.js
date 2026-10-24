@@ -512,6 +512,7 @@ window.UVSTUDIO_LOCALES.ru = {
   "appDescription_minesweeper": "Классическая игра «Сапёр».",
   "appDescription_plasma": "Демонстрация анимированной плазменной графики.",
   "appDescription_pocsagrx": "Принимает сообщения пейджеров POCSAG (DAPNET).",
+  "appDescription_qrmap": "Показывает позицию, полученную из другого приложения, в виде QR-кода, который можно отсканировать телефоном, чтобы открыть её на карте.",
   "appDescription_rapidroll": "Быстрая вертикальная аркадная игра.",
   "appDescription_resistor": "Расшифровка цветовой маркировки резисторов: номинал, допуск и ТКС (от 3 до 6 полос).",
   "appDescription_sigfinder": "Определяет направление и уровень сигнала.",

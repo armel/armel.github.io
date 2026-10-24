@@ -512,6 +512,7 @@ window.UVSTUDIO_LOCALES.es = {
   "appDescription_minesweeper": "El clásico juego del buscaminas.",
   "appDescription_plasma": "Demostración de gráficos de plasma animados.",
   "appDescription_pocsagrx": "Recibe mensajes de buscapersonas POCSAG (DAPNET).",
+  "appDescription_qrmap": "Muestra una posición recibida de otra app como código QR para escanearla con un teléfono y abrirla en un mapa.",
   "appDescription_rapidroll": "Juego arcade vertical y rápido.",
   "appDescription_resistor": "Lee el código de colores de las resistencias: valor, tolerancia y coeficiente de temperatura (de 3 a 6 bandas).",
   "appDescription_sigfinder": "Localiza la dirección y la intensidad de una señal.",
