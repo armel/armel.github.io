@@ -62,8 +62,8 @@ if [[ "$DRY_RUN" == false ]]; then
     [[ -z "$STATUS" ]] ||
         fail "The working tree must be clean before publishing a release."
 
-    printf 'Refreshing origin/%s and remote tags...\n' "$RELEASE_BRANCH"
-    git fetch origin "$RELEASE_BRANCH" --tags
+    printf 'Refreshing origin/%s...\n' "$RELEASE_BRANCH"
+    git fetch origin "$RELEASE_BRANCH"
 
     [[ "$COMMIT" == "$(git rev-parse "origin/${RELEASE_BRANCH}")" ]] ||
         fail "Local ${RELEASE_BRANCH} must exactly match origin/${RELEASE_BRANCH}."
@@ -92,9 +92,23 @@ TAG="uvstudio-v${VERSION}"
 ARCHIVE_NAME="${TAG}.zip"
 CHECKSUM_NAME="${ARCHIVE_NAME}.sha256"
 
-if [[ "$DRY_RUN" == false ]] &&
-    git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-    fail "Tag ${TAG} already exists on origin."
+REMOTE_TAG_EXISTS=false
+REMOTE_TAG_SHA=""
+RELEASE_EXISTS=false
+if [[ "$DRY_RUN" == false ]]; then
+    REMOTE_TAG_SHA="$(
+        git ls-remote --refs --tags origin "refs/tags/${TAG}" |
+            awk 'NR == 1 { print $1 }'
+    )"
+    if [[ -n "$REMOTE_TAG_SHA" ]]; then
+        REMOTE_TAG_EXISTS=true
+    fi
+    if gh release view "$TAG" --repo "$REPOSITORY" >/dev/null 2>&1; then
+        RELEASE_EXISTS=true
+    fi
+    if [[ "$REMOTE_TAG_EXISTS" == true || "$RELEASE_EXISTS" == true ]]; then
+        printf 'Existing %s tag or release will be replaced after confirmation.\n' "$TAG"
+    fi
 fi
 
 printf 'Running UV Studio tests...\n'
@@ -161,7 +175,11 @@ if [[ "$DRY_RUN" == true ]]; then
     exit 0
 fi
 
-printf '\nPublish UV Studio v%s on GitHub? [y/N] ' "$VERSION"
+if [[ "$REMOTE_TAG_EXISTS" == true || "$RELEASE_EXISTS" == true ]]; then
+    printf '\nReplace UV Studio v%s on GitHub? [y/N] ' "$VERSION"
+else
+    printf '\nPublish UV Studio v%s on GitHub? [y/N] ' "$VERSION"
+fi
 read -r CONFIRMATION
 case "$CONFIRMATION" in
     y|Y|yes|YES)
@@ -172,14 +190,39 @@ case "$CONFIRMATION" in
         ;;
 esac
 
-gh release create "$TAG" \
-    "${ARCHIVE_PATH}#UV Studio v${VERSION}" \
-    "${CHECKSUM_PATH}#SHA-256 checksum" \
-    --repo "$REPOSITORY" \
-    --target "$COMMIT" \
-    --title "UV Studio v${VERSION}" \
-    --notes-file "$NOTES_PATH" \
-    --latest
+if [[ "$REMOTE_TAG_EXISTS" == true || "$RELEASE_EXISTS" == true ]]; then
+    git tag --force "$TAG" "$COMMIT"
+    if [[ "$REMOTE_TAG_EXISTS" == true ]]; then
+        git push \
+            --force-with-lease="refs/tags/${TAG}:${REMOTE_TAG_SHA}" \
+            origin "refs/tags/${TAG}"
+    else
+        git push origin "refs/tags/${TAG}"
+    fi
+fi
+
+if [[ "$RELEASE_EXISTS" == true ]]; then
+    gh release upload "$TAG" \
+        "${ARCHIVE_PATH}#UV Studio v${VERSION}" \
+        "${CHECKSUM_PATH}#SHA-256 checksum" \
+        --repo "$REPOSITORY" \
+        --clobber
+    gh release edit "$TAG" \
+        --repo "$REPOSITORY" \
+        --target "$COMMIT" \
+        --title "UV Studio v${VERSION}" \
+        --notes-file "$NOTES_PATH" \
+        --latest
+else
+    gh release create "$TAG" \
+        "${ARCHIVE_PATH}#UV Studio v${VERSION}" \
+        "${CHECKSUM_PATH}#SHA-256 checksum" \
+        --repo "$REPOSITORY" \
+        --target "$COMMIT" \
+        --title "UV Studio v${VERSION}" \
+        --notes-file "$NOTES_PATH" \
+        --latest
+fi
 
 git fetch origin tag "$TAG"
 
