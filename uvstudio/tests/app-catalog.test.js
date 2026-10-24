@@ -119,6 +119,13 @@ test('adds presentation metadata without changing the app binary format', () => 
     author: 'armel',
     label: 'Flash Map'
   });
+  assert.deepEqual(catalog.appDetails('GeoNav.app'), {
+    id: 'geonav',
+    category: 'tools',
+    description: 'Azimuth, distance and elevation from the APRS position to a radiosonde, opened from Sonde M10, M20 or RS41.',
+    descriptionKey: 'appDescription_geonav',
+    author: 'armel'
+  });
   assert.equal(catalog.appDetails('APRSDIGI.app').label, 'APRS DIGI');
   assert.equal(catalog.appCatalogId('Spectrum-3D.app'), 'spectrum3d');
 });

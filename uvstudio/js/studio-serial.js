@@ -15,6 +15,7 @@
     let owner = null;
     let state = "disconnected";
     let operation = null;
+    let reusablePort = null;
     let operationSequence = 0;
     let queue = Promise.resolve();
 
@@ -69,19 +70,123 @@
         return closeError;
     }
 
-    async function disconnectOwner(reason) {
+    function portMatchesInfo(port, expectedInfo) {
+        if (!port || !expectedInfo || typeof port.getInfo !== "function") return false;
+        const info = port.getInfo();
+        return info.usbVendorId === expectedInfo.usbVendorId &&
+            info.usbProductId === expectedInfo.usbProductId;
+    }
+
+    function createReconnectManager(options) {
+        const settings = options || {};
+        const retryDelayMs = Math.max(0, Number(settings.retryDelayMs) || 500);
+        let active = false;
+        let attempting = false;
+        let timer = null;
+        let expectedInfo = null;
+        let generation = 0;
+
+        function notifyStateChange() {
+            if (typeof settings.onStateChange === "function") settings.onStateChange();
+        }
+
+        function matches(port) {
+            return portMatchesInfo(port, expectedInfo);
+        }
+
+        function schedule() {
+            if (!active || timer || typeof navigator === "undefined" || !navigator.serial) return;
+            timer = setTimeout(async () => {
+                timer = null;
+                if (!active) return;
+                try {
+                    const ports = await navigator.serial.getPorts();
+                    for (const candidate of ports.filter(matches)) {
+                        if (await tryPort(candidate)) break;
+                    }
+                } catch (error) {
+                    if (typeof settings.onError === "function") settings.onError(error);
+                }
+                if (active) schedule();
+            }, retryDelayMs);
+        }
+
+        async function tryPort(candidate) {
+            if (!active || attempting || !matches(candidate)) return false;
+            const attemptGeneration = generation;
+            attempting = true;
+            notifyStateChange();
+            try {
+                await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+                if (!active || generation !== attemptGeneration || !matches(candidate) ||
+                    (typeof settings.canAttempt === "function" && !settings.canAttempt())) {
+                    return false;
+                }
+                if (typeof settings.reconnect !== "function" ||
+                    await settings.reconnect(candidate) !== true) return false;
+                active = false;
+                clearTimeout(timer);
+                timer = null;
+                return true;
+            } catch (error) {
+                if (typeof settings.onError === "function") settings.onError(error);
+                return false;
+            } finally {
+                attempting = false;
+                notifyStateChange();
+            }
+        }
+
+        function start(portInfo) {
+            if (!portInfo) return false;
+            expectedInfo = Object.assign({}, portInfo);
+            generation++;
+            active = true;
+            notifyStateChange();
+            schedule();
+            return true;
+        }
+
+        function stop(stopOptions) {
+            active = false;
+            generation++;
+            clearTimeout(timer);
+            timer = null;
+            if (stopOptions && stopOptions.forgetPortInfo) expectedInfo = null;
+            notifyStateChange();
+        }
+
+        if (typeof navigator !== "undefined" && navigator.serial) {
+            navigator.serial.addEventListener("connect", event => {
+                void tryPort(event.target);
+            });
+        }
+
+        return Object.freeze({
+            start,
+            stop,
+            tryPort,
+            matches,
+            isActive() { return active; },
+            isAttempting() { return attempting; }
+        });
+    }
+
+    async function disconnectOwner(reason, transition) {
         if (!owner) return snapshot();
 
         const previousOwner = owner;
         const client = clients.get(previousOwner);
-        setState("disconnecting", { reason, previousOwner });
+        const context = Object.assign({}, transition, { reason, previousOwner });
+        if (reason === "user") reusablePort = null;
+        setState("disconnecting", context);
         try {
             if (client && typeof client.disconnect === "function") {
-                await client.disconnect({ reason });
+                await client.disconnect(context);
             }
         } finally {
             if (owner === previousOwner) owner = null;
-            setState("disconnected", { reason, previousOwner });
+            setState("disconnected", context);
         }
         return snapshot();
     }
@@ -100,7 +205,7 @@
                 return enqueue(async () => {
                     if (operation && operation.owner !== id) return snapshot();
                     if (owner === id) return snapshot();
-                    if (owner) await disconnectOwner("handoff");
+                    if (owner) await disconnectOwner("handoff", { nextOwner: id });
                     owner = id;
                     setState("connecting", Object.assign({ reason: "acquire" }, meta));
                     return snapshot();
@@ -125,6 +230,20 @@
             },
 
             getSnapshot: snapshot,
+
+            rememberPort(port) {
+                if (owner !== id || !port) return false;
+                reusablePort = port;
+                return true;
+            },
+
+            getReusablePort() {
+                return reusablePort;
+            },
+
+            forgetPort(port) {
+                if (!port || reusablePort === port) reusablePort = null;
+            },
 
             beginOperation(name, options) {
                 if (operation) return null;
@@ -154,12 +273,14 @@
     const controller = Object.freeze({
         register,
         closeResources,
+        createReconnectManager,
+        portMatchesInfo,
 
         releaseFor(nextOwner) {
             return enqueue(async () => {
                 if (operation) return snapshot();
                 if (!owner || owner === nextOwner) return snapshot();
-                return disconnectOwner("navigation");
+                return disconnectOwner("navigation", { nextOwner: nextOwner || null });
             });
         },
 

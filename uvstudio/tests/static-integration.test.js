@@ -12,6 +12,8 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const studioVersionSource = fs.readFileSync(path.join(root, 'js', 'studio-version.js'), 'utf8');
 const flashSource = fs.readFileSync(path.join(root, 'js', 'flash.js'), 'utf8');
 const viewerSource = fs.readFileSync(path.join(root, 'js', 'k5viewer.js'), 'utf8');
+const serialSource = fs.readFileSync(path.join(root, 'js', 'studio-serial.js'), 'utf8');
+const studioSource = fs.readFileSync(path.join(root, 'js', 'studio.js'), 'utf8');
 const appCatalogSource = fs.readFileSync(path.join(root, 'js', 'app-catalog.js'), 'utf8');
 const studioCss = fs.readFileSync(path.join(root, 'css', 'studio.css'), 'utf8');
 const toolsCss = fs.readFileSync(path.join(root, 'css', 'tools.css'), 'utf8');
@@ -108,22 +110,28 @@ test('keeps the public version and its cache key aligned', () => {
   assert.match(html, new RegExp(`js/studio-version\\.js\\?v=${version.replaceAll('.', '\\.')}`));
 });
 
-test('reconnects Firmware Slots and refreshes them after the serial port returns', () => {
+test('reconnects every runtime tool and refreshes device inventories', () => {
   assert.ok(flashSource.includes("navigator.serial.addEventListener('disconnect'"));
-  assert.ok(flashSource.includes("navigator.serial.addEventListener('connect'"));
-  assert.ok(flashSource.includes('navigator.serial.getPorts()'));
+  assert.ok(serialSource.includes('navigator.serial.addEventListener("connect"'));
+  assert.ok(serialSource.includes('navigator.serial.getPorts()'));
   assert.ok(flashSource.includes("toolsSerial.setState('reconnecting'"));
-  assert.ok(flashSource.includes('slotRefreshPending = true'));
+  assert.ok(flashSource.includes("toolsRefreshPending = activeToolsView === 'slots' || activeToolsView === 'apps'"));
   assert.ok(flashSource.includes('void slotRefreshFlow()'));
+  assert.ok(flashSource.includes('void appRefreshFlow()'));
+  assert.match(flashSource, /function toolsViewUsesRuntimeSerial[\s\S]*return view !== 'flash'/);
+  assert.match(flashSource, /UVStudioSerial\.createReconnectManager/);
+  assert.match(viewerSource, /UVStudioSerial\.createReconnectManager/);
+  assert.doesNotMatch(flashSource, /slotAutoReconnecting|reconnectSlotPort|handleSlotHardwareDisconnect/);
   assert.match(html, /class="slots-list-toolbar">\s*<button[^>]+id="slotsRefreshBtn"[^>]+class="btn primary compact-toolbar-action slots-refresh"/);
   assert.match(toolsCss, /\.compact-toolbar-action\s*\{[^}]*height:\s*32px[^}]*font-size:\s*11px/s);
 });
 
 test('loads the shared RF Log protocol before both consumers', () => {
+  const runtime = html.indexOf('js/runtime-protocol.js');
   const rf = html.indexOf('js/rf-log.js');
   const viewer = html.indexOf('js/k5viewer.js');
   const tools = html.indexOf('js/flash.js');
-  assert.ok(rf > 0 && rf < viewer && viewer < tools);
+  assert.ok(runtime > 0 && runtime < rf && rf < viewer && viewer < tools);
 });
 
 test('loads the app catalog after the installer API and exposes both selectors', () => {
@@ -136,9 +144,11 @@ test('loads the app catalog after the installer API and exposes both selectors',
   assert.match(flashSource, /uvstudio:appselect/);
 });
 
-test('exposes 48 app slots while retaining the v6.1.0 capacity', () => {
-  assert.match(flashSource, /const APP_SLOT_COUNT = 48/);
+test('exposes 64 app slots for v7 while retaining earlier capacities', () => {
+  assert.match(flashSource, /const APP_SLOT_COUNT = 64/);
+  assert.match(flashSource, /const APP_V6_SLOT_COUNT = 48/);
   assert.match(flashSource, /const APP_LEGACY_SLOT_COUNT = 16/);
+  assert.match(flashSource, /appCompareVersions\(version, '7\.0\.0'\) >= 0/);
   assert.match(flashSource, /appCompareVersions\(version, '6\.1\.0'\) > 0/);
   assert.match(html, /class="slots-table-wrap apps-table-wrap">\s*<table class="slots-table" id="appsTable"/);
   assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*max-height:\s*442px[^}]*overflow:\s*auto/s);
@@ -251,8 +261,8 @@ test('reorders complete app slots through the existing raw flash protocol', () =
   assert.match(toolsCss, /\.app-renumber-button\[hidden\]\s*\{\s*display:\s*none/);
   assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*overflow-anchor:\s*none/s);
   assert.match(toolsCss, /tr\.app-order-drop-before td\s*\{[^}]*box-shadow/s);
-  assert.match(html, /css\/tools\.css\?v=57/);
-  assert.match(html, /js\/flash\.js\?v=84/);
+  assert.match(html, /css\/tools\.css\?v=59/);
+  assert.match(html, /js\/flash\.js\?v=99/);
   assert.doesNotMatch(flashSource, /app-order-(?:up|down)/);
   assert.doesNotMatch(flashSource, /function appMoveInOrder/);
 
@@ -358,7 +368,11 @@ test('checks installed apps against the detected Labs catalog', () => {
   const start = flashSource.indexOf('function appVersionParts');
   const end = flashSource.indexOf('\n\nconst appFileInput', start);
   assert.ok(start >= 0 && end > start);
-  const context = { APP_SLOT_COUNT: 48, APP_LEGACY_SLOT_COUNT: 16 };
+  const context = {
+    APP_SLOT_COUNT: 64,
+    APP_V6_SLOT_COUNT: 48,
+    APP_LEGACY_SLOT_COUNT: 16
+  };
   vm.runInNewContext(
     `${flashSource.slice(start, end)}; this.extract = appFirmwareVersionFromName; this.slotCount = appSlotCountForFirmware;`,
     context
@@ -371,6 +385,10 @@ test('checks installed apps against the detected Labs catalog', () => {
   assert.equal(context.slotCount('F4HWN Labs v6.1.0'), 16);
   assert.equal(context.slotCount('F4HWN Fusion v6.1.1'), 48);
   assert.equal(context.slotCount('F4HWN Fusion v6.2.0'), 48);
+  assert.equal(context.slotCount('F4HWN Fusion v6.99.0'), 48);
+  assert.equal(context.slotCount('F4HWN Fusion v7.0'), 64);
+  assert.equal(context.slotCount('F4HWN Fusion v7.0.0'), 64);
+  assert.equal(context.slotCount('F4HWN Fusion v7.1.0'), 64);
   assert.equal(context.slotCount('unknown firmware'), 16);
   assert.match(flashSource, /uvstudio:appfirmwareversion/);
   assert.match(flashSource, /uvstudio:appcatalogcompatibility/);
@@ -460,9 +478,293 @@ test('keeps Labs-only tools together in the sidebar', () => {
   assert.match(html, /class="nav-item nav-item-labs" data-route="external-flash"[^>]+data-name="External Flash \(Labs only\)"/);
   assert.match(html, /class="nav-item nav-item-labs" data-route="factory-reset"[^>]+data-name="Factory Reset \(Labs only\)"/);
   assert.equal((html.match(/class="tag" data-i18n="studio_nav_labs_only"/g) || []).length, 3);
+  assert.equal((html.match(/class="tag" data-i18n="studio_nav_labs_only" hidden/g) || []).length, 3);
   assert.match(studioCss, /\.nav-item-labs\s*\{[^}]*gap:\s*8px/);
   assert.match(studioCss, /\.nav-item-labs \.tag\s*\{[^}]*margin-left:\s*auto/);
   assert.match(studioCss, /\.nav-item-labs \.tag\s*\{[^}]*margin-right:\s*0/);
+  assert.match(studioCss, /\.nav-item:disabled > svg,\s*\.nav-item:disabled \.nav-item-label\s*\{[^}]*opacity:\s*0\.5/s);
+  assert.match(studioCss, /\.nav-item:disabled \.tag\s*\{[^}]*opacity:\s*1[^}]*filter:\s*none/s);
+  assert.match(html, /css\/studio\.css\?v=28/);
+});
+
+test('adapts tool badges to the connected firmware generation', () => {
+  const start = flashSource.indexOf('function firmwareUsesServiceNavigation');
+  const end = flashSource.indexOf('\n\n// ========== UI UPDATE ==========', start);
+  assert.ok(start >= 0 && end > start);
+
+  const makeTag = () => ({
+    hidden: false,
+    textContent: '',
+    setAttribute(name, value) { this[name] = value; }
+  });
+  const makeItem = () => ({
+    dataset: {},
+    title: '',
+    setAttribute(name, value) { this[name] = value; },
+    removeAttribute(name) { delete this[name]; }
+  });
+  const events = [];
+  const context = {
+    connectedFirmwareName: '',
+    firmwareNavigationConnected: false,
+    navigationCapabilities: null,
+    appsNavigationTag: makeTag(),
+    externalFlashNavigationTag: makeTag(),
+    factoryResetNavigationTag: makeTag(),
+    appsNavigationItem: makeItem(),
+    externalFlashNavigationItem: makeItem(),
+    factoryResetNavigationItem: makeItem(),
+    t(key) { return key; },
+    CustomEvent: class CustomEvent { constructor(type) { this.type = type; } },
+    window: { dispatchEvent(event) { events.push(event.type); } }
+  };
+  vm.runInNewContext(
+    `${flashSource.slice(start, end)}; this.applyPolicy = applyFirmwareNavigationPolicy; this.applyCapabilities = applyNavigationCapabilities; this.isService = firmwareUsesServiceNavigation; this.keepProfile = shouldKeepFirmwareNavigationProfile; this.clearOnSerialState = shouldClearFirmwareNavigationOnSerialState;`,
+    context
+  );
+
+  assert.equal(context.isService('F4HWN v6.9.9'), false);
+  assert.equal(context.isService('F4HWN v50'), false);
+  assert.equal(context.isService('F4HWN v7.0.0'), true);
+  assert.equal(context.isService('F4HWN v70'), true);
+  assert.equal(context.isService('unknown'), false);
+  assert.equal(context.keepProfile({ reason: 'navigation', nextOwner: 'viewer' }), true);
+  assert.equal(context.keepProfile({ reason: 'handoff', nextOwner: 'tools' }), true);
+  assert.equal(context.keepProfile({ reason: 'navigation', nextOwner: null }), false);
+  assert.equal(context.keepProfile({ reason: 'user', nextOwner: 'viewer' }), false);
+  assert.equal(context.clearOnSerialState({ state: 'disconnected', previousOwner: 'viewer', reason: 'navigation', nextOwner: 'tools' }), false);
+  assert.equal(context.clearOnSerialState({ state: 'disconnected', previousOwner: 'viewer', reason: 'user' }), true);
+  assert.equal(context.clearOnSerialState({ state: 'reconnecting', owner: 'viewer', reason: 'hardware-disconnect' }), true);
+
+  context.applyPolicy('', false);
+  assert.equal(context.appsNavigationTag.hidden, true);
+  assert.equal(context.externalFlashNavigationTag.hidden, true);
+  assert.equal(context.factoryResetNavigationTag.hidden, true);
+
+  context.applyPolicy('F4HWN v6.9.9');
+  assert.equal(context.appsNavigationTag.hidden, true);
+  assert.equal(context.externalFlashNavigationTag.hidden, true);
+  assert.equal(context.factoryResetNavigationTag.hidden, true);
+  context.applyCapabilities({ apps: true, externalFlash: true });
+  assert.equal(context.appsNavigationItem.dataset.capabilityKnown, 'true');
+  assert.equal(context.externalFlashNavigationItem.dataset.capabilityKnown, 'true');
+  assert.equal(context.factoryResetNavigationItem.dataset.capabilityKnown, 'true');
+  assert.equal(context.appsNavigationItem.dataset.capabilityDisabled, undefined);
+  assert.equal(context.externalFlashNavigationItem.dataset.capabilityDisabled, undefined);
+  assert.equal(context.factoryResetNavigationItem.dataset.capabilityDisabled, undefined);
+  assert.equal(context.appsNavigationTag.hidden, true);
+  assert.equal(context.externalFlashNavigationTag.hidden, true);
+  assert.equal(context.factoryResetNavigationTag.hidden, true);
+  context.applyCapabilities({ apps: true, externalFlash: false });
+  assert.equal(context.appsNavigationItem.dataset.capabilityDisabled, 'true');
+  assert.equal(context.externalFlashNavigationItem.dataset.capabilityDisabled, 'true');
+  assert.equal(context.factoryResetNavigationItem.dataset.capabilityDisabled, 'true');
+  assert.equal(context.appsNavigationTag.hidden, false);
+  assert.equal(context.appsNavigationTag['data-i18n'], 'studio_nav_labs_only');
+  assert.equal(context.externalFlashNavigationTag.hidden, false);
+  assert.equal(context.externalFlashNavigationTag['data-i18n'], 'studio_nav_labs_only');
+  assert.equal(context.factoryResetNavigationTag.hidden, false);
+  assert.equal(context.factoryResetNavigationTag['data-i18n'], 'studio_nav_labs_only');
+  context.applyCapabilities({ apps: false, externalFlash: true });
+  assert.equal(context.appsNavigationItem.dataset.capabilityDisabled, 'true');
+  assert.equal(context.externalFlashNavigationItem.dataset.capabilityDisabled, 'true');
+  assert.equal(context.factoryResetNavigationItem.dataset.capabilityDisabled, 'true');
+  context.applyCapabilities(null);
+  assert.equal(context.appsNavigationItem.dataset.capabilityKnown, 'false');
+  assert.equal(context.externalFlashNavigationItem.dataset.capabilityKnown, 'false');
+  assert.equal(context.factoryResetNavigationItem.dataset.capabilityKnown, 'false');
+  events.length = 0;
+
+  context.applyPolicy('F4HWN v7.0.0');
+  assert.equal(context.appsNavigationTag.hidden, true);
+  assert.equal(context.externalFlashNavigationTag.hidden, true);
+  assert.equal(context.factoryResetNavigationTag.hidden, true);
+  context.applyCapabilities({ apps: true, externalFlash: false });
+  assert.equal(context.appsNavigationItem.dataset.capabilityDisabled, undefined);
+  assert.equal(context.appsNavigationTag.hidden, true);
+  assert.equal(context.externalFlashNavigationItem.dataset.capabilityDisabled, 'true');
+  assert.equal(context.factoryResetNavigationItem.dataset.capabilityDisabled, 'true');
+  assert.equal(context.externalFlashNavigationTag.hidden, false);
+  assert.equal(context.externalFlashNavigationTag['data-i18n'], 'studio_nav_service_only');
+  assert.equal(context.factoryResetNavigationTag.hidden, false);
+  assert.equal(context.factoryResetNavigationTag['data-i18n'], 'studio_nav_service_only');
+  assert.equal(context.externalFlashNavigationItem['data-i18n-title'], 'studio_nav_unavailable_edition');
+  assert.deepEqual(events, ['uvstudio:navigationcapabilitieschange']);
+  context.applyCapabilities({ apps: false, externalFlash: true });
+  assert.equal(context.appsNavigationItem.dataset.capabilityDisabled, 'true');
+  assert.equal(context.appsNavigationTag.hidden, false);
+  assert.equal(context.appsNavigationTag['data-i18n'], 'studio_nav_fusion_only');
+  assert.equal(context.externalFlashNavigationItem.dataset.capabilityDisabled, undefined);
+  assert.equal(context.externalFlashNavigationTag.hidden, true);
+  assert.equal(context.factoryResetNavigationTag.hidden, true);
+  context.applyCapabilities(null);
+  assert.equal(context.externalFlashNavigationItem.dataset.capabilityDisabled, undefined);
+  assert.equal(context.factoryResetNavigationItem.dataset.capabilityDisabled, undefined);
+  assert.equal(context.appsNavigationTag.hidden, true);
+  assert.equal(context.externalFlashNavigationTag.hidden, true);
+  assert.equal(context.factoryResetNavigationTag.hidden, true);
+  assert.match(flashSource, /await requestDeviceInfo\(\{ timeoutMs: 1500 \}\)/);
+  assert.match(flashSource, /const name = logDeviceInfo\(resp\.data\);\s+applyFirmwareNavigationPolicy\(name\)/);
+  assert.match(flashSource, /appInfo\(APP_SLOT_FIRST, NAVIGATION_PROBE_TIMEOUT_MS\)/);
+  assert.match(flashSource, /deviceInfo\.timestamp, NAVIGATION_PROBE_TIMEOUT_MS, 0/);
+  assert.match(studioSource, /item\.dataset\.capabilityDisabled === "true"/);
+  assert.match(studioSource, /uvstudio:navigationcapabilitieschange/);
+
+  const localeDir = path.join(root, 'locales');
+  fs.readdirSync(localeDir).filter(file => /^[a-z]{2}\.js$/.test(file)).forEach(file => {
+    const localeContext = { window: {} };
+    vm.runInNewContext(fs.readFileSync(path.join(localeDir, file), 'utf8'), localeContext);
+    const dictionary = localeContext.window.UVSTUDIO_LOCALES[file.slice(0, 2)];
+    assert.ok(dictionary.studio_nav_service_only, `${file}: service-only badge`);
+    assert.ok(dictionary.studio_nav_fusion_only, `${file}: Fusion-only badge`);
+    assert.ok(dictionary.studio_nav_unavailable_edition, `${file}: unavailable edition title`);
+  });
+});
+
+test('detects the firmware profile when Live Viewer owns the serial port', () => {
+  assert.match(html, /js\/runtime-protocol\.js\?v=2/);
+  assert.match(html, /js\/k5viewer\.js\?v=37/);
+  assert.match(viewerSource, /PROFILE_MSG_DEVICE_INFO_REQUEST = 0x0514/);
+  assert.match(viewerSource, /PROFILE_MSG_APP_INFO = 0x0730/);
+  assert.match(viewerSource, /PROFILE_MSG_EXTERNAL_FLASH_READ = 0x0738/);
+  assert.match(viewerSource, /void detectViewerFirmwareProfile\(connectionSession\)/);
+  assert.match(viewerSource, /if \(reconnected\) \{\s*firstFrameAfterReconnect = false;\s*void detectViewerFirmwareProfile\(serialSession\)/);
+  assert.doesNotMatch(viewerSource, /setState\('connected', \{ reason: 'auto-reconnect' \}\);\s*void detectViewerFirmwareProfile/);
+  assert.match(viewerSource, /new CustomEvent\('uvstudio:firmwareprofiledetected'/);
+  assert.match(flashSource, /addEventListener\('uvstudio:firmwareprofiledetected'/);
+  assert.match(flashSource, /snapshot\?\.owner !== 'viewer'/);
+  assert.match(flashSource, /applyFirmwareNavigationPolicy\(detail\.name, true\)/);
+  assert.match(flashSource, /applyNavigationCapabilities\(detail\.capabilities\)/);
+});
+
+test('keeps edition-mismatched navigation disabled across serial state changes', () => {
+  const start = studioSource.indexOf('function applyNavigationDisabledState');
+  const end = studioSource.indexOf('\n\n    function applyBranding', start);
+  assert.ok(start >= 0 && end > start);
+
+  const makeItem = (unavailable, route) => {
+    const classes = new Set();
+    return {
+      dataset: Object.assign({ route, capabilityKnown: 'true' }, unavailable ? { capabilityDisabled: 'true' } : {}),
+      disabled: false,
+      classList: {
+        toggle(name, force) { if (force) classes.add(name); else classes.delete(name); },
+        contains(name) { return classes.has(name); }
+      },
+      setAttribute(name, value) { this[name] = value; },
+      removeAttribute(name) { delete this[name]; }
+    };
+  };
+  const unavailable = makeItem(true, 'apps');
+  const current = makeItem(false, 'firmware-slots');
+  const other = makeItem(false, 'external-flash');
+  const context = {
+    items: [unavailable, current, other],
+    currentItem: current,
+    lastSerialSnapshot: { state: 'disconnected', operation: null },
+    editionSensitiveRoutes: new Set(['apps', 'external-flash', 'factory-reset']),
+    renderEditionContentState() {}
+  };
+  vm.runInNewContext(
+    `${studioSource.slice(start, end)}; this.applyDisabledState = applyNavigationDisabledState;`,
+    context
+  );
+
+  context.applyDisabledState();
+  assert.equal(unavailable.disabled, true);
+  assert.equal(current.disabled, false);
+  assert.equal(other.disabled, false);
+  assert.equal(unavailable.classList.contains('is-edition-disconnected'), true);
+  assert.equal(current.classList.contains('is-edition-disconnected'), false);
+  assert.equal(other.classList.contains('is-edition-disconnected'), true);
+
+  context.lastSerialSnapshot = { state: 'connected', operation: { name: 'test' } };
+  context.applyDisabledState();
+  assert.equal(unavailable.disabled, true);
+  assert.equal(current.disabled, false);
+  assert.equal(other.disabled, true);
+  assert.equal(unavailable.classList.contains('is-edition-disconnected'), false);
+  assert.equal(other.classList.contains('is-edition-disconnected'), false);
+
+  delete other.dataset.capabilityKnown;
+  context.lastSerialSnapshot = { state: 'connected', operation: null };
+  context.applyDisabledState();
+  assert.equal(other.disabled, false);
+  assert.equal(other.classList.contains('is-edition-disconnected'), true);
+});
+
+test('replaces stale edition-sensitive content with an inline connection state', () => {
+  assert.match(html, /id="edition-state-content"[^>]+role="status"[^>]+aria-live="polite"/);
+  assert.match(toolsCss, /#pane-tools \.edition-state\.active\s*\{[^}]*display:\s*flex/s);
+  assert.match(toolsCss, /#pane-tools\.showing-edition-state \.log-container/);
+
+  const start = studioSource.indexOf('function showToolView');
+  const end = studioSource.indexOf('\n\n    async function ensureRuntimeSerial', start);
+  assert.ok(start >= 0 && end > start);
+
+  const makeClassList = initial => {
+    const classes = new Set(initial || []);
+    return {
+      add(name) { classes.add(name); },
+      remove(name) { classes.delete(name); },
+      toggle(name, force) { if (force) classes.add(name); else classes.delete(name); },
+      contains(name) { return classes.has(name); }
+    };
+  };
+  const appsView = {
+    id: 'apps-content', hidden: false, classList: makeClassList(['active'])
+  };
+  const editionStateView = {
+    id: 'edition-state-content', hidden: true, dataset: {}, classList: makeClassList()
+  };
+  const paneTools = { classList: makeClassList() };
+  const currentItem = {
+    dataset: {
+      app: 'tools', route: 'apps', toolView: 'apps', capabilityKnown: 'true', capabilityDisabled: 'true'
+    }
+  };
+  const context = {
+    toolViews: [appsView, editionStateView],
+    paneTools,
+    editionStateView,
+    editionStateTitle: { textContent: '' },
+    editionStateBody: { textContent: '' },
+    currentItem,
+    lastSerialSnapshot: { state: 'connected' },
+    editionSensitiveRoutes: new Set(['apps', 'external-flash', 'factory-reset']),
+    activateToolAction() {},
+    translate(key) { return key; }
+  };
+  vm.runInNewContext(
+    `${studioSource.slice(start, end)}; this.renderEditionState = renderEditionContentState;`,
+    context
+  );
+
+  context.renderEditionState();
+  assert.equal(appsView.hidden, true);
+  assert.equal(editionStateView.hidden, false);
+  assert.equal(editionStateView.dataset.state, 'unavailable');
+  assert.equal(context.editionStateTitle.textContent, 'studio_nav_unavailable_edition');
+  assert.equal(context.editionStateBody.textContent, 'studio_edition_unavailable_body');
+  assert.equal(paneTools.classList.contains('showing-edition-state'), true);
+
+  context.lastSerialSnapshot = { state: 'disconnected' };
+  context.renderEditionState();
+  assert.equal(editionStateView.dataset.state, 'disconnected');
+  assert.equal(context.editionStateTitle.textContent, 'studio_serial_disconnected');
+  assert.equal(context.editionStateBody.textContent, 'appManagerConnectHint');
+
+  delete currentItem.dataset.capabilityDisabled;
+  context.lastSerialSnapshot = { state: 'connected' };
+  context.renderEditionState();
+  assert.equal(appsView.hidden, false);
+  assert.equal(editionStateView.hidden, true);
+  assert.equal(paneTools.classList.contains('showing-edition-state'), false);
+
+  delete currentItem.dataset.capabilityKnown;
+  context.renderEditionState();
+  assert.equal(editionStateView.dataset.state, 'disconnected');
+  assert.equal(editionStateView.hidden, false);
 });
 
 test('keeps compact app and firmware controls usable on narrow screens', () => {
@@ -497,7 +799,7 @@ test('keeps generated-file downloads beside their read actions', () => {
 
 test('keeps full external flash transfers responsive and retryable', () => {
   const start = flashSource.indexOf('async function waitForExternalFlashResponse');
-  const end = flashSource.indexOf('\n\n// Labs-only gate for External Flash', start);
+  const end = flashSource.indexOf('\n\n// Safety gate for External Flash', start);
   assert.ok(start >= 0 && end > start);
   const helpers = flashSource.slice(start, end);
   assert.match(helpers, /await waitForSerialRead\(/);
@@ -813,22 +1115,54 @@ test('translates radio help and exposes every global serial status label', () =>
   assert.match(html, /data-i18n-aria-label="radio_led_state"/);
 });
 
+test('requires one reusable runtime connection for every menu except Flash and About', () => {
+  assert.match(studioSource, /const isFirmwareFlash = app === "tools" && toolView === "flash"/);
+  assert.match(studioSource, /const requiresRuntimeSerial = Boolean\(serialOwner\) && !isFirmwareFlash/);
+  assert.match(studioSource, /activate\(item, \{ ensureSerial: true \}\)/);
+  assert.match(studioSource, /await ensureRuntimeSerial\("tools"\)/);
+  assert.match(viewerSource, /uvstudio:serialrequired/);
+  assert.match(flashSource, /uvstudio:serialrequired/);
+  assert.match(flashSource, /connect\(\{ reuse: false, remember: false \}\)/);
+  assert.match(flashSource, /hardwareDisconnect && activePort\) toolsSerial\.forgetPort\(activePort\)/);
+  assert.match(viewerSource, /if \(port\) viewerSerial\.forgetPort\(port\)/);
+  assert.match(flashSource, /nextView === 'slots' && port && writer &&[\s\S]{0,80}void slotRefreshFlow\(\)/);
+  assert.match(serialSource, /ports\.filter\(matches\)/);
+  assert.match(flashSource, /view === 'apps' && navigationCapabilities\?\.apps === true/);
+  assert.match(flashSource, /canAttempt: \(\) => toolsViewUsesRuntimeSerial\(\) &&[\s\S]{0,100}!activeOperationToken/);
+
+  const calibrationDump = flashSource.slice(
+    flashSource.indexOf("beginToolsOperation('dump-calibration'"),
+    flashSource.indexOf('\nfunction flashAddress')
+  );
+  assert.doesNotMatch(calibrationDump, /await disconnect\(\)/);
+});
+
 function loadToolsHardwareDisconnect(state) {
-  const start = flashSource.indexOf('let toolsHardwareDisconnectPromise');
-  const end = flashSource.indexOf('\n\nfunction scheduleSlotReconnectProbe', start);
+  const start = flashSource.indexOf('async function handleToolsHardwareDisconnect');
+  const end = flashSource.indexOf('\n\nasync function reconnectToolsPort', start);
   assert.ok(start >= 0 && end > start);
   const calls = [];
   const context = Object.assign({
-    activeToolsView: 'flash',
+    activeToolsView: 'apps',
     port: {},
-    activeOperationToken: null,
+    toolsLastPortInfo: {},
+    toolsHardwareDisconnectPromise: null,
+    toolsRefreshPending: false,
+    toolsViewUsesRuntimeSerial() { return context.activeToolsView !== 'flash'; },
+    async disconnectPort(details) {
+      calls.push(['disconnect', details.reason]);
+      context.port = null;
+    },
+    toolsReconnect: {
+      start(info) { calls.push(['start', info]); }
+    },
     log() {},
-    t(key) { return key; },
-    async handleSlotHardwareDisconnect() { calls.push('slots'); }
+    t(key) { return key; }
   }, state);
   context.toolsSerial = {
     isOwner: () => true,
-    async release(reason) { calls.push(reason); context.port = null; }
+    async release(reason) { calls.push(['release', reason]); context.port = null; },
+    setState(nextState) { calls.push(['state', nextState]); }
   };
   vm.runInNewContext(
     `${flashSource.slice(start, end)}; this.run = handleToolsHardwareDisconnect;`,
@@ -837,37 +1171,104 @@ function loadToolsHardwareDisconnect(state) {
   return { run: context.run, calls };
 }
 
-test('releases a port lost outside Firmware Slots so the next action reconnects', async () => {
+function loadDisconnectPort() {
+  const start = flashSource.indexOf('async function disconnectPort');
+  const end = flashSource.indexOf('\n\nconst toolsSerial', start);
+  assert.ok(start >= 0 && end > start);
+  const lostPort = {};
+  const calls = [];
+  const context = {
+    port: lostPort,
+    reader: {},
+    writer: {},
+    isReading: true,
+    toolsSerialSession: 0,
+    toolsSerial: {
+      forgetPort(value) { calls.push(['forget', value]); }
+    },
+    stopToolsReconnect() { calls.push(['stop']); },
+    shouldKeepFirmwareNavigationProfile(context) {
+      return (context?.reason === 'navigation' || context?.reason === 'handoff') &&
+        (context?.nextOwner === 'tools' || context?.nextOwner === 'viewer');
+    },
+    clearFirmwareNavigationProfile() {
+      calls.push(['policy', '', false], ['capabilities', null]);
+    },
+    notifySerialRead() {},
+    log() {},
+    t(key) { return key; },
+    window: {
+      UVStudioSerial: {
+        async closeResources(resources) { calls.push(['close', resources.port]); }
+      }
+    }
+  };
+  vm.runInNewContext(
+    `${flashSource.slice(start, end)}; this.run = disconnectPort;`,
+    context
+  );
+  return { run: context.run, calls, lostPort };
+}
+
+test('forgets a reusable runtime port when the USB device is physically removed', async () => {
+  const { run, calls, lostPort } = loadDisconnectPort();
+  await run({ reason: 'hardware-disconnect' });
+  assert.deepEqual(calls, [
+    ['forget', lostPort],
+    ['close', lostPort],
+    ['policy', '', false],
+    ['capabilities', null]
+  ]);
+});
+
+test('keeps the detected edition while handing the runtime port to UV Viewer', async () => {
+  const { run, calls, lostPort } = loadDisconnectPort();
+  await run({ reason: 'navigation', nextOwner: 'viewer' });
+  assert.deepEqual(calls, [
+    ['stop'],
+    ['close', lostPort]
+  ]);
+});
+
+test('keeps UV Tools ownership and starts one reconnect loop after a runtime disconnect', async () => {
   const { run, calls } = loadToolsHardwareDisconnect();
   await Promise.all([run(), run()]);   // disconnect event + read loop ending
-  assert.deepEqual(calls, ['hardware-disconnect']);
+  assert.deepEqual(calls, [
+    ['disconnect', 'hardware-disconnect'],
+    ['state', 'reconnecting'],
+    ['start', {}]
+  ]);
 });
 
-test('leaves a lost port to the running operation and to Firmware Slots', async () => {
-  const busy = loadToolsHardwareDisconnect({ activeOperationToken: {} });
-  await busy.run();
-  assert.deepEqual(busy.calls, []);
-
+test('uses the same reconnect path for Apps and Firmware Slots but excludes firmware flashing', async () => {
   const slots = loadToolsHardwareDisconnect({ activeToolsView: 'slots' });
   await slots.run();
-  assert.deepEqual(slots.calls, ['slots']);
+  assert.deepEqual(slots.calls, [
+    ['disconnect', 'hardware-disconnect'],
+    ['state', 'reconnecting'],
+    ['start', {}]
+  ]);
+
+  const flash = loadToolsHardwareDisconnect({ activeToolsView: 'flash' });
+  await flash.run();
+  assert.deepEqual(flash.calls, [['release', 'hardware-disconnect']]);
 });
 
-test('gates every Labs-only feature on one Labs modal, before any confirmation', () => {
+test('keeps compatibility gates silent and before destructive confirmations', () => {
   const localeDir = path.join(root, 'locales');
   fs.readdirSync(localeDir).filter(file => /^[a-z]{2}\.js$/.test(file)).forEach(file => {
     const context = { window: {} };
     vm.runInNewContext(fs.readFileSync(path.join(localeDir, file), 'utf8'), context);
     const dictionary = context.window.UVSTUDIO_LOCALES[file.slice(0, 2)];
-    assert.ok(dictionary.labsRequiredTitle, `${file}:labsRequiredTitle`);
-    assert.match(dictionary.labsRequiredBody, /\{0\}/, `${file}:labsRequiredBody`);
-    assert.match(dictionary.flashUnsupported, /Labs/, `${file}:flashUnsupported`);
-    assert.doesNotMatch(dictionary.flashUnsupported, /Fusion/, `${file}:flashUnsupported`);
+    assert.ok(dictionary.studio_edition_unavailable_body, `${file}:inline unavailable state`);
+    assert.equal('labsRequiredTitle' in dictionary, false, `${file}:obsolete modal title`);
+    assert.equal('labsRequiredBody' in dictionary, false, `${file}:obsolete modal body`);
+    assert.doesNotMatch(dictionary.flashUnsupported, /Labs|Fusion|Service/i, `${file}:generic guard log`);
   });
-  assert.match(html, /id="labsRequiredModal"/);
-  assert.doesNotMatch(flashSource, /requireExternalFlashSupport|showAppUnsupportedModal/);
+  assert.doesNotMatch(html, /id="labsRequiredModal"/);
+  assert.doesNotMatch(flashSource, /showLabsRequiredModal|labsRequiredBody/);
 
-  // Destructive restores ask for confirmation only once Labs support is known.
+  // Destructive restores ask for confirmation only once support is known.
   const gateThen = (from, confirm) => {
     const start = flashSource.indexOf(from);
     assert.ok(start >= 0, from);

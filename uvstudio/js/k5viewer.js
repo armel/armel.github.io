@@ -37,6 +37,14 @@ const REBOOT_PACKET = new Uint8Array([
     0x14, 0xE6, 0x5B, 0xEB, 0xDC, 0xBA
 ]);
 const REBOOT_FRAME_GUARD_MS = 500;
+const RUNTIME_PROTOCOL = window.UVStudioRuntimeProtocol;
+const PROFILE_MSG_DEVICE_INFO_REQUEST = 0x0514;
+const PROFILE_MSG_DEVICE_INFO_RESPONSE = 0x0515;
+const PROFILE_MSG_APP_INFO = 0x0730;
+const PROFILE_MSG_APP_INFO_RESPONSE = 0x0731;
+const PROFILE_MSG_EXTERNAL_FLASH_READ = 0x0738;
+const PROFILE_MSG_EXTERNAL_FLASH_READ_RESPONSE = 0x0739;
+const PROFILE_COMMAND_TIMEOUT_MS = 1000;
 
 // Keepalive ping period. The firmware grants a budget of 15 frames per
 // ping received, so the max frame rate is 15 / (KEEPALIVE_INTERVAL_MS / 1000).
@@ -140,6 +148,7 @@ let rfAnalyticsFilter = 'all';
 let rfSessionsExpanded = false;
 let rfAnalyticsResizeFrame = null;
 let serialSession = 0;
+let viewerProfileCommand = null;
 
 document.querySelectorAll('[data-rf-view]').forEach(button => {
     button.addEventListener('click', () => setRfLogView(button.dataset.rfView));
@@ -357,17 +366,141 @@ function handleHelpModalKeydown(event) {
     }
 }
 
-async function connectSerial() {
+function cancelViewerProfileCommand(error) {
+    const pending = viewerProfileCommand;
+    if (!pending) return;
+    viewerProfileCommand = null;
+    clearTimeout(pending.timer);
+    pending.reject(error || new Error('Viewer profile probe cancelled'));
+}
+
+function acceptViewerProfileMessage(message, session) {
+    const pending = viewerProfileCommand;
+    if (!pending || pending.session !== session || message.type !== pending.responseType) return;
+    viewerProfileCommand = null;
+    clearTimeout(pending.timer);
+    pending.resolve(message.data);
+}
+
+async function sendViewerProfileCommand(messageType, data, responseType, session) {
+    if (!RUNTIME_PROTOCOL || !writer || !isConnected || session !== serialSession) {
+        throw new Error('Viewer serial session changed');
+    }
+    if (viewerProfileCommand) {
+        throw new Error('A viewer profile command is already pending');
+    }
+
+    let resolveResponse;
+    let rejectResponse;
+    const response = new Promise((resolve, reject) => {
+        resolveResponse = resolve;
+        rejectResponse = reject;
+    });
+    const timer = setTimeout(() => {
+        if (viewerProfileCommand?.session !== session ||
+            viewerProfileCommand?.responseType !== responseType) return;
+        viewerProfileCommand = null;
+        rejectResponse(new Error('Viewer profile command timed out'));
+    }, PROFILE_COMMAND_TIMEOUT_MS);
+    viewerProfileCommand = {
+        session,
+        responseType,
+        timer,
+        resolve: resolveResponse,
+        reject: rejectResponse
+    };
+
+    try {
+        await writer.write(RUNTIME_PROTOCOL.createPacket(messageType, data));
+    } catch (error) {
+        cancelViewerProfileCommand(error);
+    }
+    return response;
+}
+
+function parseViewerFirmwareName(data) {
+    let name = '';
+    for (let index = 0; index < Math.min(16, data.length); index++) {
+        const value = data[index];
+        if (value === 0 || value === 0xff) break;
+        if (value >= 32 && value < 127) name += String.fromCharCode(value);
+    }
+    return name;
+}
+
+async function detectViewerFirmwareProfile(session) {
+    if (!RUNTIME_PROTOCOL || !writer || !isConnected || session !== serialSession) return;
+
+    const timestamp = Date.now() >>> 0;
+    const deviceRequest = new Uint8Array(4);
+    new DataView(deviceRequest.buffer).setUint32(0, timestamp, true);
+
+    let firmwareName;
+    try {
+        const deviceInfo = await sendViewerProfileCommand(
+            PROFILE_MSG_DEVICE_INFO_REQUEST,
+            deviceRequest,
+            PROFILE_MSG_DEVICE_INFO_RESPONSE,
+            session
+        );
+        firmwareName = parseViewerFirmwareName(deviceInfo);
+    } catch (_) {
+        return;
+    }
+    if (!firmwareName || !isConnected || session !== serialSession) return;
+
+    let apps = false;
+    try {
+        await sendViewerProfileCommand(
+            PROFILE_MSG_APP_INFO,
+            Uint8Array.of(0),
+            PROFILE_MSG_APP_INFO_RESPONSE,
+            session
+        );
+        apps = true;
+    } catch (_) {}
+
+    let externalFlash = false;
+    if (isConnected && session === serialSession) {
+        const flashRequest = new Uint8Array(10);
+        const flashView = new DataView(flashRequest.buffer);
+        flashView.setUint32(0, 0, true);
+        flashView.setUint16(4, 1, true);
+        flashView.setUint32(6, timestamp, true);
+        try {
+            await sendViewerProfileCommand(
+                PROFILE_MSG_EXTERNAL_FLASH_READ,
+                flashRequest,
+                PROFILE_MSG_EXTERNAL_FLASH_READ_RESPONSE,
+                session
+            );
+            externalFlash = true;
+        } catch (_) {}
+    }
+
+    if (!isConnected || session !== serialSession) return;
+    window.dispatchEvent(new CustomEvent('uvstudio:firmwareprofiledetected', {
+        detail: {
+            name: firmwareName,
+            capabilities: { apps, externalFlash }
+        }
+    }));
+}
+
+async function connectSerial(options = {}) {
+    let reusedPort = null;
     try {
         if (!('serial' in navigator)) {
             throw new Error(t('web_serial_not_supported'));
         }
+        if (isConnected && viewerSerial.isOwner()) return;
 
         await viewerSerial.acquire({ source: 'viewer' });
         if (!viewerSerial.isOwner()) {
             throw Object.assign(new Error(t('disconnected')), { code: 'UVSTUDIO_SERIAL_RELEASED' });
         }
-        port = await navigator.serial.requestPort();
+        reusedPort = options.reuse === false ? null : viewerSerial.getReusablePort();
+        port = reusedPort || await navigator.serial.requestPort();
         if (!viewerSerial.isOwner()) {
             throw Object.assign(new Error(t('disconnected')), { code: 'UVSTUDIO_SERIAL_RELEASED' });
         }
@@ -380,6 +513,7 @@ async function connectSerial() {
         
         reader = port.readable.getReader();
         writer = port.writable.getWriter();
+        if (options.remember !== false) viewerSerial.rememberPort(port);
         
         rebootPending = false;
         rebootRequestedAt = 0;
@@ -402,10 +536,13 @@ async function connectSerial() {
         keepaliveInterval = setInterval(sendKeepalive, KEEPALIVE_INTERVAL_MS);
         
         // Start reading frames
-        readFrames(++serialSession);
+        const connectionSession = ++serialSession;
+        readFrames(connectionSession);
         viewerSerial.setState('connected', { reason: 'connection-established' });
+        void detectViewerFirmwareProfile(connectionSession);
         
     } catch (error) {
+        if (reusedPort) viewerSerial.forgetPort(reusedPort);
         if (viewerSerial.isOwner()) {
             await viewerSerial.release('connection-error');
         } else {
@@ -438,12 +575,11 @@ async function disconnectSerial(context = {}) {
     rebootRequestedAt = 0;
     isConnected = false;
     serialSession++;
+    cancelViewerProfileCommand(new Error('Viewer disconnected'));
     radioDeepSleep = false;
     updateRadioLeds(false, false);
     userDisconnected = true;
-    autoReconnecting = false;
-    clearTimeout(reconnectTimer);
-    reconnectTimer = null;
+    viewerReconnect.stop({ forgetPortInfo: true });
 
     if (keepaliveInterval) {
         clearInterval(keepaliveInterval);
@@ -472,6 +608,17 @@ async function disconnectSerial(context = {}) {
 
 const viewerSerial = window.UVStudioSerial.register('viewer', {
     disconnect: disconnectSerial
+});
+
+const viewerReconnect = window.UVStudioSerial.createReconnectManager({
+    canAttempt: () => !userDisconnected && viewerSerial.isOwner(),
+    reconnect: reconnectPort,
+    onError: error => console.warn('Unable to enumerate serial ports during viewer reconnect:', error)
+});
+
+window.addEventListener('uvstudio:serialrequired', event => {
+    if (event.detail?.owner !== 'viewer' || event.detail.promise) return;
+    event.detail.promise = connectSerial({ reuse: true, remember: true });
 });
 
 async function rebootRadio() {
@@ -1149,6 +1296,18 @@ async function readFrames(session) {
             // Process frames in buffer
             let processed = 0;
             while (processed < bufferPos - 4) {
+                const runtimePacket = RUNTIME_PROTOCOL?.parsePacketAt(buffer, processed, bufferPos);
+                if (runtimePacket?.incomplete) break;
+                if (runtimePacket?.message) {
+                    acceptViewerProfileMessage(runtimePacket.message, session);
+                    processed += runtimePacket.consumed;
+                    continue;
+                }
+                if (runtimePacket?.invalid) {
+                    processed += runtimePacket.consumed || 1;
+                    continue;
+                }
+
                 // Check for version marker and optional state flags.
                 let isNewFormat = false;
                 let frameFlags = 0;
@@ -1444,6 +1603,7 @@ function updateFPS() {
 
     if (reconnected) {
         firstFrameAfterReconnect = false;
+        void detectViewerFirmwareProfile(serialSession);
     }
 
     if (rebootCompleted) {
@@ -1942,13 +2102,10 @@ function updateKeyboardState() {
 }
 
 // ─── Auto-reconnect on USB disconnect/reconnect ──────────────
-let autoReconnecting    = false;
-let reconnectTimer      = null;
 let lastPortInfo        = null;   // { usbVendorId, usbProductId }
 let userDisconnected    = false;
 let firstFrameAfterReconnect = false;
 let reconnectWasDeepSleep = false;
-let reconnectInProgress = false;
 let hardwareDisconnectPromise = null;
 
 async function handleHardwareDisconnect() {
@@ -1960,6 +2117,7 @@ async function handleHardwareDisconnect() {
         reconnectWasDeepSleep = radioDeepSleep;
         isConnected = false;
         serialSession++;
+        cancelViewerProfileCommand(new Error('Viewer hardware disconnected'));
         if (reconnectWasDeepSleep) {
             tempColorKey = 'x';
             tempInvertLcd = 0;
@@ -1967,6 +2125,7 @@ async function handleHardwareDisconnect() {
         startLcdAnimation();
 
         if (keepaliveInterval) { clearInterval(keepaliveInterval); keepaliveInterval = null; }
+        if (port) viewerSerial.forgetPort(port);
         await closeSerialResources();
         if (userDisconnected || !viewerSerial.isOwner()) return;
 
@@ -1974,11 +2133,10 @@ async function handleHardwareDisconnect() {
         updateKeyboardState();
         resetRfLogPanel();
 
-        autoReconnecting = true;
         viewerSerial.setState('reconnecting', { reason: 'hardware-disconnect' });
         updateStatus(t('reconnecting'));
         showNotification('serial_disconnected_auto', {}, 'warning');
-        scheduleReconnectProbe();
+        viewerReconnect.start(lastPortInfo);
     })();
 
     try {
@@ -1994,62 +2152,20 @@ if ('serial' in navigator) {
     });
 }
 
-function scheduleReconnectProbe() {
-    if (reconnectTimer || !autoReconnecting) return;
-    reconnectTimer = setTimeout(async () => {
-        reconnectTimer = null;
-        if (!autoReconnecting || !lastPortInfo) return;
-
-        try {
-            const ports = await navigator.serial.getPorts();
-            const candidates = ports.filter(candidatePort => {
-                const info = candidatePort.getInfo();
-                return info.usbVendorId === lastPortInfo.usbVendorId &&
-                       info.usbProductId === lastPortInfo.usbProductId;
-            });
-
-            for (const candidate of candidates) {
-                await reconnectPort(candidate);
-                if (!autoReconnecting) break;
-            }
-        } catch (error) {
-            console.warn('Unable to enumerate serial ports during reconnect:', error);
-        }
-        if (autoReconnecting) scheduleReconnectProbe();
-    }, 500);
-}
-
 async function reconnectPort(candidate) {
-    if (!autoReconnecting) return;
-    if (!lastPortInfo) return;
-    if (reconnectInProgress) return;
-
-    // Check if the reconnected port matches the one we lost
-    const info = candidate.getInfo();
-    if (info.usbVendorId  !== lastPortInfo.usbVendorId ||
-        info.usbProductId !== lastPortInfo.usbProductId) return;
-    reconnectInProgress = true;
-
-    // It's our port — wait a bit for the OS to finish enumeration
-    await new Promise(r => setTimeout(r, 500));
-    if (!autoReconnecting || !viewerSerial.isOwner()) {
-        reconnectInProgress = false;
-        return;
-    }
-
     try {
         port = candidate;
         await port.open({ baudRate: BAUDRATE });
-        if (!autoReconnecting || !viewerSerial.isOwner()) {
+        if (!viewerReconnect.isActive() || !viewerSerial.isOwner()) {
             await closeSerialResources();
-            return;
+            return false;
         }
 
         reader = port.readable.getReader();
         writer = port.writable.getWriter();
-        if (!autoReconnecting || !viewerSerial.isOwner()) {
+        if (!viewerReconnect.isActive() || !viewerSerial.isOwner()) {
             await closeSerialResources();
-            return;
+            return false;
         }
 
         isConnected = true;
@@ -2062,7 +2178,6 @@ async function reconnectPort(candidate) {
             tempInvertLcd = invertLcd;
         }
         startLcdAnimation();
-        autoReconnecting = false;
         userDisconnected = false;
         updateConnectionButtonState('connected');
         updateKeyboardState();
@@ -2072,27 +2187,25 @@ async function reconnectPort(candidate) {
         updateStatus(radioDeepSleep ? t('connected_deep_sleep') : t('reconnecting'));
 
         keepaliveInterval = setInterval(sendKeepalive, KEEPALIVE_INTERVAL_MS);
-        readFrames(++serialSession);
+        const reconnectSession = ++serialSession;
+        readFrames(reconnectSession);
+        viewerSerial.rememberPort(port);
         viewerSerial.setState('connected', { reason: 'auto-reconnect' });
+        return true;
 
     } catch (error) {
         console.error('Auto-reconnect failed:', error);
         await closeSerialResources();
-    } finally {
-        reconnectInProgress = false;
+        return false;
     }
 }
 
 if ('serial' in navigator) {
     navigator.serial.addEventListener('connect', async (event) => {
-        if (isConnected && lastPortInfo) {
-            const info = event.target.getInfo();
-            if (info.usbVendorId === lastPortInfo.usbVendorId &&
-                info.usbProductId === lastPortInfo.usbProductId) {
-                await handleHardwareDisconnect();
-            }
+        if (isConnected && window.UVStudioSerial.portMatchesInfo(event.target, lastPortInfo)) {
+            await handleHardwareDisconnect();
+            await viewerReconnect.tryPort(event.target);
         }
-        await reconnectPort(event.target);
     });
 }
 

@@ -60,6 +60,7 @@ const FLASH_COMMAND_TIMEOUT_MS = 2000;
 const FLASH_ERASE_TIMEOUT_MS = 3000;
 const FLASH_CRC_PROBE_TIMEOUT_MS = 1000;
 const FLASH_COMMAND_RETRIES = 3;
+const NAVIGATION_PROBE_TIMEOUT_MS = 1000;
 // Calibration is device-specific. Restore deliberately leaves its entire erase
 // sector untouched; the boot logo begins in the following sector at 0x011000.
 const FLASH_CALIBRATION_SECTOR = 0x010000;
@@ -136,6 +137,9 @@ let isReading = false;
 let toolsSerialSession = 0;
 let rfLogDownloadUrl = null;
 const serialSupported = 'serial' in navigator;
+let toolsLastPortInfo = null;
+let toolsHardwareDisconnectPromise = null;
+let toolsRefreshPending = false;
 
 // Firmware Slots state
 let slotImage = null;   // Uint8Array of the selected .bin
@@ -143,14 +147,11 @@ let slotMeta = { name: '', fwVersion: '' };
 // Out-of-order guard for the slot image picker (catalog or local file).
 let slotImageLoadSeq = 0;
 let slotImageLoadAbort = null;
-let slotAutoReconnecting = false;
-let slotReconnectTimer = null;
-let slotReconnectInProgress = false;
-let slotLastPortInfo = null;
-let slotHardwareDisconnectPromise = null;
-let slotRefreshPending = false;
 let slotLatestVersions = new Map();
 let slotUpdateDownloadPending = false;
+let connectedFirmwareName = '';
+let firmwareNavigationConnected = false;
+let navigationCapabilities = null;
 
 // Logo state
 let logoSourceImage = null;       // HTMLImageElement of the user-picked file
@@ -200,6 +201,12 @@ const factoryResetConfirmBtn = document.getElementById('factoryResetConfirmBtn')
 const chirpDriverDownload = document.getElementById('chirpDriverDownload');
 const chirpDriverLink = document.getElementById('chirpDriverLink');
 const chirpDriverText = document.getElementById('chirpDriverText');
+const appsNavigationItem = document.querySelector('[data-route="apps"]');
+const externalFlashNavigationItem = document.querySelector('[data-route="external-flash"]');
+const factoryResetNavigationItem = document.querySelector('[data-route="factory-reset"]');
+const appsNavigationTag = appsNavigationItem?.querySelector('.tag');
+const externalFlashNavigationTag = externalFlashNavigationItem?.querySelector('.tag');
+const factoryResetNavigationTag = factoryResetNavigationItem?.querySelector('.tag');
 
 // File input labels
 const fileLabel = document.getElementById('fileLabel');
@@ -267,8 +274,143 @@ function t(key, ...args) {
   return window.uvStudioI18n ? window.uvStudioI18n.t(key, ...args) : key;
 }
 
+function firmwareUsesServiceNavigation(deviceInfoName) {
+  const match = String(deviceInfoName || '').match(/\bv(\d+)(?:\.(\d+))?/i);
+  if (!match) return false;
+
+  // Historical compact versions use v50 for v5.0 and v70 for v7.0.
+  // Dotted versions expose the major component directly.
+  if (match[2] !== undefined) return Number(match[1]) >= 7;
+  const compactVersion = Number(match[1]);
+  return match[1].length === 1 ? compactVersion >= 7 : compactVersion >= 70;
+}
+
+function updateNavigationTag(element, key, hidden) {
+  if (!element) return;
+  element.hidden = hidden;
+  element.setAttribute('data-i18n', key);
+  element.textContent = t(key);
+}
+
+function renderFirmwareNavigationTags() {
+  if (!firmwareNavigationConnected) {
+    updateNavigationTag(appsNavigationTag, 'studio_nav_labs_only', true);
+    updateNavigationTag(externalFlashNavigationTag, 'studio_nav_labs_only', true);
+    updateNavigationTag(factoryResetNavigationTag, 'studio_nav_labs_only', true);
+    return;
+  }
+
+  const serviceNavigation = firmwareUsesServiceNavigation(connectedFirmwareName);
+  if (serviceNavigation) {
+    const fusionRequired = navigationCapabilities?.apps === false;
+    const serviceRequired = navigationCapabilities?.externalFlash === false;
+    updateNavigationTag(appsNavigationTag, 'studio_nav_fusion_only', !fusionRequired);
+    updateNavigationTag(externalFlashNavigationTag, 'studio_nav_service_only', !serviceRequired);
+    updateNavigationTag(factoryResetNavigationTag, 'studio_nav_service_only', !serviceRequired);
+    return;
+  }
+
+  const labsAppsRequired = navigationCapabilities?.apps === false;
+  const labsFlashRequired = navigationCapabilities?.externalFlash === false;
+  updateNavigationTag(appsNavigationTag, 'studio_nav_labs_only', !labsAppsRequired);
+  updateNavigationTag(externalFlashNavigationTag, 'studio_nav_labs_only', !labsFlashRequired);
+  updateNavigationTag(factoryResetNavigationTag, 'studio_nav_labs_only', !labsFlashRequired);
+}
+
+function applyFirmwareNavigationPolicy(deviceInfoName, connected) {
+  if (deviceInfoName !== undefined) {
+    connectedFirmwareName = String(deviceInfoName || '');
+    if (connected === undefined) firmwareNavigationConnected = true;
+  }
+  if (connected !== undefined) firmwareNavigationConnected = connected;
+  renderFirmwareNavigationTags();
+}
+
+function updateNavigationCapability(element, supported) {
+  if (!element) return;
+  element.dataset.capabilityKnown = String(typeof supported === 'boolean');
+  if (supported === false) {
+    element.dataset.capabilityDisabled = 'true';
+    element.setAttribute('data-i18n-title', 'studio_nav_unavailable_edition');
+    element.title = t('studio_nav_unavailable_edition');
+  } else {
+    delete element.dataset.capabilityDisabled;
+    element.removeAttribute('data-i18n-title');
+    element.removeAttribute('title');
+  }
+}
+
+function shouldKeepFirmwareNavigationProfile(context) {
+  const nextOwner = context?.nextOwner;
+  return (context?.reason === 'navigation' || context?.reason === 'handoff') &&
+    (nextOwner === 'tools' || nextOwner === 'viewer');
+}
+
+function shouldClearFirmwareNavigationOnSerialState(detail) {
+  if (detail?.state === 'reconnecting' && detail.owner === 'viewer') return true;
+  return detail?.state === 'disconnected' && detail.previousOwner === 'viewer' &&
+    !shouldKeepFirmwareNavigationProfile(detail);
+}
+
+function clearFirmwareNavigationProfile() {
+  applyFirmwareNavigationPolicy('', false);
+  applyNavigationCapabilities(null);
+}
+
+function applyNavigationCapabilities(capabilities) {
+  let resolvedCapabilities = capabilities || null;
+  if (resolvedCapabilities && !firmwareUsesServiceNavigation(connectedFirmwareName)) {
+    const labsFirmware = resolvedCapabilities.apps === true &&
+      resolvedCapabilities.externalFlash === true;
+    resolvedCapabilities = {
+      ...resolvedCapabilities,
+      apps: labsFirmware,
+      externalFlash: labsFirmware
+    };
+  }
+
+  navigationCapabilities = resolvedCapabilities;
+  updateNavigationCapability(appsNavigationItem, resolvedCapabilities?.apps);
+  updateNavigationCapability(externalFlashNavigationItem, resolvedCapabilities?.externalFlash);
+  updateNavigationCapability(factoryResetNavigationItem, resolvedCapabilities?.externalFlash);
+  renderFirmwareNavigationTags();
+  window.dispatchEvent(new CustomEvent('uvstudio:navigationcapabilitieschange'));
+}
+
+async function detectNavigationCapabilities(deviceInfo) {
+  const session = toolsSerialSession;
+  let apps = false;
+  let externalFlash = false;
+
+  try {
+    await appInfo(APP_SLOT_FIRST, NAVIGATION_PROBE_TIMEOUT_MS);
+    apps = true;
+  } catch (error) {
+    if (error?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' ||
+        session !== toolsSerialSession || !port) throw error;
+  }
+
+  try {
+    await readExternalFlashChunk(
+      0, 1, deviceInfo.timestamp, NAVIGATION_PROBE_TIMEOUT_MS, 0
+    );
+    externalFlash = true;
+  } catch (error) {
+    if (error?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' ||
+        session !== toolsSerialSession || !port) throw error;
+  }
+
+  if (session !== toolsSerialSession) {
+    throw Object.assign(new Error(t('tools_disconnected')), {
+      code: 'UVSTUDIO_SERIAL_SESSION_CHANGED'
+    });
+  }
+  applyNavigationCapabilities({ apps, externalFlash });
+}
+
 // ========== UI UPDATE ==========
 function refreshLocalizedToolsState() {
+  applyFirmwareNavigationPolicy();
   if (labelFwFileEl) labelFwFileEl.textContent = t('labelFirmwareFile');
   if (labelCalibFileEl) labelCalibFileEl.textContent = t('labelCalibFile');
 
@@ -399,14 +541,12 @@ window.addEventListener('uvstudio:languagechange', () => {
 
 window.addEventListener('uvstudio:toolviewchange', event => {
   const nextView = event.detail?.view || 'flash';
-  const leavingSlots = activeToolsView === 'slots' && nextView !== 'slots';
   activeToolsView = nextView;
   updateInfoBox();
-  // Leaving Slots: stop its hardware auto-reconnect loop, but KEEP the port open
-  // so the next normal-mode view (Apps, Dump/Restore, Logo) inherits the live
-  // connection without a reconnect + port re-pick. Switching to a different owner
-  // (e.g. K5Viewer) still releases through the shared controller's releaseFor().
-  if (leavingSlots) stopSlotAutoReconnect();
+  if (nextView === 'slots' && port && writer &&
+      toolsSerial.isOwner() && !activeOperationToken) {
+    void slotRefreshFlow();
+  }
 });
 
 // Initial i18n sync
@@ -676,15 +816,18 @@ function updateRestoreButton() {
 }
 
 // ========== SERIAL CONNECTION ==========
-async function connect() {
+async function connect(options = {}) {
+  let reusedPort = null;
   try {
-    stopSlotAutoReconnect({ forgetPort: true });
+    if (port && writer && toolsSerial.isOwner()) return;
+    stopToolsReconnect({ forgetPortInfo: true });
     await toolsSerial.acquire({ source: 'tools' });
     if (!toolsSerial.isOwner()) {
       throw Object.assign(new Error(t('tools_disconnected')), { code: 'UVSTUDIO_SERIAL_RELEASED' });
     }
     log(t('requestingPort'), 'info');
-    port = await navigator.serial.requestPort();
+    reusedPort = options.reuse === false ? null : toolsSerial.getReusablePort();
+    port = reusedPort || await navigator.serial.requestPort();
     if (!toolsSerial.isOwner()) {
       throw Object.assign(new Error(t('tools_disconnected')), { code: 'UVSTUDIO_SERIAL_RELEASED' });
     }
@@ -700,8 +843,9 @@ async function connect() {
     reader = port.readable.getReader();
     log(t('gettingWriter'), 'info');
     writer = port.writable.getWriter();
+    if (options.remember !== false) toolsSerial.rememberPort(port);
     toolsSerialSession++;
-    slotLastPortInfo = port.getInfo();
+    toolsLastPortInfo = options.remember === false ? null : port.getInfo();
 
     log(t('startingRead'), 'info');
     startReading();
@@ -712,9 +856,28 @@ async function connect() {
       throw Object.assign(new Error(t('tools_disconnected')), { code: 'UVSTUDIO_SERIAL_RELEASED' });
     }
 
+    if (options.remember !== false) {
+      applyFirmwareNavigationPolicy('', false);
+      applyNavigationCapabilities(null);
+      readBuffer = [];
+      let deviceInfoDetected = false;
+      try {
+        const deviceInfo = await requestDeviceInfo({ timeoutMs: 1500 });
+        deviceInfoDetected = true;
+        await detectNavigationCapabilities(deviceInfo);
+      } catch (error) {
+        console.warn('Unable to detect the connected firmware capabilities:', error);
+      }
+      if (!toolsSerial.isOwner()) {
+        throw Object.assign(new Error(t('tools_disconnected')), { code: 'UVSTUDIO_SERIAL_RELEASED' });
+      }
+      if (!deviceInfoDetected) applyFirmwareNavigationPolicy('', true);
+    }
+
     log(t('connected'), 'success');
     toolsSerial.setState('connected', { reason: 'connection-established' });
   } catch (e) {
+    if (reusedPort) toolsSerial.forgetPort(reusedPort);
     if (toolsSerial.isOwner()) {
       await toolsSerial.release('connection-error');
     } else {
@@ -729,11 +892,12 @@ async function connect() {
 
 async function disconnectPort(context = {}) {
   const hardwareDisconnect = context.reason === 'hardware-disconnect';
-  if (!hardwareDisconnect) stopSlotAutoReconnect({ forgetPort: true });
+  if (!hardwareDisconnect) stopToolsReconnect({ forgetPortInfo: true });
   isReading = false;
   const activeReader = reader;
   const activeWriter = writer;
   const activePort = port;
+  if (hardwareDisconnect && activePort) toolsSerial.forgetPort(activePort);
   reader = null;
   writer = null;
   port = null;
@@ -745,6 +909,9 @@ async function disconnectPort(context = {}) {
     writer: activeWriter,
     port: activePort
   });
+  if (!shouldKeepFirmwareNavigationProfile(context)) {
+    clearFirmwareNavigationProfile();
+  }
   if (context.reason === 'operation-complete' || context.reason === 'user') {
     log(t('tools_disconnected'), 'info');
   }
@@ -754,9 +921,40 @@ const toolsSerial = window.UVStudioSerial.register('tools', {
   disconnect: disconnectPort
 });
 
+const toolsReconnect = window.UVStudioSerial.createReconnectManager({
+  canAttempt: () => toolsViewUsesRuntimeSerial() &&
+    toolsSerial.isOwner() && !activeOperationToken,
+  reconnect: reconnectToolsPort,
+  onError: error => console.warn('Unable to enumerate serial ports during tools reconnect:', error),
+  onStateChange: () => {
+    updateActionButtons();
+    runPendingToolsRefresh();
+  }
+});
+
+window.addEventListener('uvstudio:serialrequired', event => {
+  if (event.detail?.owner !== 'tools' || event.detail.promise) return;
+  event.detail.promise = connect({ reuse: true, remember: true });
+});
+
+window.addEventListener('uvstudio:serialstatechange', event => {
+  if (shouldClearFirmwareNavigationOnSerialState(event.detail)) {
+    clearFirmwareNavigationProfile();
+  }
+});
+
+window.addEventListener('uvstudio:firmwareprofiledetected', event => {
+  const detail = event.detail;
+  const snapshot = window.UVStudioSerial?.getSnapshot();
+  if (!detail?.name || !detail.capabilities ||
+      snapshot?.owner !== 'viewer' || snapshot.state !== 'connected') return;
+  applyFirmwareNavigationPolicy(detail.name, true);
+  applyNavigationCapabilities(detail.capabilities);
+});
+
 function updateActionButtons() {
-  const busy = Boolean(activeOperationToken) || slotAutoReconnecting ||
-    slotReconnectInProgress || slotUpdateDownloadPending;
+  const busy = Boolean(activeOperationToken) || toolsReconnect.isActive() ||
+    toolsReconnect.isAttempting() || slotUpdateDownloadPending;
   const slotNameValid = Boolean(slotNormalizeName(slotNameInput?.value ?? slotMeta.name));
   if (flashBtn) flashBtn.disabled = !serialSupported || busy || !firmwareData;
   if (dumpBtn) dumpBtn.disabled = !serialSupported || busy;
@@ -792,7 +990,7 @@ function endToolsOperation(token) {
   activeOperationToken = null;
   activeOperationName = null;
   updateActionButtons();
-  runPendingSlotRefresh();
+  runPendingToolsRefresh();
 }
 
 window.addEventListener('beforeunload', event => {
@@ -846,59 +1044,35 @@ async function readLoop() {
   if (unexpectedlyClosed) void handleToolsHardwareDisconnect();
 }
 
-// ========== FIRMWARE SLOTS AUTO-RECONNECT ==========
-function sameSlotPort(candidate) {
-  if (!candidate || !slotLastPortInfo) return false;
-  const info = candidate.getInfo();
-  return info.usbVendorId === slotLastPortInfo.usbVendorId &&
-    info.usbProductId === slotLastPortInfo.usbProductId;
+// ========== RUNTIME TOOLS AUTO-RECONNECT ==========
+function toolsViewUsesRuntimeSerial(view = activeToolsView) {
+  return view !== 'flash';
 }
 
-function stopSlotAutoReconnect(options = {}) {
-  slotAutoReconnecting = false;
-  clearTimeout(slotReconnectTimer);
-  slotReconnectTimer = null;
-  slotRefreshPending = false;
-  if (options.forgetPort) slotLastPortInfo = null;
-  updateActionButtons();
+function stopToolsReconnect(options = {}) {
+  toolsReconnect.stop({ forgetPortInfo: options.forgetPortInfo });
+  toolsRefreshPending = false;
+  if (options.forgetPortInfo) toolsLastPortInfo = null;
 }
 
-async function handleSlotHardwareDisconnect() {
-  if (slotHardwareDisconnectPromise) return slotHardwareDisconnectPromise;
-  if (activeToolsView !== 'slots' || !port || !toolsSerial.isOwner() || !slotLastPortInfo) return;
-
-  slotHardwareDisconnectPromise = (async () => {
-    await disconnectPort({ reason: 'hardware-disconnect' });
-    if (activeToolsView !== 'slots' || !toolsSerial.isOwner()) return;
-
-    slotAutoReconnecting = true;
-    toolsSerial.setState('reconnecting', { reason: 'hardware-disconnect' });
-    log(t('serial_disconnected_auto'), 'info');
-    updateActionButtons();
-    scheduleSlotReconnectProbe();
-  })();
-
-  try {
-    await slotHardwareDisconnectPromise;
-  } finally {
-    slotHardwareDisconnectPromise = null;
-  }
-}
-
-// Outside Firmware Slots (e.g. the port inherited from Slots or Apps), a lost
-// device must not leave a dead `port` behind: the next action would reuse it
-// instead of reconnecting, typically when the radio is switched to DFU mode
-// before flashing. Release it so the next action starts a fresh connection.
-// A running operation is left alone: it fails and releases the port itself.
-let toolsHardwareDisconnectPromise = null;
 async function handleToolsHardwareDisconnect() {
-  if (activeToolsView === 'slots') return handleSlotHardwareDisconnect();
   if (toolsHardwareDisconnectPromise) return toolsHardwareDisconnectPromise;
-  if (!port || !toolsSerial.isOwner() || activeOperationToken) return;
+  if (!port || !toolsSerial.isOwner()) return;
 
   toolsHardwareDisconnectPromise = (async () => {
-    await toolsSerial.release('hardware-disconnect');
-    log(t('tools_disconnected'), 'info');
+    if (!toolsViewUsesRuntimeSerial() || !toolsLastPortInfo) {
+      await toolsSerial.release('hardware-disconnect');
+      log(t('tools_disconnected'), 'info');
+      return;
+    }
+
+    toolsRefreshPending = false;
+    await disconnectPort({ reason: 'hardware-disconnect' });
+    if (!toolsViewUsesRuntimeSerial() || !toolsSerial.isOwner()) return;
+
+    toolsSerial.setState('reconnecting', { reason: 'hardware-disconnect' });
+    log(t('serial_disconnected_auto'), 'info');
+    toolsReconnect.start(toolsLastPortInfo);
   })();
   try {
     await toolsHardwareDisconnectPromise;
@@ -907,43 +1081,13 @@ async function handleToolsHardwareDisconnect() {
   }
 }
 
-function scheduleSlotReconnectProbe() {
-  if (slotReconnectTimer || !slotAutoReconnecting) return;
-  slotReconnectTimer = setTimeout(async () => {
-    slotReconnectTimer = null;
-    if (!slotAutoReconnecting || !slotLastPortInfo) return;
-
-    try {
-      const ports = await navigator.serial.getPorts();
-      for (const candidate of ports.filter(sameSlotPort)) {
-        await reconnectSlotPort(candidate);
-        if (!slotAutoReconnecting) break;
-      }
-    } catch (error) {
-      console.warn('Unable to enumerate serial ports during slot reconnect:', error);
-    }
-    if (slotAutoReconnecting) scheduleSlotReconnectProbe();
-  }, 500);
-}
-
-async function reconnectSlotPort(candidate) {
-  if (!slotAutoReconnecting || slotReconnectInProgress || !sameSlotPort(candidate)) return;
-  slotReconnectInProgress = true;
-  updateActionButtons();
-
-  await sleep(500);
-  if (!slotAutoReconnecting || activeToolsView !== 'slots' || !toolsSerial.isOwner()) {
-    slotReconnectInProgress = false;
-    updateActionButtons();
-    return;
-  }
-
+async function reconnectToolsPort(candidate) {
   try {
     port = candidate;
     await port.open({ baudRate: BAUDRATE, bufferSize: 65536 });
-    if (!slotAutoReconnecting || activeToolsView !== 'slots' || !toolsSerial.isOwner()) {
+    if (!toolsReconnect.isActive() || !toolsViewUsesRuntimeSerial() || !toolsSerial.isOwner()) {
       await disconnectPort({ reason: 'hardware-disconnect' });
-      return;
+      return false;
     }
 
     reader = port.readable.getReader();
@@ -951,35 +1095,47 @@ async function reconnectSlotPort(candidate) {
     toolsSerialSession++;
     startReading();
 
-    slotAutoReconnecting = false;
-    clearTimeout(slotReconnectTimer);
-    slotReconnectTimer = null;
+    let deviceInfoDetected = false;
+    try {
+      readBuffer = [];
+      const deviceInfo = await requestDeviceInfo({ timeoutMs: 1500 });
+      deviceInfoDetected = true;
+      await detectNavigationCapabilities(deviceInfo);
+    } catch (error) {
+      if (!port || !toolsSerial.isOwner()) throw error;
+      console.warn('Unable to refresh firmware capabilities after reconnect:', error);
+    }
+    if (!deviceInfoDetected) applyFirmwareNavigationPolicy('', true);
+
+    toolsSerial.rememberPort(port);
     toolsSerial.setState('connected', { reason: 'auto-reconnect' });
     log(t('serial_reconnected'), 'success');
-    slotRefreshPending = true;
+    toolsRefreshPending = activeToolsView === 'slots' || activeToolsView === 'apps';
+    return true;
   } catch (error) {
-    console.warn('Firmware Slots auto-reconnect failed:', error);
+    console.warn('Runtime tools auto-reconnect failed:', error);
     await disconnectPort({ reason: 'hardware-disconnect' });
+    return false;
   } finally {
-    slotReconnectInProgress = false;
     updateActionButtons();
-    runPendingSlotRefresh();
   }
 }
 
-function runPendingSlotRefresh() {
-  if (!slotRefreshPending || activeOperationToken || activeToolsView !== 'slots' ||
+function runPendingToolsRefresh() {
+  if (!toolsRefreshPending || activeOperationToken || toolsReconnect.isActive() ||
       !port || !writer || !toolsSerial.isOwner()) return;
-  slotRefreshPending = false;
-  void slotRefreshFlow();
+  const view = activeToolsView;
+  toolsRefreshPending = false;
+  if (view === 'slots') {
+    void slotRefreshFlow();
+  } else if (view === 'apps' && navigationCapabilities?.apps === true) {
+    void appRefreshFlow();
+  }
 }
 
 if (serialSupported) {
   navigator.serial.addEventListener('disconnect', event => {
     if (port && event.target === port) void handleToolsHardwareDisconnect();
-  });
-  navigator.serial.addEventListener('connect', event => {
-    void reconnectSlotPort(event.target);
   });
 }
 
@@ -1106,7 +1262,7 @@ flashBtn.addEventListener('click', async () => {
   const operation = beginToolsOperation('flash-firmware', true);
   if (!operation) return;
   try {
-    if (!port) await connect();
+    if (!port) await connect({ reuse: false, remember: false });
     await flashFirmware(fw);
   } catch (e) {
     log(t('flashError', e?.message ?? String(e)), 'error');
@@ -1383,7 +1539,6 @@ dumpBtn.addEventListener('click', async () => {
   } catch (e) {
     log(t('error', e?.message ?? String(e)), 'error');
   } finally {
-    if (port) await disconnect();
     endToolsOperation(operation);
   }
 });
@@ -1440,7 +1595,10 @@ async function exchangeExternalFlashMessage(
   return null;
 }
 
-async function readExternalFlashChunk(address, length, timestamp) {
+async function readExternalFlashChunk(
+  address, length, timestamp, timeoutMs = FLASH_COMMAND_TIMEOUT_MS,
+  retries = FLASH_COMMAND_RETRIES
+) {
   const msg = createMessage(MSG_READ_FLASH, 10);
   const view = new DataView(msg.buffer);
   view.setUint32(4, address, true);
@@ -1448,7 +1606,7 @@ async function readExternalFlashChunk(address, length, timestamp) {
   view.setUint32(10, timestamp, true);
 
   const resp = await exchangeExternalFlashMessage(
-    msg, MSG_READ_FLASH_RESP, address, FLASH_COMMAND_TIMEOUT_MS
+    msg, MSG_READ_FLASH_RESP, address, timeoutMs, retries
   );
   if (!resp || resp.data.length < 7) {
     throw new Error(t('flashReadError', flashAddress(address)));
@@ -1552,17 +1710,16 @@ async function verifyExternalFlashSector(data, sector, sectorEnd, timestamp, crc
   }
 }
 
-// Labs-only gate for External Flash and Factory reset: a firmware without
-// external-flash access never answers 0x0738. Returns false after logging and
-// showing the Labs modal, so the caller simply stops.
-async function hasExternalFlashSupport(timestamp, featureKey) {
+// Safety gate for External Flash and Factory reset: a firmware without
+// external-flash access never answers 0x0738. The navigation already explains
+// the incompatibility inline; this guard only prevents an unsupported command.
+async function hasExternalFlashSupport(timestamp) {
   try {
     await readExternalFlashChunk(0, 1, timestamp);
     return true;
   } catch (e) {
     if (e?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e;
     log(t('flashUnsupported'), 'error');
-    showLabsRequiredModal(featureKey);
     return false;
   }
 }
@@ -1776,7 +1933,7 @@ async function runFactoryReset(targetKey) {
     readBuffer = [];
     await sleep(1000);
     const devInfo = await requestDeviceInfo();
-    if (!(await hasExternalFlashSupport(devInfo.timestamp, 'studio_nav_factory_reset'))) return;
+    if (!(await hasExternalFlashSupport(devInfo.timestamp))) return;
     if (!(await showFactoryResetModal('confirm', target))) return;
 
     progressContainer.style.display = 'block';
@@ -1798,7 +1955,7 @@ async function runFactoryReset(targetKey) {
 
     updateProgress(0);
     log(t('factoryResetWaitingDfu', target.label), 'info');
-    await connect();
+    await connect({ reuse: false, remember: false });
     await flashFirmware(stockFirmware, { count: false, offerChirpDriver: false });
     log(t('factoryResetComplete', target.label), 'success');
   } catch (e) {
@@ -1825,7 +1982,7 @@ if (flashDumpBtn) flashDumpBtn.addEventListener('click', async () => {
     await sleep(1000);
 
     const devInfo = await requestDeviceInfo();
-    if (!(await hasExternalFlashSupport(devInfo.timestamp, 'studio_nav_external_flash'))) return;
+    if (!(await hasExternalFlashSupport(devInfo.timestamp))) return;
     progressContainer.style.display = 'block';
     updateProgress(0);
     log(t('dumpingFlash'), 'info');
@@ -1857,7 +2014,6 @@ if (flashDumpBtn) flashDumpBtn.addEventListener('click', async () => {
   } catch (e) {
     log(t('error', e?.message ?? String(e)), 'error');
   } finally {
-    if (port) await disconnect();
     endToolsOperation(operation);
   }
 });
@@ -1875,7 +2031,7 @@ if (flashRestoreBtn) flashRestoreBtn.addEventListener('click', async () => {
     await sleep(1000);
 
     const devInfo = await requestDeviceInfo();
-    if (!(await hasExternalFlashSupport(devInfo.timestamp, 'studio_nav_external_flash'))) return;
+    if (!(await hasExternalFlashSupport(devInfo.timestamp))) return;
     // Destructive: rewriting the external flash replaces the logo, settings,
     // firmware slots and multiboot state. Device-specific calibration is skipped.
     // Asked only once the firmware is known to support the restore.
@@ -1934,7 +2090,6 @@ if (flashRestoreBtn) flashRestoreBtn.addEventListener('click', async () => {
   } catch (e) {
     log(t('error', e?.message ?? String(e)), 'error');
   } finally {
-    if (port) await disconnect();
     endToolsOperation(operation);
   }
 });
@@ -2012,13 +2167,12 @@ restoreBtn.addEventListener('click', async () => {
   } catch (e) {
     log(t('error', e?.message ?? String(e)), 'error');
   } finally {
-    if (port) await disconnect();
     endToolsOperation(operation);
   }
 });
 
 // ========== REQUEST DEVICE INFO (for dump/restore) ==========
-async function requestDeviceInfo() {
+async function requestDeviceInfo(options = {}) {
   log(t('establishing'), 'info');
   
   const ts = Date.now() & 0xffffffff;
@@ -2026,7 +2180,8 @@ async function requestDeviceInfo() {
   new DataView(msg.buffer).setUint32(4, ts, true);
   await sendMessage(msg);
   
-  for (let timeout = 0; timeout < 500; timeout++) {
+  const attempts = Math.max(1, Math.ceil((options.timeoutMs || 5000) / 10));
+  for (let timeout = 0; timeout < attempts; timeout++) {
     await sleep(10);
     const resp = fetchMessage(readBuffer);
     if (!resp) continue;
@@ -2036,6 +2191,7 @@ async function requestDeviceInfo() {
     if (resp.msgType === MSG_DEV_INFO_RESP) {
       // Log raw device info data (and keep the firmware string to name it later)
       const name = logDeviceInfo(resp.data);
+      applyFirmwareNavigationPolicy(name);
       log(t('deviceDetected'), 'success');
       return { timestamp: ts, name };
     }
@@ -2291,7 +2447,6 @@ if (logoUploadBtn) {
     } catch (e) {
       log(t('error', e?.message ?? String(e)), 'error');
     } finally {
-      if (port) await disconnect();
       endToolsOperation(operation);
     }
   });
@@ -2386,7 +2541,6 @@ if (logoDumpBtn) {
     } catch (e) {
       log(t('error', e?.message ?? String(e)), 'error');
     } finally {
-      if (port) await disconnect();
       endToolsOperation(operation);
     }
   });
@@ -2514,7 +2668,6 @@ if (rfLogExportBtn) {
         if (progressContainer) progressContainer.style.display = 'none';
         updateProgress(0);
       }
-      if (port) await disconnect();
       endToolsOperation(operation);
     }
   });
@@ -2889,11 +3042,7 @@ function slotLocalize() {
 }
 
 async function finishSlotOperation(op) {
-  try {
-    if (activeToolsView !== 'slots' && toolsSerial.isOwner()) await disconnect();
-  } finally {
-    endToolsOperation(op);
-  }
+  endToolsOperation(op);
 }
 
 // Smart default target: first empty slot (no FMB1 header), else the first user slot.
@@ -3154,7 +3303,8 @@ window.addEventListener('uvstudio:slotcatalogversions', event => {
 // Parallels the firmware-slots feature, targeting the external-flash "Apps"
 // region via the 0x073x command family. A .app file already carries its 64-byte
 // header (built by pack_app.py), so we just split header/code and write both.
-const APP_SLOT_COUNT = 48;        // v6.2.0+ firmware capacity (0..47)
+const APP_SLOT_COUNT = 64;        // v7.0.0+ Fusion capacity (0..63)
+const APP_V6_SLOT_COUNT = 48;     // firmware capacity after v6.1.0 and before v7
 const APP_LEGACY_SLOT_COUNT = 16; // firmware capacity through v6.1.0
 const APP_SLOT_FIRST = 0;         // first physical slot index
 const appSlotLabel = (s) => String(s + 1);   // physical slot -> user-facing number
@@ -3218,9 +3368,10 @@ function appFirmwareVersionFromName(name) {
 
 function appSlotCountForFirmware(name) {
   const version = appFirmwareVersionFromName(name);
-  return version && appCompareVersions(version, '6.1.0') > 0
-    ? APP_SLOT_COUNT
-    : APP_LEGACY_SLOT_COUNT;
+  if (!version) return APP_LEGACY_SLOT_COUNT;
+  if (appCompareVersions(version, '7.0.0') >= 0) return APP_SLOT_COUNT;
+  if (appCompareVersions(version, '6.1.0') > 0) return APP_V6_SLOT_COUNT;
+  return APP_LEGACY_SLOT_COUNT;
 }
 
 const appFileInput   = document.getElementById('appFile');
@@ -3478,48 +3629,11 @@ function appCancelOrder() {
   updateAppButtons();
 }
 
-// --- Labs-only feature modal ------------------------------------------------
-// Shown when the booted firmware lacks a Labs-only service: overlay apps (it
-// never answers 0x0730) or external-flash access (0x0738, used by External Flash
-// and Factory reset). Reuses the shared .modal styling; no "flash" button on
-// purpose - it names the feature and says that Labs is required.
-const labsRequiredModal = document.getElementById('labsRequiredModal');
-const labsRequiredClose = document.getElementById('labsRequiredClose');
-const labsRequiredBody  = document.getElementById('labsRequiredBody');
-
-function escapeHtml(text) {
-  return String(text).replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  })[c]);
-}
-
-// featureKey: the feature's navigation label (studio_nav_*).
-function showLabsRequiredModal(featureKey) {
-  if (!labsRequiredModal) return;
-  // Trusted static locale string (<strong> markup), the feature name escaped.
-  if (labsRequiredBody) labsRequiredBody.innerHTML = t('labsRequiredBody', escapeHtml(t(featureKey)));
-  labsRequiredModal.classList.add('show');
-  labsRequiredModal.setAttribute('aria-hidden', 'false');
-  if (labsRequiredClose) requestAnimationFrame(() => labsRequiredClose.focus());
-}
-function hideLabsRequiredModal() {
-  if (!labsRequiredModal) return;
-  labsRequiredModal.classList.remove('show');
-  labsRequiredModal.setAttribute('aria-hidden', 'true');
-}
-if (labsRequiredClose) labsRequiredClose.addEventListener('click', hideLabsRequiredModal);
-if (labsRequiredModal) {
-  labsRequiredModal.addEventListener('click', (e) => { if (e.target === labsRequiredModal) hideLabsRequiredModal(); });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && labsRequiredModal.classList.contains('show')) hideLabsRequiredModal();
-  });
-}
-
 // Shared capability gate for every app action (scan, install, delete). A firmware
 // without overlay-app support never answers 0x0730, so rather than let a later
 // erase/write hang on a 30 s timeout we probe one slot up front. Returns the
-// slot-0 info when supported; on an unsupported firmware it shows the modal and
-// returns null so the caller aborts. `fw` is the device-info result (for naming).
+// slot-0 info when supported, or null so the caller aborts. The navigation owns
+// the user-facing compatibility state; `fw` is retained for diagnostic logging.
 async function appsProbe(fw) {
   try {
     try { return await appInfo(APP_SLOT_FIRST); }
@@ -3532,7 +3646,6 @@ async function appsProbe(fw) {
     if (e?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw e;
     const name = (fw && fw.name) || t('appUnknownFirmware');
     log(t('appUnsupportedLog', name), 'error');   // firmware still named in the log for diagnostics
-    showLabsRequiredModal('studio_nav_apps');
     return null;
   }
 }
@@ -3554,8 +3667,8 @@ function appParseHeader(b) {
   };
 }
 
-async function appInfo(slot) {
-  const data = await slotCommand(MSG_APP_INFO, Uint8Array.of(slot), MSG_APP_INFO_RESP, 3000);
+async function appInfo(slot, timeoutMs = 3000) {
+  const data = await slotCommand(MSG_APP_INFO, Uint8Array.of(slot), MSG_APP_INFO_RESP, timeoutMs);
   return { slot, status: data[1], hdr: appParseHeader(data.subarray(2, 2 + APP_HDR_SIZE)) };
 }
 async function appErase(slot, ts) {
@@ -3813,8 +3926,8 @@ function appSetSlotCount(count) {
 }
 
 async function finishAppOperation(op) {
-  try { if (activeToolsView !== 'apps' && toolsSerial.isOwner()) await disconnect(); }
-  finally { endToolsOperation(op); updateAppButtons(); }
+  endToolsOperation(op);
+  updateAppButtons();
 }
 
 async function appRefreshFlow() {
@@ -4127,7 +4240,7 @@ async function appRewriteOrderFlow(moves, validateTargets, operation, doneKey) {
     readBuffer = []; await sleep(300);
     const dev = await requestDeviceInfo();
     if (!(await appsProbe(dev))) return;
-    if (!(await hasExternalFlashSupport(dev.timestamp, 'studio_nav_apps'))) return;
+    if (!(await hasExternalFlashSupport(dev.timestamp))) return;
 
     const sources = [...new Set(moves.map(move => move.source))];
     const images = new Map();
@@ -4364,10 +4477,14 @@ appBuildTable();
 appResetOrder();
 appUpdateManagerSummary();
 
-// Refresh the app list on entering the Apps view; release serial on leaving.
+// Refresh the app list on entering the Apps view once the shared runtime
+// connection requested by the Studio shell is ready.
 window.addEventListener('uvstudio:toolviewchange', event => {
   const nextView = event.detail?.view || 'flash';
-  if (nextView === 'apps') { updateAppButtons(); void appRefreshFlow(); }
+  if (nextView === 'apps') {
+    updateAppButtons();
+    if (port && toolsSerial.isOwner()) void appRefreshFlow();
+  }
 });
 window.addEventListener('uvstudio:appcatalogversions', event => {
   const apps = Array.isArray(event.detail?.apps) ? event.detail.apps : [];
