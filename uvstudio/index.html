@@ -4,12 +4,12 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>UV Studio by F4HWN</title>
-    <script src="js/studio-version.js?v=2.0.0"></script>
+    <script src="js/studio-version.js?v=2.1.0"></script>
 <link rel="icon" type="image/svg+xml" href="assets/uv-studio-radio.svg">
 <link href="css/core.css?v=5" rel="stylesheet">
 <link href="css/viewer.css?v=13" rel="stylesheet">
-<link href="css/tools.css?v=57" rel="stylesheet">
-<link href="css/studio.css?v=26" rel="stylesheet">
+<link href="css/tools.css?v=59" rel="stylesheet">
+<link href="css/studio.css?v=28" rel="stylesheet">
 </head>
 <body data-theme="light">
 
@@ -125,17 +125,17 @@
             <button class="nav-item nav-item-labs" data-route="apps" data-app="tools" data-tool-view="apps" data-name="Apps (Labs only)" data-section-i18n="studio_nav_apps">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                 <span class="nav-item-label" data-i18n="studio_nav_apps">Apps</span>
-                <span class="tag" data-i18n="studio_nav_labs_only">Labs only</span>
+                <span class="tag" data-i18n="studio_nav_labs_only" hidden>Labs only</span>
             </button>
             <button class="nav-item nav-item-labs" data-route="external-flash" data-app="tools" data-tool-view="external-flash" data-default-action="dump" data-name="External Flash (Labs only)" data-section-i18n="studio_nav_external_flash">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v6M9 12l3 3 3-3"/></svg>
                 <span class="nav-item-label" data-i18n="studio_nav_external_flash">External Flash</span>
-                <span class="tag" data-i18n="studio_nav_labs_only">Labs only</span>
+                <span class="tag" data-i18n="studio_nav_labs_only" hidden>Labs only</span>
             </button>
             <button class="nav-item nav-item-labs" data-route="factory-reset" data-app="tools" data-tool-view="factory-reset" data-name="Factory Reset (Labs only)" data-section-i18n="studio_nav_factory_reset">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/></svg>
                 <span class="nav-item-label" data-i18n="studio_nav_factory_reset">Factory reset</span>
-                <span class="tag" data-i18n="studio_nav_labs_only">Labs only</span>
+                <span class="tag" data-i18n="studio_nav_labs_only" hidden>Labs only</span>
             </button>
             <button class="nav-item" data-route="calibration" data-app="tools" data-tool-view="calibration" data-default-action="dump" data-name="Calibration" data-section-i18n="studio_nav_calibration">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg>
@@ -302,6 +302,19 @@
         <!-- ── Maintenance (uvtools2) ── -->
         <section class="pane" id="pane-tools">
           <div class="container">
+            <div class="tool-view edition-state" id="edition-state-content" role="status" aria-live="polite" hidden>
+                <span class="edition-state-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                        <path d="m19 5 3-3M2 22l3-3"></path>
+                        <path d="M6.3 20.3a2.4 2.4 0 0 0 3.4 0L12 18l-6-6-2.3 2.3a2.4 2.4 0 0 0 0 3.4Z"></path>
+                        <path d="M7.5 13.5 10 11M10.5 16.5 13 14"></path>
+                        <path d="m12 6 6 6 2.3-2.3a2.4 2.4 0 0 0 0-3.4l-2.6-2.6a2.4 2.4 0 0 0-3.4 0Z"></path>
+                    </svg>
+                </span>
+                <h2 id="editionStateTitle">Disconnected</h2>
+                <p id="editionStateBody">Connect the radio to check compatibility</p>
+            </div>
+
             <div class="tool-view active" id="flash-content" role="region">
                 <section class="section firmware-catalog" id="firmwareCatalogSection" aria-labelledby="firmwareCatalogLabel" hidden>
                     <label id="firmwareCatalogLabel" for="firmwareCatalogSelect" data-i18n="flash_catalog_label">Official F4HWN firmware</label>
@@ -779,22 +792,6 @@
     </div>
 </div>
 
-<!-- Overlay-apps capability notice: shown when the booted firmware has no 0x073x support -->
-<div class="modal" id="labsRequiredModal" role="dialog" aria-modal="true"
-     aria-labelledby="labsRequiredTitle" aria-hidden="true">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="modal-title" id="labsRequiredTitle" data-i18n="labsRequiredTitle">Labs Edition required</h2>
-            <button class="modal-close" id="labsRequiredClose" type="button"
-                    data-i18n-title="appClose" data-i18n-aria-label="appClose"
-                    title="Close" aria-label="Close">&times;</button>
-        </div>
-        <div class="modal-body">
-            <p id="labsRequiredBody"></p>
-        </div>
-    </div>
-</div>
-
 <!-- External-flash restore confirmation -->
 <div class="modal" id="flashRestoreConfirmModal" role="dialog" aria-modal="true"
      aria-labelledby="flashRestoreConfirmTitle" aria-describedby="flashRestoreConfirmBody"
@@ -859,26 +856,27 @@
 </div>
 
 <!-- ═══════════ Scripts (all local, file://-friendly) ═══════════ -->
-<script src="locales/en.js?v=63"></script>
-<script src="locales/fr.js?v=63"></script>
-<script src="locales/it.js?v=63"></script>
-<script src="locales/es.js?v=63"></script>
-<script src="locales/de.js?v=63"></script>
-<script src="locales/pt.js?v=63"></script>
-<script src="locales/ru.js?v=63"></script>
-<script src="locales/pl.js?v=63"></script>
-<script src="locales/zh.js?v=63"></script>
-<script src="locales/nl.js?v=63"></script>
+<script src="locales/en.js?v=67"></script>
+<script src="locales/fr.js?v=67"></script>
+<script src="locales/it.js?v=67"></script>
+<script src="locales/es.js?v=67"></script>
+<script src="locales/de.js?v=67"></script>
+<script src="locales/pt.js?v=67"></script>
+<script src="locales/ru.js?v=67"></script>
+<script src="locales/pl.js?v=67"></script>
+<script src="locales/zh.js?v=67"></script>
+<script src="locales/nl.js?v=67"></script>
 <script src="js/studio-preferences.js?v=2"></script>
 <script src="js/studio-i18n.js?v=5"></script>
-<script src="js/studio-serial.js?v=2"></script>
+<script src="js/studio-serial.js?v=5"></script>
+<script src="js/runtime-protocol.js?v=2"></script>
 <script src="js/rf-log.js?v=4"></script>
-    <script src="js/k5viewer.js?v=32"></script>
+    <script src="js/k5viewer.js?v=37"></script>
 <script src="js/keypad-detach.js?v=1"></script>
-<script src="js/flash.js?v=84"></script>
+<script src="js/flash.js?v=99"></script>
 <script src="js/flash-catalog.js?v=19"></script>
 <script src="js/app-catalog.js?v=20"></script>
-<script src="js/studio.js?v=19"></script>
+<script src="js/studio.js?v=24"></script>
 <script src="js/studio-flash-counter.js?v=2"></script>
 </body>
 </html>

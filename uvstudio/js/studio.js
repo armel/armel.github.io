@@ -16,10 +16,14 @@
     const hamburgerBtn = document.getElementById("hamburgerMenu");
     const toolViews = Array.from(document.querySelectorAll("#pane-tools .tool-view"));
     const actionTabs = Array.from(document.querySelectorAll("#pane-tools .action-tab"));
+    const editionStateView = document.getElementById("edition-state-content");
+    const editionStateTitle = document.getElementById("editionStateTitle");
+    const editionStateBody = document.getElementById("editionStateBody");
     const stage = document.querySelector(".stage");
     const version = window.UVSTUDIO_VERSION || "dev";
     const serialController = window.UVStudioSerial;
     const preferences = window.UVStudioPreferences;
+    const editionSensitiveRoutes = new Set(["apps", "external-flash", "factory-reset"]);
     let currentItem = null;
     let lastSerialSnapshot = serialController
         ? serialController.getSnapshot()
@@ -46,8 +50,8 @@
         "restore-flash": { route: "external-flash", action: "restore" }
     };
 
-    function translate(key) {
-        return window.uvStudioI18n ? window.uvStudioI18n.t(key) : key;
+    function translate(key, ...args) {
+        return window.uvStudioI18n ? window.uvStudioI18n.t(key, ...args) : key;
     }
 
     function renderSerialStatus(snapshot) {
@@ -79,6 +83,22 @@
                 lastSerialSnapshot.state === "reconnecting";
             serialDisconnect.hidden = !held || Boolean(operation);
         }
+    }
+
+    function applyNavigationDisabledState() {
+        const blocked = Boolean(lastSerialSnapshot?.operation);
+        const disconnected = lastSerialSnapshot?.state !== "connected";
+        items.forEach(item => {
+            const unavailable = item.dataset.capabilityDisabled === "true";
+            const editionSensitive = editionSensitiveRoutes.has(item.dataset.route);
+            const editionKnown = item.dataset.capabilityKnown === "true";
+            const editionPending = editionSensitive && (disconnected || !editionKnown);
+            item.classList.toggle("is-edition-disconnected", editionPending);
+            item.disabled = unavailable || (blocked && item !== currentItem);
+            if (item.disabled) item.setAttribute("aria-disabled", "true");
+            else item.removeAttribute("aria-disabled");
+        });
+        renderEditionContentState();
     }
 
     function applyBranding() {
@@ -154,12 +174,76 @@
         });
     }
 
+    function showToolView(toolView, action) {
+        toolViews.forEach(panel => {
+            const active = panel.id === `${toolView}-content`;
+            panel.classList.toggle("active", active);
+            panel.hidden = !active;
+            if (active) activateToolAction(panel, action);
+        });
+    }
+
+    function renderEditionContentState() {
+        if (!paneTools || !editionStateView) return;
+
+        const sensitive = currentItem?.dataset.app === "tools" &&
+            editionSensitiveRoutes.has(currentItem.dataset.route);
+        const disconnected = lastSerialSnapshot?.state !== "connected";
+        const editionKnown = currentItem?.dataset.capabilityKnown === "true";
+        const unavailable = currentItem?.dataset.capabilityDisabled === "true";
+        const state = sensitive
+            ? ((disconnected || !editionKnown) ? "disconnected" : (unavailable ? "unavailable" : ""))
+            : "";
+
+        paneTools.classList.toggle("showing-edition-state", Boolean(state));
+        editionStateView.dataset.state = state;
+
+        if (!state) {
+            if (sensitive) showToolView(currentItem.dataset.toolView);
+            else {
+                editionStateView.classList.remove("active");
+                editionStateView.hidden = true;
+            }
+            return;
+        }
+
+        showToolView("edition-state");
+        if (state === "disconnected") {
+            if (editionStateTitle) editionStateTitle.textContent = translate("studio_serial_disconnected");
+            if (editionStateBody) editionStateBody.textContent = translate("appManagerConnectHint");
+        } else {
+            if (editionStateTitle) editionStateTitle.textContent = translate("studio_nav_unavailable_edition");
+            if (editionStateBody) editionStateBody.textContent = translate("studio_edition_unavailable_body");
+        }
+    }
+
+    async function ensureRuntimeSerial(owner) {
+        const detail = { owner, promise: null };
+        window.dispatchEvent(new CustomEvent("uvstudio:serialrequired", { detail }));
+        if (detail.promise && typeof detail.promise.then === "function") {
+            try {
+                await detail.promise;
+            } catch {
+                return false;
+            }
+        }
+        const snapshot = serialController?.getSnapshot();
+        return snapshot?.owner === owner && snapshot.state === "connected";
+    }
+
     async function activate(item, options) {
         if (!item) return;
-        const settings = Object.assign({ updateHash: true }, options);
+        if (item.dataset.capabilityDisabled === "true") {
+            if (currentItem) replaceHash(currentItem.dataset.route);
+            return;
+        }
+        const settings = Object.assign({ updateHash: true, ensureSerial: false }, options);
         const app = item.dataset.app;
         const toolView = item.dataset.toolView;
         const view = item.dataset.view;
+        const serialOwner = app === "viewer" || app === "tools" ? app : null;
+        const isFirmwareFlash = app === "tools" && toolView === "flash";
+        const requiresRuntimeSerial = Boolean(serialOwner) && !isFirmwareFlash;
 
         applyBranding();
         if (item !== currentItem && serialController?.isNavigationBlocked()) {
@@ -167,11 +251,21 @@
             return;
         }
         if (serialController) {
-            const nextOwner = app === "viewer" || app === "tools" ? app : null;
             try {
-                await serialController.releaseFor(nextOwner);
+                if (isFirmwareFlash) {
+                    await serialController.releaseFor(null);
+                } else if (requiresRuntimeSerial) {
+                    await serialController.releaseFor(serialOwner);
+                }
             } catch (error) {
                 console.warn("Serial release failed during navigation:", error);
+                if (currentItem) replaceHash(currentItem.dataset.route);
+                return;
+            }
+        }
+        if (settings.ensureSerial && requiresRuntimeSerial) {
+            const connected = await ensureRuntimeSerial(serialOwner);
+            if (!connected || item.dataset.capabilityDisabled === "true") {
                 if (currentItem) replaceHash(currentItem.dataset.route);
                 return;
             }
@@ -192,12 +286,10 @@
             viewLive.classList.toggle("active", viewerMode === "live");
             viewRflog.classList.toggle("active", viewerMode === "rflog");
         } else if (app === "tools" && toolView) {
-            toolViews.forEach(panel => {
-                const active = panel.id === `${toolView}-content`;
-                panel.classList.toggle("active", active);
-                panel.hidden = !active;
-                if (active) activateToolAction(panel, settings.action || item.dataset.defaultAction);
-            });
+            showToolView(toolView, settings.action || item.dataset.defaultAction);
+        }
+
+        if (app === "tools" && toolView) {
             window.dispatchEvent(new CustomEvent("uvstudio:toolviewchange", {
                 detail: { view: toolView }
             }));
@@ -213,14 +305,18 @@
 
         const route = settings.route || item.dataset.route;
         currentItem = item;
+        renderEditionContentState();
         rememberRoute(route);
         if (settings.updateHash) replaceHash(route);
     }
 
-    items.forEach(item => item.addEventListener("click", () => { void activate(item); }));
+    items.forEach(item => item.addEventListener("click", () => {
+        void activate(item, { ensureSerial: true });
+    }));
 
-    actionTabs.forEach(tab => tab.addEventListener("click", () => {
+    actionTabs.forEach(tab => tab.addEventListener("click", async () => {
         if (serialController?.isNavigationBlocked()) return;
+        await ensureRuntimeSerial("tools");
         const toolView = tab.closest(".tool-view");
         activateToolAction(toolView, tab.dataset.action);
         const route = tab.dataset.route;
@@ -247,12 +343,8 @@
 
     window.addEventListener("uvstudio:serialstatechange", event => {
         renderSerialStatus(event.detail);
+        applyNavigationDisabledState();
         const blocked = Boolean(event.detail?.operation);
-        items.forEach(item => {
-            item.disabled = blocked && item !== currentItem;
-            if (item.disabled) item.setAttribute("aria-disabled", "true");
-            else item.removeAttribute("aria-disabled");
-        });
         actionTabs.forEach(tab => {
             tab.disabled = blocked && !tab.classList.contains("active");
             if (tab.disabled) tab.setAttribute("aria-disabled", "true");
@@ -260,8 +352,13 @@
         });
     });
 
+    window.addEventListener("uvstudio:navigationcapabilitieschange", () => {
+        applyNavigationDisabledState();
+    });
+
     window.addEventListener("uvstudio:languagechange", () => {
         renderSerialStatus(lastSerialSnapshot);
+        renderEditionContentState();
     });
 
     if (serialDisconnect && serialController) {
@@ -302,6 +399,7 @@
 
     applyBranding();
     renderSerialStatus(lastSerialSnapshot);
+    applyNavigationDisabledState();
     void activate(initial.item, { action: initial.action, route: initial.requestedRoute });
 
     /* Hidden developer switch: the Konami code (up up down down left right

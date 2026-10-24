@@ -164,11 +164,27 @@ body {
     padding: 2px 5px;
 }
 .nav-item:hover { background: color-mix(in oklab, var(--text) 6%, transparent); color: var(--text); }
+.nav-item.is-edition-disconnected {
+    opacity: 0.55;
+    filter: saturate(0.35);
+}
 .nav-item:disabled {
     cursor: not-allowed;
-    opacity: 0.55;
+    opacity: 1;
 }
-.nav-item.active:disabled { opacity: 0.82; }
+.nav-item:disabled > svg,
+.nav-item:disabled .nav-item-label {
+    opacity: 0.5;
+    filter: saturate(0.35);
+}
+.nav-item.active:disabled > svg,
+.nav-item.active:disabled .nav-item-label {
+    opacity: 0.62;
+}
+.nav-item:disabled .tag {
+    opacity: 1;
+    filter: none;
+}
 .nav-item.active {
     background: linear-gradient(160deg, #3b82f6 0%, #2563eb 100%); color: #fff;
     box-shadow: 0 2px 8px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
