@@ -1,5 +1,5 @@
 // Firmware catalog: lists stable archive/ files from the main branch and the
-// optional rolling development build from feature_update_v6 through the GitHub
+// optional rolling development build from feature_update_v7 through the GitHub
 // Contents API. Selected builds feed into either the main flash pipeline or the
 // multiboot-slot pipeline through window.UVStudioFlash. Pure helpers are exported
 // for Node tests; the browser runtime is guarded and self-boots.
@@ -28,7 +28,7 @@
   const API_URL =
     `https://api.github.com/repos/${REPO}/contents/${ARCHIVE_PATH}` +
     `?ref=${encodeURIComponent(STABLE_BRANCH)}`;
-  const DEVELOPMENT_BRANCH = 'feature_update_v6';
+  const DEVELOPMENT_BRANCH = 'feature_update_v7';
   const DEVELOPMENT_FILENAME = 'f4hwn.fusion.development.bin';
   const DEVELOPMENT_API_URL =
     `https://api.github.com/repos/${REPO}/contents/${ARCHIVE_PATH}/${DEVELOPMENT_FILENAME}` +

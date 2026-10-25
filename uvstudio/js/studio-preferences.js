@@ -41,7 +41,7 @@
        and app catalogs from the development branch instead of main, to check
        how a release will look before it is merged. */
     const DEV_CATALOG_KEY = "uvstudio.devCatalog";
-    const DEV_CATALOG_BRANCH = "feature_update_v6";
+    const DEV_CATALOG_BRANCH = "feature_update_v7";
 
     function devCatalog() {
         return get(DEV_CATALOG_KEY, "") === "1";

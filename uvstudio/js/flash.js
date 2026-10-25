@@ -117,6 +117,13 @@ let port = null;
 let reader = null;
 let writer = null;
 let firmwareData = null;
+// Asset pack (fonts, menu texts) carried by the selected firmware package, or
+// null for a binary-only firmware. firmwareData then holds the image alone.
+let firmwareAssets = null;
+// Asset pack still to be written into the running slot of the radio: set when
+// a flash (or a slot write) could not write it, and cleared once written. The
+// "Install firmware assets" button exists only for it.
+let pendingFirmwareAssets = null;
 let firmwareFileName = 'firmware.bin';
 // Out-of-order guard: only the most recent selection may commit firmwareData.
 let firmwareLoadSeq = 0;
@@ -143,6 +150,7 @@ let toolsRefreshPending = false;
 
 // Firmware Slots state
 let slotImage = null;   // Uint8Array of the selected .bin
+let slotAssets = null;  // asset pack of the selected firmware package, or null
 let slotMeta = { name: '', fwVersion: '' };
 // Out-of-order guard for the slot image picker (catalog or local file).
 let slotImageLoadSeq = 0;
@@ -159,6 +167,8 @@ let logoBitmap = null;            // Uint8Array(1024) ST7565-native, after thres
 
 // ========== UI ELEMENTS ==========
 const flashBtn = document.getElementById('flashBtn');
+const flashAssetsBtn = document.getElementById('flashAssetsBtn');
+const flashSteps = document.getElementById('flashSteps');
 const dumpBtn = document.getElementById('dumpBtn');
 const restoreBtn = document.getElementById('restoreBtn');
 const firmwareFileInput = document.getElementById('firmwareFile');
@@ -418,6 +428,7 @@ function refreshLocalizedToolsState() {
   updateInfoBox();
   
   if (flashBtn) flashBtn.textContent = t('flashBtn');
+  if (flashAssetsBtn) flashAssetsBtn.textContent = t('flashAssetsBtn');
   if (dumpBtn) dumpBtn.textContent = t('dumpBtn');
   if (restoreBtn) restoreBtn.textContent = t('restoreBtn');
   if (fileButton) fileButton.textContent = t('fileChoose');
@@ -587,6 +598,7 @@ function beginFirmwareLoad(source) {
   // The previous firmware is no longer current: make it unavailable so Flash is
   // disabled until the new selection has finished loading.
   firmwareData = null;
+  firmwareAssets = null;
   updateFlashButton();
   if (source === 'url' && firmwareFileInput) firmwareFileInput.value = '';
   window.dispatchEvent(new CustomEvent('uvstudio:firmwareselect', { detail: { source } }));
@@ -595,13 +607,24 @@ function beginFirmwareLoad(source) {
 
 function clearFirmware() {
   firmwareData = null;
+  firmwareAssets = null;
   if (fileName) { fileName.textContent = t('fileNoFile'); fileName.classList.remove('has-file'); }
   if (fileLabel) fileLabel.classList.remove('has-file');
   updateFlashButton();
 }
 
 function setFirmwareBuffer(buf, name = 'firmware.bin') {
-  firmwareData = new Uint8Array(buf);
+  let parts;
+  try {
+    parts = window.UVStudioFirmwarePackage.splitFirmwarePackage(new Uint8Array(buf));
+  } catch (e) {
+    log(t('fwPackageInvalid', name, e?.message ?? String(e)), 'error');
+    clearFirmware();
+    return;
+  }
+  firmwareData = parts.image;
+  firmwareAssets = parts.pack;
+  resetFlashSteps();
   firmwareFileName = name;
   hideChirpDriverOffer();
   if (fileName) {
@@ -610,6 +633,7 @@ function setFirmwareBuffer(buf, name = 'firmware.bin') {
   }
   if (fileLabel) fileLabel.classList.add('has-file');
   log(t('firmwareLoaded', name, firmwareData.length), 'success');
+  if (firmwareAssets) log(t('fwAssetsDetected', firmwareAssets.length), 'info');
   updateFlashButton();
 }
 
@@ -816,6 +840,43 @@ function updateRestoreButton() {
 }
 
 // ========== SERIAL CONNECTION ==========
+// Write the assets of the selected firmware package into the running slot:
+// completes a flash whose serial link did not survive the reboot, or a
+// multiboot slot restored without its assets.
+if (flashAssetsBtn) {
+  flashAssetsBtn.addEventListener('click', async () => {
+    const assets = pendingFirmwareAssets;
+    if (!assets) return;
+    const operation = beginToolsOperation('flash-assets', true);
+    if (!operation) return;
+    try {
+      if (!port) await connect({ reuse: true, remember: true });
+      readBuffer = [];
+      await sleep(500);
+      const dev = await requestDeviceInfo();
+      if (progressContainer) progressContainer.style.display = 'block';
+      updateProgress(0);
+      setFlashStep('restart', 'done', 'flash_step_detected');
+      setFlashStep('assets', 'active');
+      await writeFirmwareAssets(ASSET_RUNNING_SLOT, assets, dev.timestamp, fraction => {
+        setFlashStepProgress('assets', fraction);
+        return updateProgress(fraction * 100);
+      });
+      updateProgress(100);
+      setFlashStep('assets', 'done', 'flash_step_done');
+      setFlashStepsComplete(true);
+      pendingFirmwareAssets = null;
+    } catch (e) {
+      failActiveFlashStep();
+      log(t('fwAssetsError', e?.message ?? String(e)), 'error');
+    } finally {
+      hideProgressSoon();
+      if (port) await disconnect();
+      endToolsOperation(operation);
+    }
+  });
+}
+
 async function connect(options = {}) {
   let reusedPort = null;
   try {
@@ -952,11 +1013,90 @@ window.addEventListener('uvstudio:firmwareprofiledetected', event => {
   applyNavigationCapabilities(detail.capabilities);
 });
 
+// Steps shown under the Flash button for a firmware that carries assets:
+// image, radio restart, assets. Each step is pending, active, done or error,
+// has its own gauge (the global one stays for binary-only firmwares) and a
+// note whose i18n key is kept, so a language change redraws it.
+const FLASH_STEPS = ['image', 'restart', 'assets'];
+
+function flashStepElement(step) {
+  return flashSteps?.querySelector(`[data-step="${step}"]`) || null;
+}
+
+function setFlashStep(step, state, noteKey = null) {
+  const element = flashStepElement(step);
+  if (!element) return;
+  if (state) element.dataset.state = state;
+  else delete element.dataset.state;
+  delete element.dataset.wait;
+
+  const key = noteKey || `flash_step_${step}_hint`;
+  const note = element.querySelector('.flash-step-note');
+  if (note) {
+    note.setAttribute('data-i18n', key);
+    note.textContent = t(key);
+  }
+  const mark = element.querySelector('.flash-step-mark');
+  if (mark) mark.textContent = state === 'done' ? '\u2713' : state === 'error' ? '!' : String(FLASH_STEPS.indexOf(step) + 1);
+  const fill = element.querySelector('.flash-step-fill');
+  if (fill && state === 'error' && !fill.style.width) fill.style.width = '100%';
+  if (fill && (state === 'done' || !state)) fill.style.width = '';
+  const pct = element.querySelector('.flash-step-pct');
+  if (pct && state !== 'active') pct.textContent = '';
+}
+
+// Waiting for the radio: active, with moving stripes instead of a percentage.
+function setFlashStepWaiting(step) {
+  setFlashStep(step, 'active', 'flash_step_waiting');
+  const element = flashStepElement(step);
+  if (element) element.dataset.wait = 'true';
+}
+
+// Returns true when the shown percentage changed (to let the browser paint).
+function setFlashStepProgress(step, fraction) {
+  const element = flashStepElement(step);
+  if (!element) return false;
+  const label = `${Math.round(Math.min(1, Math.max(0, fraction)) * 100)}%`;
+  const pct = element.querySelector('.flash-step-pct');
+  const fill = element.querySelector('.flash-step-fill');
+  const changed = Boolean(pct && pct.textContent !== label);
+  if (pct) pct.textContent = label;
+  if (fill) fill.style.width = label;
+  return changed;
+}
+
+function failActiveFlashStep() {
+  FLASH_STEPS.forEach(step => {
+    if (flashStepElement(step)?.dataset.state === 'active') setFlashStep(step, 'error', 'flash_step_failed');
+  });
+}
+
+// Once the assets are written, the cable reminder becomes "you can unplug".
+function setFlashStepsComplete(complete) {
+  if (!flashSteps) return;
+  flashSteps.dataset.complete = String(complete);
+  const hint = flashSteps.querySelector('#flashStepsHint');
+  if (!hint) return;
+  const key = complete ? 'flash_unplug_done' : 'flash_unplug_warning';
+  hint.setAttribute('data-i18n', key);
+  hint.textContent = t(key);
+}
+
+function resetFlashSteps() {
+  FLASH_STEPS.forEach(step => setFlashStep(step, null));
+  setFlashStepsComplete(false);
+}
+
 function updateActionButtons() {
   const busy = Boolean(activeOperationToken) || toolsReconnect.isActive() ||
     toolsReconnect.isAttempting() || slotUpdateDownloadPending;
   const slotNameValid = Boolean(slotNormalizeName(slotNameInput?.value ?? slotMeta.name));
   if (flashBtn) flashBtn.disabled = !serialSupported || busy || !firmwareData;
+  if (flashSteps) flashSteps.hidden = !firmwareAssets;
+  if (flashAssetsBtn) {
+    flashAssetsBtn.hidden = !pendingFirmwareAssets;
+    flashAssetsBtn.disabled = !serialSupported || busy || !pendingFirmwareAssets;
+  }
   if (dumpBtn) dumpBtn.disabled = !serialSupported || busy;
   if (restoreBtn) restoreBtn.disabled = !serialSupported || busy || !calibData;
   if (logoUploadBtn) logoUploadBtn.disabled = !serialSupported || busy || !logoBitmap;
@@ -1259,12 +1399,22 @@ flashBtn.addEventListener('click', async () => {
   if (!firmwareData) return;
   // Snapshot the buffer so a download finishing mid-flash cannot swap it out.
   const fw = firmwareData;
+  const assets = firmwareAssets;
   const operation = beginToolsOperation('flash-firmware', true);
   if (!operation) return;
   try {
     if (!port) await connect({ reuse: false, remember: false });
-    await flashFirmware(fw);
+    pendingFirmwareAssets = null;
+    resetFlashSteps();
+    if (assets) setFlashStep('image', 'active');
+    // With assets, the steps carry the progress instead of the global gauge.
+    await flashFirmware(fw, assets ? { onProgress: fraction => setFlashStepProgress('image', fraction) } : {});
+    if (assets) {
+      setFlashStep('image', 'done', 'flash_step_done');
+      await installAssetsAfterFlash(assets);
+    }
   } catch (e) {
+    failActiveFlashStep();
     log(t('flashError', e?.message ?? String(e)), 'error');
   } finally {
     if (port) await disconnect();
@@ -1274,8 +1424,13 @@ flashBtn.addEventListener('click', async () => {
 
 async function flashFirmware(fw, options = {}) {
   hideChirpDriverOffer();
-  if (progressContainer) progressContainer.style.display = 'block';
-  updateProgress(0);
+  // options.onProgress(fraction) replaces the global gauge: a firmware with
+  // assets shows its progress in the flash steps, and is not done yet here.
+  const report = options.onProgress || null;
+  if (!report) {
+    if (progressContainer) progressContainer.style.display = 'block';
+    updateProgress(0);
+  }
 
   readBuffer = [];
   log(t('bufferEmpty'), 'info');
@@ -1309,10 +1464,11 @@ async function flashFirmware(fw, options = {}) {
   await performHandshake(devInfo.blVersion);
   log(t('handshakeComplete'), 'success');
 
-  await programFirmware(fw);
+  await programFirmware(fw, report || (fraction => updateProgress(fraction * 100)));
 
-  updateProgress(100);
-  log(t('programmingComplete'), 'success');
+  if (report) report(1);
+  else updateProgress(100);
+  log(t(report ? 'fwAssetsImageDone' : 'programmingComplete'), 'success');
 
   // Global community counter: a firmware was successfully flashed.
   // Best-effort — never blocks or fails the flash.
@@ -1323,6 +1479,10 @@ async function flashFirmware(fw, options = {}) {
   // Offer the matching CHIRP driver for download. Best-effort, never blocks.
   if (options.offerChirpDriver !== false) maybeOfferChirpDriver(firmwareFileName);
 
+  if (!report) hideProgressSoon();
+}
+
+function hideProgressSoon() {
   setTimeout(() => {
     if (progressContainer) progressContainer.style.display = 'none';
     updateProgress(0);
@@ -1403,7 +1563,7 @@ async function performHandshake(blVersion) {
   log(t('bufferCleaned', readBuffer.length), 'info');
 }
 
-async function programFirmware(fw) {
+async function programFirmware(fw, report) {
   const pageCount = Math.ceil(fw.length / 256);
   const timestamp = Date.now() & 0xffffffff;
   log(t('programming', pageCount), 'info');
@@ -1412,7 +1572,7 @@ async function programFirmware(fw) {
   const MAX_RETRIES = 3;
 
   while (pageIndex < pageCount) {
-    updateProgress((pageIndex / pageCount) * 100);
+    report(pageIndex / pageCount);
 
     const msg = createMessage(MSG_PROG_FW, 268);
     const view = new DataView(msg.buffer);
@@ -2173,7 +2333,7 @@ restoreBtn.addEventListener('click', async () => {
 
 // ========== REQUEST DEVICE INFO (for dump/restore) ==========
 async function requestDeviceInfo(options = {}) {
-  log(t('establishing'), 'info');
+  if (!options.quiet) log(t('establishing'), 'info');
   
   const ts = Date.now() & 0xffffffff;
   const msg = createMessage(MSG_DEV_INFO_REQ, 4);
@@ -2186,7 +2346,7 @@ async function requestDeviceInfo(options = {}) {
     const resp = fetchMessage(readBuffer);
     if (!resp) continue;
     
-    log(t('messageReceived', resp.msgType.toString(16).padStart(4, '0')), 'info');
+    if (!options.quiet) log(t('messageReceived', resp.msgType.toString(16).padStart(4, '0')), 'info');
     
     if (resp.msgType === MSG_DEV_INFO_RESP) {
       // Log raw device info data (and keep the firmware string to name it later)
@@ -2734,7 +2894,8 @@ const MSG_PROFILE_ERASE = 0x0728, MSG_PROFILE_ERASE_RESP = 0x0729;
 // Firmware MB_ERR_* codes (0..8) -> i18n status keys.
 const SLOT_STATUS_KEY = ['slotStateValid', 'slotStateEmpty', 'slotStateNewHdr',
   'slotStateIncomplete', 'slotStateBadSize', 'slotStateCrc', 'slotStateSpi',
-  'slotStateBadSlot', 'slotStateAuth'];
+  'slotStateBadSlot', 'slotStateAuth', 'slotStateError', 'slotStateError',
+  'slotStateMismatch'];
 function slotStatusText(code) { return t(SLOT_STATUS_KEY[code] || 'slotStateError'); }
 
 // CRC-32 (zlib/PNG, poly 0xEDB88320) — must match the firmware mb_crc32_update.
@@ -2908,6 +3069,196 @@ async function slotValidate(slot) {
   const data = await slotCommand(MSG_SLOT_VALIDATE, Uint8Array.of(slot), MSG_SLOT_VALIDATE_RESP, 20000);
   const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
   return { crc: dv.getUint32(0, true) >>> 0, status: data[5] };
+}
+
+// ---------- Firmware assets (fonts, menu texts) ----------
+// v7 firmwares keep their read-only data in a 16 KiB asset zone per firmware
+// slot (0x075x commands, same wire layout as the 0x072x slot family). The
+// release package carries the pack after the image (firmware-package.js).
+const MSG_ASSET_INFO = 0x0750, MSG_ASSET_INFO_RESP = 0x0751;
+const MSG_ASSET_ERASE = 0x0752, MSG_ASSET_ERASE_RESP = 0x0753;
+const MSG_ASSET_WRITE = 0x0754, MSG_ASSET_WRITE_RESP = 0x0755;
+const MSG_ASSET_VALIDATE = 0x0756, MSG_ASSET_VALIDATE_RESP = 0x0757;
+const ASSET_RUNNING_SLOT = 0xFF;          // the firmware resolves it to its own slot
+const ASSET_BOOT_TIMEOUT_MS = 30000;      // first boot also backs up the new firmware
+
+async function assetInfo(slot, timeoutMs = 3000) {
+  const data = await slotCommand(MSG_ASSET_INFO, Uint8Array.of(slot), MSG_ASSET_INFO_RESP, timeoutMs);
+  const fwPackage = window.UVStudioFirmwarePackage;
+  return {
+    slot: data[0],
+    status: data[1],
+    runningSlot: data[2],
+    loaded: data[3] === 1,
+    runningBuildId: fwPackage.toHex(data.subarray(36, 36 + fwPackage.BUILD_ID_SIZE))
+  };
+}
+
+async function assetErase(slot, ts) {
+  const d = new Uint8Array(6);
+  d[0] = slot;
+  new DataView(d.buffer).setUint32(2, ts, true);
+  const data = await slotCommand(MSG_ASSET_ERASE, d, MSG_ASSET_ERASE_RESP, 30000);
+  return data[1];
+}
+
+async function assetWriteChunk(slot, offset, ts, chunk) {
+  const d = new Uint8Array(12 + chunk.length);
+  const dv = new DataView(d.buffer);
+  d[0] = slot;
+  dv.setUint32(2, offset, true);
+  dv.setUint16(6, chunk.length, true);
+  dv.setUint32(8, ts, true);
+  d.set(chunk, 12);
+  const data = await slotCommand(MSG_ASSET_WRITE, d, MSG_ASSET_WRITE_RESP, 1500);
+  return data[1];
+}
+
+// Same idempotent retry as slot chunks: NOR programming of identical bytes.
+async function assetWriteChunkRetry(slot, offset, ts, chunk) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await assetWriteChunk(slot, offset, ts, chunk);
+    } catch (e) {
+      if (attempt >= 4) throw e;
+      log(t('slotRetry', offset), 'info');
+      await sleep(60);
+    }
+  }
+}
+
+async function assetValidate(slot) {
+  const data = await slotCommand(MSG_ASSET_VALIDATE, Uint8Array.of(slot), MSG_ASSET_VALIDATE_RESP, 5000);
+  return data[1];
+}
+
+// Write an asset pack into the zone of `slot` (ASSET_RUNNING_SLOT = the running
+// firmware). The payload goes first and the header last, so an interrupted
+// upload never validates. The running firmware only accepts its own build.
+async function writeFirmwareAssets(slot, pack, ts, onProgress = null) {
+  const fwPackage = window.UVStudioFirmwarePackage;
+  const info = await assetInfo(slot);
+  if (info.slot === info.runningSlot &&
+      info.runningBuildId !== fwPackage.parseAssetPack(pack).buildId) {
+    throw new Error(t('fwAssetsWrongFirmware'));
+  }
+
+  log(t('fwAssetsWriting'), 'info');
+  let st = await assetErase(info.slot, ts);
+  if (st !== 0) throw new Error('erase: ' + slotStatusText(st));
+  const header = fwPackage.PACK_HEADER_SIZE;
+  for (let off = header; off < pack.length; off += SLOT_WRITE_CHUNK) {
+    const chunk = pack.subarray(off, Math.min(off + SLOT_WRITE_CHUNK, pack.length));
+    st = await assetWriteChunkRetry(info.slot, off, ts, chunk);
+    if (st !== 0) throw new Error('write @' + off + ': ' + slotStatusText(st));
+    if (onProgress && onProgress((off + chunk.length) / pack.length)) await waitForProgressPaint();
+  }
+  st = await assetWriteChunkRetry(info.slot, 0, ts, pack.subarray(0, header));
+  if (st !== 0) throw new Error('header: ' + slotStatusText(st));
+  st = await assetValidate(info.slot);
+  if (st !== 0) throw new Error('verify: ' + slotStatusText(st));
+  log(t('fwAssetsWriteOk'), 'success');
+}
+
+// After a bootloader flash, wait for the radio to run the new firmware and
+// write its assets on its serial port, without any click: the same port when
+// it survives the reboot (programming cable), else the port that appears once
+// the radio restarts (USB-C: the firmware enumerates its own CDC device, which
+// the page reaches through the ports already granted to it). The firmware
+// keeps the screen blank until then. On timeout the "Install firmware assets"
+// button finishes the job.
+const FW_VCP_INFO = Object.freeze({ usbVendorId: 0x36B7, usbProductId: 0xFFFF }); // App/usb/usbd_cdc_if.c
+const ASSET_RADIO_TIMEOUT_MS = 120000;
+
+async function openRadioPortForAssets(flashPortInfo) {
+  const matches = window.UVStudioSerial.portMatchesInfo;
+  let ports;
+  try {
+    ports = await navigator.serial.getPorts();
+  } catch (e) {
+    return false;
+  }
+  const candidates = ports.filter(candidate => !candidate.readable &&
+    (matches(candidate, FW_VCP_INFO) || matches(candidate, flashPortInfo)));
+  for (const candidate of candidates) {
+    try {
+      if (!toolsSerial.isOwner()) await toolsSerial.acquire({ source: 'tools' });
+      if (!toolsSerial.isOwner()) return false;
+      await candidate.open({ baudRate: BAUDRATE, bufferSize: 65536 });
+      port = candidate;
+      reader = port.readable.getReader();
+      writer = port.writable.getWriter();
+      toolsSerialSession++;
+      startReading();
+      toolsSerial.setState('connected', { reason: 'firmware-assets' });
+      return true;
+    } catch (e) {
+      if (port === candidate) await disconnectPort({ reason: 'connection-error' });
+      else try { await candidate.close(); } catch (closeError) {}
+    }
+  }
+  return false;
+}
+
+async function installAssetsAfterFlash(pack) {
+  const flashPortInfo = port?.getInfo?.() || null;
+  setFlashStepWaiting('restart');
+  log(t('fwAssetsWaitRadio'), 'info');
+  const deadline = performance.now() + ASSET_RADIO_TIMEOUT_MS;
+  while (performance.now() < deadline) {
+    if (!port || !writer) await openRadioPortForAssets(flashPortInfo);
+    let dev = null;
+    if (port && writer) {
+      try {
+        readBuffer = [];
+        dev = await requestDeviceInfo({ timeoutMs: 1000, quiet: true });
+      } catch (e) {
+        dev = null;
+      }
+    }
+    if (dev) {
+      setFlashStep('restart', 'done', 'flash_step_detected');
+      setFlashStep('assets', 'active');
+      try {
+        await writeFirmwareAssets(ASSET_RUNNING_SLOT, pack, dev.timestamp,
+          fraction => setFlashStepProgress('assets', fraction));
+        setFlashStep('assets', 'done', 'flash_step_done');
+        setFlashStepsComplete(true);
+        log(t('programmingComplete'), 'success');
+      } catch (e) {
+        setFlashStep('assets', 'error', 'flash_step_failed');
+        log(t('fwAssetsError', e?.message ?? String(e)), 'error');
+        pendingFirmwareAssets = pack;
+        log(t('fwAssetsReconnect'), 'info');
+      }
+      return;
+    }
+    await sleep(500);
+  }
+  setFlashStep('restart', 'error', 'flash_step_failed');
+  pendingFirmwareAssets = pack;
+  log(t('fwAssetsReconnect'), 'info');
+}
+
+// Assets of a firmware written into a multiboot slot. A running firmware
+// without the 0x075x commands, or the slot being the running one (its build
+// differs from the new image), leaves them for "Install firmware assets"
+// once the slot has been restored.
+async function slotWriteAssets(slot, pack, ts) {
+  let info;
+  try {
+    info = await assetInfo(slot, 1500);
+  } catch (e) {
+    log(t('fwAssetsSlotUnsupported', slot), 'error');
+    pendingFirmwareAssets = pack;
+    return;
+  }
+  if (info.runningSlot === slot) {
+    log(t('fwAssetsSlotRunning', slot), 'info');
+    pendingFirmwareAssets = pack;
+    return;
+  }
+  await writeFirmwareAssets(slot, pack, ts);
 }
 
 function slotRenderRow(slot, info) {
@@ -3138,6 +3489,7 @@ async function slotWriteFlow() {
     const dev = await requestDeviceInfo();
     const ts = dev.timestamp;
     const image = slotImage;
+    const assets = slotAssets;
     const crc = crc32Bytes(image);
 
     log(t('slotErasing', slot), 'info');
@@ -3162,8 +3514,9 @@ async function slotWriteFlow() {
     log(t('slotVerifying', slot), 'info');
     const v = await slotValidate(slot);
     if (v.status !== 0 || v.crc !== crc) throw new Error('verify: ' + slotStatusText(v.status));
-    updateProgress(100);
     log(t('slotWriteOk', slot), 'success');
+    if (assets) await slotWriteAssets(slot, assets, ts);
+    updateProgress(100);
     slotRenderRow(slot, await slotInfo(slot));
     slotPickDefaultTarget();
     setTimeout(() => { if (progressContainer) progressContainer.style.display = 'none'; }, 1200);
@@ -3176,6 +3529,7 @@ async function slotWriteFlow() {
 
 function clearSlotImage() {
   slotImage = null;
+  slotAssets = null;
   slotMeta = { name: '', fwVersion: '' };
   if (slotNameInput) slotNameInput.value = '';
   if (slotFileName) {
@@ -3204,7 +3558,16 @@ function beginSlotImageLoad(source) {
 }
 
 function setSlotImageBuffer(buf, name = 'firmware.bin') {
-  slotImage = new Uint8Array(buf);
+  let parts;
+  try {
+    parts = window.UVStudioFirmwarePackage.splitFirmwarePackage(new Uint8Array(buf));
+  } catch (e) {
+    log(t('fwPackageInvalid', name, e?.message ?? String(e)), 'error');
+    clearSlotImage();
+    return false;
+  }
+  slotImage = parts.image;
+  slotAssets = parts.pack;
   slotMeta = slotExtractMeta(slotImage, name);
   if (slotNameInput) slotNameInput.value = slotMeta.name;
   if (slotFileName) {
@@ -3222,6 +3585,7 @@ function setSlotImageBuffer(buf, name = 'firmware.bin') {
     );
   }
   log(t('slotFileLoaded', name), 'success');
+  if (slotAssets) log(t('fwAssetsDetected', slotAssets.length), 'info');
   updateActionButtons();
   return true;
 }

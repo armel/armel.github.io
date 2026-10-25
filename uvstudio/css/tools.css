@@ -278,9 +278,201 @@ display: none !important;
 /* The hidden attribute must beat the display rules below (class selectors would
    otherwise override the UA [hidden] { display: none } and keep them visible). */
 #pane-tools .firmware-catalog[hidden],
-#pane-tools .catalog-or[hidden] {
+#pane-tools .catalog-or[hidden],
+#pane-tools #flashAssetsBtn[hidden],
+#pane-tools .flash-steps[hidden] {
   display: none;
 }
+
+/* ---------- Flash steps (firmware + assets) ---------- */
+/* Under the Flash button, for a firmware that carries assets: the plan of the
+   three steps, each with its own gauge (they replace the global progress bar),
+   and the reminder not to unplug the radio before the assets are written. */
+/* Header line: what the block is, and the cable reminder. Once the assets are
+   written (data-complete) the reminder turns into a green "you can unplug". */
+#pane-tools .flash-steps-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-top: 22px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+#pane-tools .flash-steps-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+#pane-tools .flash-steps-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Icons take the text colour: a cable while installing, a check once done. */
+#pane-tools .flash-steps-icon {
+  flex: none;
+  align-self: center;
+}
+
+#pane-tools .flash-steps-icon-done,
+#pane-tools .flash-steps[data-complete="true"] .flash-steps-icon-cable {
+  display: none;
+}
+
+#pane-tools .flash-steps[data-complete="true"] .flash-steps-icon-done {
+  display: block;
+}
+
+#pane-tools .flash-steps[data-complete="true"] .flash-steps-hint {
+  color: var(--success);
+  font-weight: 600;
+}
+
+#pane-tools .flash-steps-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px 6px;
+}
+
+#pane-tools .flash-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+#pane-tools .flash-step-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+#pane-tools .flash-step-mark {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+#pane-tools .flash-step-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+#pane-tools .flash-step-note {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+#pane-tools .flash-step-pct {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+#pane-tools .flash-step-bar {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+#pane-tools .flash-step-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
+  transition: width 0.3s;
+}
+
+#pane-tools .flash-step[data-state="active"] .flash-step-head {
+  color: var(--text);
+  font-weight: 600;
+}
+
+#pane-tools .flash-step[data-state="active"] .flash-step-mark {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* Waiting for the radio: no measurable progress, moving stripes instead. */
+#pane-tools .flash-step[data-wait="true"] .flash-step-fill {
+  width: 100%;
+  background: repeating-linear-gradient(45deg,
+    color-mix(in srgb, var(--accent) 35%, transparent) 0 8px, transparent 8px 16px);
+  background-size: 200% 100%;
+  animation: flash-step-wait 1.2s linear infinite;
+}
+
+#pane-tools .flash-step[data-state="done"] .flash-step-mark {
+  border-color: var(--success);
+  background: var(--success);
+  color: #fff;
+}
+
+#pane-tools .flash-step[data-state="done"] .flash-step-fill {
+  width: 100%;
+  background: var(--success);
+}
+
+#pane-tools .flash-step[data-state="error"] .flash-step-head,
+#pane-tools .flash-step[data-state="error"] .flash-step-note {
+  color: var(--error);
+}
+
+#pane-tools .flash-step[data-state="error"] .flash-step-mark {
+  border-color: var(--error);
+  background: var(--error);
+  color: #fff;
+}
+
+#pane-tools .flash-step[data-state="error"] .flash-step-fill {
+  background: var(--error);
+}
+
+@keyframes flash-step-wait {
+  to { background-position: -45px 0; }
+}
+
+@media (max-width: 640px) {
+  #pane-tools .flash-steps-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #pane-tools .flash-step[data-wait="true"] .flash-step-fill {
+    animation: none;
+  }
+}
+
 
 #pane-tools .catalog-or {
   display: flex;

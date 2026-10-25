@@ -261,8 +261,8 @@ test('reorders complete app slots through the existing raw flash protocol', () =
   assert.match(toolsCss, /\.app-renumber-button\[hidden\]\s*\{\s*display:\s*none/);
   assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*overflow-anchor:\s*none/s);
   assert.match(toolsCss, /tr\.app-order-drop-before td\s*\{[^}]*box-shadow/s);
-  assert.match(html, /css\/tools\.css\?v=59/);
-  assert.match(html, /js\/flash\.js\?v=99/);
+  assert.match(html, /css\/tools\.css\?v=66/);
+  assert.match(html, /js\/flash\.js\?v=104/);
   assert.doesNotMatch(flashSource, /app-order-(?:up|down)/);
   assert.doesNotMatch(flashSource, /function appMoveInOrder/);
 
@@ -1278,4 +1278,25 @@ test('keeps compatibility gates silent and before destructive confirmations', ()
   };
   gateThen('async function runFactoryReset', "showFactoryResetModal('confirm'");
   gateThen("beginToolsOperation('restore-flash'", 'confirmExternalFlashRestore()');
+});
+
+test('flashes the firmware image, then writes the asset pack of the package', () => {
+  assert.ok(html.indexOf('js/firmware-package.js') < html.indexOf('js/flash.js'));
+  assert.match(html, /<button id="flashAssetsBtn" disabled hidden>/);
+  assert.match(toolsCss, /#pane-tools #flashAssetsBtn\[hidden\]/);
+  // The install button only exists for a pack left pending by a flash.
+  assert.match(flashSource, /flashAssetsBtn\.hidden = !pendingFirmwareAssets/);
+  assert.match(flashSource, /navigator\.serial\.getPorts\(\)[\s\S]{0,300}FW_VCP_INFO/);
+  // Under the Flash button, the three steps carry their own gauges.
+  // The steps block opens with its title and the cable reminder.
+  assert.match(html, /<button id="flashBtn"[^>]*>[^<]*<\/button>\s*<div class="flash-steps" id="flashSteps"[^>]*>\s*<div class="flash-steps-header">[\s\S]{0,2000}id="flashStepsHint" data-i18n="flash_unplug_warning"/);
+  assert.match(flashSource, /setFlashStep\('assets', 'done', 'flash_step_done'\);\s*setFlashStepsComplete\(true\);/);
+  assert.equal((html.match(/class="flash-step" data-step="(?:image|restart|assets)"/g) || []).length, 3);
+  assert.match(flashSource, /flashSteps\.hidden = !firmwareAssets/);
+  assert.match(flashSource, /flashFirmware\(fw, assets \? \{ onProgress: fraction => setFlashStepProgress\('image', fraction\) \} : \{\}\)/);
+  assert.match(flashSource, /if \(!report\) hideProgressSoon\(\)/);
+  assert.match(flashSource, /await flashFirmware\(fw, [^;]+\);[\s\S]{0,120}await installAssetsAfterFlash\(assets\);/);
+  assert.match(flashSource, /if \(assets\) await slotWriteAssets\(slot, assets, ts\);/);
+  // Payload first, header last: an interrupted upload never validates.
+  assert.match(flashSource, /for \(let off = header; off < pack\.length;[\s\S]{0,600}pack\.subarray\(0, header\)/);
 });
