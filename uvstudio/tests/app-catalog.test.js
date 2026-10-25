@@ -85,6 +85,14 @@ test('adds presentation metadata without changing the app binary format', () => 
     author: 'armel',
     label: 'Sonde M10'
   });
+  assert.deepEqual(catalog.appDetails('SondeMRZ.app'), {
+    id: 'sondemrz',
+    category: 'radio',
+    description: 'Decode MRZ-N1 / MP3-H1 radiosondes: ID, position, altitude, temperature, humidity, speed and heading.',
+    descriptionKey: 'appDescription_sondemrz',
+    author: 'armel',
+    label: 'Sonde MRZ'
+  });
   assert.deepEqual(catalog.appDetails('SondeRS41.app'), {
     id: 'sonders41',
     category: 'radio',
@@ -93,6 +101,7 @@ test('adds presentation metadata without changing the app binary format', () => 
     author: 'armel',
     label: 'Sonde RS41'
   });
+  assert.equal(catalog.appIconSVG('sondemrz'), catalog.appIconSVG('sondem10'));
   assert.equal(catalog.appIconSVG('sonders41'), catalog.appIconSVG('sondem10'));
   assert.deepEqual(catalog.appDetails('ToneCall.app'), {
     id: 'tonecall',
@@ -122,7 +131,7 @@ test('adds presentation metadata without changing the app binary format', () => 
   assert.deepEqual(catalog.appDetails('GeoNav.app'), {
     id: 'geonav',
     category: 'tools',
-    description: 'Azimuth, distance and elevation from the APRS position to a radiosonde, opened from Sonde M10, M20 or RS41.',
+    description: 'Azimuth, distance and elevation from the APRS position to a radiosonde, opened from Sonde M10, M20, MRZ or RS41.',
     descriptionKey: 'appDescription_geonav',
     author: 'armel'
   });
@@ -201,7 +210,7 @@ test('provides dedicated SVG pictograms for every catalog app and keeps a monogr
   [
     'acarsrx', 'aisrx', 'aprsdigi', 'aprsedit', 'aprsrx', 'aprstx', 'atisdscrx', 'atisrx', 'beacon', 'beam', 'breakout', 'broadcastfm',
     'cwdecode', 'cwkeyer', 'cwtrainer', 'cwusb', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'hellmaze', 'minesweeper',
-    'plasma', 'pocsagrx', 'qrmap', 'rapidroll', 'resistor', 'sigfinder', 'snake', 'sokoban', 'sondem10', 'sondem20', 'sonders41', 'spaceimpact',
+    'plasma', 'pocsagrx', 'qrmap', 'rapidroll', 'resistor', 'sigfinder', 'snake', 'sokoban', 'sondem10', 'sondem20', 'sondemrz', 'sonders41', 'spaceimpact',
     'spectrum3d', 'sstv', 'systeminfo', 'tetris', 'tonecall'
   ].forEach(id => {
     assert.match(catalog.appIconSVG(id), /<(?:path|circle)/);
