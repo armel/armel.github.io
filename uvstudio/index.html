@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="assets/uv-studio-radio.svg">
 <link href="css/core.css?v=5" rel="stylesheet">
 <link href="css/viewer.css?v=13" rel="stylesheet">
-<link href="css/tools.css?v=59" rel="stylesheet">
+<link href="css/tools.css?v=66" rel="stylesheet">
 <link href="css/studio.css?v=28" rel="stylesheet">
 </head>
 <body data-theme="light">
@@ -334,6 +334,39 @@
                     </div>
                 </section>
                 <button id="flashBtn" disabled aria-live="polite">Flash firmware</button>
+                <div class="flash-steps" id="flashSteps" role="status" aria-live="polite" hidden>
+                    <div class="flash-steps-header">
+                        <span class="flash-steps-title" data-i18n="flash_steps_title">Installation in 3 steps</span>
+                        <span class="flash-steps-hint"><svg class="flash-steps-icon flash-steps-icon-cable" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a1 1 0 0 1-1-1v-1a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1"/><path d="M19 15V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V9"/><path d="M21 21v-2h-4"/><path d="M3 5h4V3"/><path d="M7 5a1 1 0 0 1 1 1v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1V3"/></svg><svg class="flash-steps-icon flash-steps-icon-done" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span id="flashStepsHint" data-i18n="flash_unplug_warning">Keep the cable plugged in until the end</span></span>
+                    </div>
+                    <ol class="flash-steps-list">
+                        <li class="flash-step" data-step="image">
+                            <div class="flash-step-head">
+                                <span class="flash-step-mark" aria-hidden="true">1</span>
+                                <span class="flash-step-text"><span data-i18n="flash_step_image">Flash the firmware</span><small class="flash-step-note" data-i18n="flash_step_image_hint">DFU mode</small></span>
+                                <span class="flash-step-pct"></span>
+                            </div>
+                            <div class="flash-step-bar"><div class="flash-step-fill"></div></div>
+                        </li>
+                        <li class="flash-step" data-step="restart">
+                            <div class="flash-step-head">
+                                <span class="flash-step-mark" aria-hidden="true">2</span>
+                                <span class="flash-step-text"><span data-i18n="flash_step_restart">Radio restart</span><small class="flash-step-note" data-i18n="flash_step_restart_hint">Automatic</small></span>
+                                <span class="flash-step-pct"></span>
+                            </div>
+                            <div class="flash-step-bar"><div class="flash-step-fill"></div></div>
+                        </li>
+                        <li class="flash-step" data-step="assets">
+                            <div class="flash-step-head">
+                                <span class="flash-step-mark" aria-hidden="true">3</span>
+                                <span class="flash-step-text"><span data-i18n="flash_step_assets">Write the assets</span><small class="flash-step-note" data-i18n="flash_step_assets_hint">Fonts, menus</small></span>
+                                <span class="flash-step-pct"></span>
+                            </div>
+                            <div class="flash-step-bar"><div class="flash-step-fill"></div></div>
+                        </li>
+                    </ol>
+                </div>
+                <button id="flashAssetsBtn" disabled hidden>Install firmware assets</button>
                 <div class="download-link" id="chirpDriverDownload">
                     <a href="#" id="chirpDriverLink" rel="noopener"><svg class="dl-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="chirpDriverText" data-i18n="flash_chirp_driver_download">Download CHIRP driver</span></a>
                 </div>
@@ -856,16 +889,16 @@
 </div>
 
 <!-- ═══════════ Scripts (all local, file://-friendly) ═══════════ -->
-<script src="locales/en.js?v=67"></script>
-<script src="locales/fr.js?v=67"></script>
-<script src="locales/it.js?v=67"></script>
-<script src="locales/es.js?v=67"></script>
-<script src="locales/de.js?v=67"></script>
-<script src="locales/pt.js?v=67"></script>
-<script src="locales/ru.js?v=67"></script>
-<script src="locales/pl.js?v=67"></script>
-<script src="locales/zh.js?v=67"></script>
-<script src="locales/nl.js?v=67"></script>
+<script src="locales/en.js?v=72"></script>
+<script src="locales/fr.js?v=72"></script>
+<script src="locales/it.js?v=72"></script>
+<script src="locales/es.js?v=72"></script>
+<script src="locales/de.js?v=72"></script>
+<script src="locales/pt.js?v=72"></script>
+<script src="locales/ru.js?v=72"></script>
+<script src="locales/pl.js?v=72"></script>
+<script src="locales/zh.js?v=72"></script>
+<script src="locales/nl.js?v=72"></script>
 <script src="js/studio-preferences.js?v=2"></script>
 <script src="js/studio-i18n.js?v=5"></script>
 <script src="js/studio-serial.js?v=5"></script>
@@ -873,7 +906,8 @@
 <script src="js/rf-log.js?v=4"></script>
     <script src="js/k5viewer.js?v=37"></script>
 <script src="js/keypad-detach.js?v=1"></script>
-<script src="js/flash.js?v=99"></script>
+<script src="js/firmware-package.js?v=1"></script>
+<script src="js/flash.js?v=104"></script>
 <script src="js/flash-catalog.js?v=19"></script>
 <script src="js/app-catalog.js?v=20"></script>
 <script src="js/studio.js?v=24"></script>

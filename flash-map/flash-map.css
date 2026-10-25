@@ -21,6 +21,8 @@
   --apps: light-dark(#d3f0f3, #143f47);
   --apps-strong: light-dark(#0f7c8c, #5cd3e2);
   --apps-reserve: light-dark(#e3f5f7, #1b3338);
+  --assets: light-dark(#e8e4ff, #2e2852);
+  --assets-strong: light-dark(#5b4bc4, #a99cf5);
   --sonic: light-dark(#fff0bd, #4a3b10);
   --sonic-strong: light-dark(#8a6500, #f4cf58);
   --focus: light-dark(#125ea9, #73b8ff);
@@ -158,6 +160,7 @@ h3 { margin-bottom: 2px; font-size: 15px; }
 .kind-profile { background: var(--profile); }
 .kind-apps { background: var(--apps); }
 .kind-apps-reserve { background: var(--apps-reserve); }
+.kind-assets { background: var(--assets); }
 .kind-sonic { background: var(--sonic); }
 .kind-free { background: var(--free); color: var(--muted); }
 
