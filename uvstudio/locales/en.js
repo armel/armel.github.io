@@ -526,6 +526,8 @@ window.UVSTUDIO_LOCALES.en = {
   "appDescription_broadcastfm": "Listen to broadcast FM stations.",
   "appDescription_cwdecode": "Decode Morse code in real time.",
   "appDescription_cwkeyer": "Morse keyer using the radio's PTT and side keys.",
+  "appDescription_cwmem": "Send reusable Morse messages from CW Keyer or CW USB.",
+  "appDescription_cwmemedit": "Edit the callsign and custom messages used by CW Mem.",
   "appDescription_cwtrainer": "Learn and practice Morse code: free keying with live decoding, copy drills and listen-and-repeat exercises.",
   "appDescription_cwusb": "Morse keyer for an external paddle connected through USB-C.",
   "appDescription_cube3d": "Animated 3D graphics demonstration.",

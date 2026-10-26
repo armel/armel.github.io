@@ -526,6 +526,8 @@ window.UVSTUDIO_LOCALES.ru = {
   "appDescription_broadcastfm": "Принимает радиовещательные FM-станции.",
   "appDescription_cwdecode": "Декодирует азбуку Морзе в реальном времени.",
   "appDescription_cwkeyer": "Телеграфный ключ с использованием PTT и боковых клавиш радиостанции.",
+  "appDescription_cwmem": "Передаёт сохранённые сообщения азбукой Морзе из CW Keyer или CW USB.",
+  "appDescription_cwmemedit": "Редактирует позывной и пользовательские сообщения для CW Mem.",
   "appDescription_cwtrainer": "Изучение и тренировка азбуки Морзе: свободная передача с декодированием, упражнения на приём на слух и повторение.",
   "appDescription_cwusb": "Телеграфный ключ для внешнего манипулятора, подключённого через USB-C.",
   "appDescription_cube3d": "Демонстрация анимированной 3D-графики.",

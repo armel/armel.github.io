@@ -526,6 +526,8 @@ window.UVSTUDIO_LOCALES.de = {
   "appDescription_broadcastfm": "Empfängt UKW-Rundfunksender.",
   "appDescription_cwdecode": "Decodiert Morsecode in Echtzeit.",
   "appDescription_cwkeyer": "Morsegeber mit PTT- und Seitentasten des Funkgeräts.",
+  "appDescription_cwmem": "Gespeicherte Morse-Nachrichten aus CW Keyer oder CW USB senden.",
+  "appDescription_cwmemedit": "Rufzeichen und benutzerdefinierte Nachrichten für CW Mem bearbeiten.",
   "appDescription_cwtrainer": "Morse lernen und üben: freies Geben mit Live-Dekodierung, Hörübungen und Nachgeben gehörter Zeichen.",
   "appDescription_cwusb": "Morsegeber für ein externes Paddle am USB-C-Anschluss.",
   "appDescription_cube3d": "Animierte 3D-Grafikdemonstration.",

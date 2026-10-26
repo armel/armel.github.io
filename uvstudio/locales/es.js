@@ -526,6 +526,8 @@ window.UVSTUDIO_LOCALES.es = {
   "appDescription_broadcastfm": "Escucha emisoras de radiodifusión FM.",
   "appDescription_cwdecode": "Decodifica código Morse en tiempo real.",
   "appDescription_cwkeyer": "Manipulador Morse con las teclas PTT y laterales de la radio.",
+  "appDescription_cwmem": "Envía mensajes Morse guardados desde CW Keyer o CW USB.",
+  "appDescription_cwmemedit": "Edita el indicativo y los mensajes personalizados que usa CW Mem.",
   "appDescription_cwtrainer": "Aprende y practica Morse: manipulación libre con decodificación en directo, ejercicios de escucha y de repetición.",
   "appDescription_cwusb": "Manipulador Morse para una paleta externa conectada por USB-C.",
   "appDescription_cube3d": "Demostración de gráficos 3D animados.",
