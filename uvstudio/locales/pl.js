@@ -526,6 +526,8 @@ window.UVSTUDIO_LOCALES.pl = {
   "appDescription_broadcastfm": "Odbiera stacje radiofoniczne FM.",
   "appDescription_cwdecode": "Dekoduje alfabet Morse’a w czasie rzeczywistym.",
   "appDescription_cwkeyer": "Klucz Morse’a obsługiwany przyciskami PTT i bocznymi radiotelefonu.",
+  "appDescription_cwmem": "Wysyła zapisane wiadomości Morse’a z CW Keyer lub CW USB.",
+  "appDescription_cwmemedit": "Edytuje znak wywoławczy i własne wiadomości używane przez CW Mem.",
   "appDescription_cwtrainer": "Nauka i ćwiczenie Morse’a: swobodne nadawanie z dekodowaniem na żywo, ćwiczenia odbioru słuchowego i powtarzania.",
   "appDescription_cwusb": "Klucz Morse’a do zewnętrznego manipulatora podłączonego przez USB-C.",
   "appDescription_cube3d": "Demonstracja animowanej grafiki 3D.",

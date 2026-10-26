@@ -61,6 +61,22 @@ test('adds presentation metadata without changing the app binary format', () => 
     author: 'armel',
     label: 'CW Keyer'
   });
+  assert.deepEqual(catalog.appDetails('CWMem.app'), {
+    id: 'cwmem',
+    category: 'radio',
+    description: 'Send reusable Morse messages from CW Keyer or CW USB.',
+    descriptionKey: 'appDescription_cwmem',
+    author: 'jdenoy',
+    label: 'CW Mem'
+  });
+  assert.deepEqual(catalog.appDetails('CWMemEdit.app'), {
+    id: 'cwmemedit',
+    category: 'radio',
+    description: 'Edit the callsign and custom messages used by CW Mem.',
+    descriptionKey: 'appDescription_cwmemedit',
+    author: 'jdenoy',
+    label: 'CW Mem Edit'
+  });
   assert.deepEqual(catalog.appDetails('CWTrainer.app'), {
     id: 'cwtrainer',
     category: 'radio',
@@ -209,7 +225,7 @@ test('compares app versions numerically and treats a release as newer than its p
 test('provides dedicated SVG pictograms for every catalog app and keeps a monogram fallback', () => {
   [
     'acarsrx', 'aisrx', 'aprsdigi', 'aprsedit', 'aprsrx', 'aprstx', 'atisdscrx', 'atisrx', 'beacon', 'beam', 'breakout', 'broadcastfm',
-    'cwdecode', 'cwkeyer', 'cwtrainer', 'cwusb', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'hellmaze', 'minesweeper',
+    'cwdecode', 'cwkeyer', 'cwmem', 'cwmemedit', 'cwtrainer', 'cwusb', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'hellmaze', 'minesweeper',
     'plasma', 'pocsagrx', 'qrmap', 'rapidroll', 'resistor', 'sigfinder', 'snake', 'sokoban', 'sondem10', 'sondem20', 'sondemrz', 'sonders41', 'spaceimpact',
     'spectrum3d', 'sstv', 'systeminfo', 'tetris', 'tonecall'
   ].forEach(id => {
