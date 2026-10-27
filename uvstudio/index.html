@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="assets/uv-studio-radio.svg">
 <link href="css/core.css?v=5" rel="stylesheet">
 <link href="css/viewer.css?v=13" rel="stylesheet">
-<link href="css/tools.css?v=66" rel="stylesheet">
+<link href="css/tools.css?v=70" rel="stylesheet">
 <link href="css/studio.css?v=28" rel="stylesheet">
 </head>
 <body data-theme="light">
@@ -655,7 +655,9 @@
                             <button type="button" class="btn app-category" data-category="demos" data-i18n="appCategoryDemos">Demos</button>
                             <button type="button" class="btn app-category" data-category="other" data-i18n="appCategoryOther" hidden>Other</button>
                         </div>
-                        <div class="app-catalog-summary"><strong id="appCatalogResultCount">—</strong><span id="appCatalogFirmwareHint"></span></div>
+                        <div class="app-catalog-summary"><strong id="appCatalogResultCount">—</strong><span id="appCatalogFirmwareHint"></span>
+                            <button type="button" class="btn app-catalog-screens-toggle" id="appCatalogScreensToggle" aria-pressed="true" data-i18n-title="appCatalogScreensHint" title="Show or hide the app screenshots"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M7 13l3-3 2.5 2 2.5-3 2 2.5M9 21h6"/></svg><span data-i18n="appCatalogScreens">Screenshots</span></button>
+                        </div>
                         <div class="app-catalog-cards" id="appCatalogCards"></div>
                         <div class="app-catalog-empty" id="appCatalogEmpty" hidden data-i18n="appManagerNoResults">No apps match this search.</div>
                         <select id="appCatalogSelect" class="sr-only" aria-hidden="true" tabindex="-1" disabled>
@@ -889,27 +891,28 @@
 </div>
 
 <!-- ═══════════ Scripts (all local, file://-friendly) ═══════════ -->
-<script src="locales/en.js?v=73"></script>
-<script src="locales/fr.js?v=73"></script>
-<script src="locales/it.js?v=73"></script>
-<script src="locales/es.js?v=73"></script>
-<script src="locales/de.js?v=73"></script>
-<script src="locales/pt.js?v=73"></script>
-<script src="locales/ru.js?v=73"></script>
-<script src="locales/pl.js?v=73"></script>
-<script src="locales/zh.js?v=73"></script>
-<script src="locales/nl.js?v=73"></script>
+<script src="locales/en.js?v=74"></script>
+<script src="locales/fr.js?v=74"></script>
+<script src="locales/it.js?v=74"></script>
+<script src="locales/es.js?v=74"></script>
+<script src="locales/de.js?v=74"></script>
+<script src="locales/pt.js?v=74"></script>
+<script src="locales/ru.js?v=74"></script>
+<script src="locales/pl.js?v=74"></script>
+<script src="locales/zh.js?v=74"></script>
+<script src="locales/nl.js?v=74"></script>
 <script src="js/studio-preferences.js?v=3"></script>
 <script src="js/studio-i18n.js?v=5"></script>
 <script src="js/studio-serial.js?v=5"></script>
 <script src="js/runtime-protocol.js?v=2"></script>
 <script src="js/rf-log.js?v=4"></script>
-    <script src="js/k5viewer.js?v=37"></script>
+    <script src="js/k5viewer.js?v=39"></script>
 <script src="js/keypad-detach.js?v=1"></script>
 <script src="js/firmware-package.js?v=1"></script>
 <script src="js/flash.js?v=104"></script>
 <script src="js/flash-catalog.js?v=20"></script>
-<script src="js/app-catalog.js?v=21"></script>
+<script src="js/app-screens.js?v=8"></script>
+<script src="js/app-catalog.js?v=25"></script>
 <script src="js/studio.js?v=24"></script>
 <script src="js/studio-flash-counter.js?v=2"></script>
 </body>

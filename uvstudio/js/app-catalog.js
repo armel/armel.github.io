@@ -152,6 +152,13 @@
     tetris: '<path d="M5 5h4v4H5zm4 0h4v4H9zm0 4h4v4H9zm4 4h4v4h-4zm4 0h4v4h-4zm-4 4h4v4h-4z"/>',
     tonecall: '<rect x="3.5" y="4" width="9" height="16" rx="1.5"/><path d="M6 7h4M6 17h4M15 8.5c2 1.8 2 5.2 0 7M18 5.5c4 3.5 4 9.5 0 13"/><circle cx="8" cy="12" r="1.5"/>'
   };
+  // Card screenshots: the raw LCD of each app (js/app-screens.js, made by
+  // App/apps/app_screenshot.py --catalog in the firmware repository), drawn in
+  // a canvas in the Live Viewer colors. No image file to load: UV Studio also
+  // runs from file://, where the browser refuses images used as CSS masks.
+  const APP_SCREEN_BYTES = 1024;
+  const APP_SCREENSHOTS_PREFERENCE = 'uvstudio.appCatalogScreens';
+  const appScreenFrames = new Map();
 
   function appCatalogId(filename) {
     return String(filename).replace(/\.app$/i, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
@@ -159,6 +166,62 @@
 
   function appIconSVG(id) {
     return APP_ICONS[String(id)] || '';
+  }
+
+  function appScreenFrame(id) {
+    const key = String(id);
+    if (appScreenFrames.has(key)) return appScreenFrames.get(key);
+    const screens = typeof globalThis !== 'undefined' ? globalThis.UVStudioAppScreens : null;
+    if (!screens || !Object.prototype.hasOwnProperty.call(screens, key) || typeof atob !== 'function') return null;
+    const binary = atob(screens[key]);
+    if (binary.length !== APP_SCREEN_BYTES) return null;
+    const frame = new Uint8Array(APP_SCREEN_BYTES);
+    for (let i = 0; i < APP_SCREEN_BYTES; i++) frame[i] = binary.charCodeAt(i);
+    appScreenFrames.set(key, frame);
+    return frame;
+  }
+
+  // The Live Viewer's pixel view with its LCD effect (k5viewer.js drawFrame
+  // at pixel size 7): each LCD pixel is a 6 x 7 cell, as the glass has taller
+  // than wide pixels, drawn 5 x 6 so a one-pixel gap shows between them, lit
+  // in the ink color, unlit at 5 % of it. 768 x 448: 384 CSS px on a 2x display.
+  const APP_SCREEN_CELL_W = 6;
+  const APP_SCREEN_CELL_H = 7;
+  const APP_SCREEN_WIDTH = 128 * APP_SCREEN_CELL_W;
+  const APP_SCREEN_HEIGHT = 64 * APP_SCREEN_CELL_H;
+  const APP_SCREEN_UNLIT = 0.05;
+
+  function mixColor(paper, ink, ratio) {
+    const rgb = hex => {
+      const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex).trim());
+      return match ? match.slice(1).map(part => parseInt(part, 16)) : null;
+    };
+    const from = rgb(paper);
+    const to = rgb(ink);
+    if (!from || !to) return paper;
+    return `rgb(${from.map((value, i) => Math.round(value + (to[i] - value) * ratio)).join(', ')})`;
+  }
+
+  // Bit b of byte x of page p is the pixel (x, 8p + b), page 0 the status line.
+  function paintAppScreen(canvas, frame, ink, paper) {
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    context.fillStyle = paper;
+    context.fillRect(0, 0, APP_SCREEN_WIDTH, APP_SCREEN_HEIGHT);
+    [[false, mixColor(paper, ink, APP_SCREEN_UNLIT)], [true, ink]].forEach(([lit, color]) => {
+      context.fillStyle = color;
+      context.beginPath();
+      for (let y = 0; y < 64; y++) {
+        const page = (y >> 3) * 128;
+        const bit = 1 << (y & 7);
+        for (let x = 0; x < 128; x++) {
+          if (((frame[page + x] & bit) !== 0) === lit) {
+            context.rect(x * APP_SCREEN_CELL_W, y * APP_SCREEN_CELL_H, APP_SCREEN_CELL_W - 1, APP_SCREEN_CELL_H - 1);
+          }
+        }
+      }
+      context.fill();
+    });
   }
 
   // `sizers` are every label an action button can show in the current
@@ -371,6 +434,7 @@
     const localBuildEl = document.getElementById('appCatalogLocalBuild');
     const localBuildButton = document.getElementById('appCatalogLocalBuildButton');
     const localBuildChangeButton = document.getElementById('appCatalogLocalBuildChange');
+    const screensToggleEl = document.getElementById('appCatalogScreensToggle');
     if (!section || !versionSelect || !appSelect) return;
 
     let versions = [];
@@ -390,6 +454,10 @@
     let catalogOperationPending = false;
     let catalogProgress = null;   // { id, percent, shown, ... } while a card installs/updates
     const metadataCache = new Map();
+    const preferences = window.UVStudioPreferences;
+    // Screenshots are shown unless the user hid them (one choice for every card).
+    let showScreens = !preferences || typeof preferences.get !== 'function' ||
+      preferences.get(APP_SCREENSHOTS_PREFERENCE, '1') !== '0';
 
     function t(key, ...values) {
       return window.uvStudioI18n ? window.uvStudioI18n.t(key, ...values) : key;
@@ -447,6 +515,60 @@
       icon.classList.add('has-svg');
       icon.appendChild(svg);
       return icon;
+    }
+
+    // The Live Viewer colors (k5viewer.js publishes them): pixels on glass.
+    function lcdColors() {
+      const style = getComputedStyle(document.documentElement);
+      return {
+        ink: style.getPropertyValue('--k5-lcd-fg').trim() || '#2a213f',
+        paper: style.getPropertyValue('--k5-lcd-bg').trim() || '#e5e0ec'
+      };
+    }
+
+    // The app's screen under the card details, in the Live Viewer colors. An
+    // app without a screenshot keeps the same footprint, with its icon.
+    function createAppScreen(app) {
+      const screen = document.createElement('div');
+      screen.className = 'app-catalog-screen';
+      const frame = appScreenFrame(app.id);
+      if (frame) {
+        const canvas = document.createElement('canvas');
+        canvas.className = 'app-catalog-screen-pixels';
+        canvas.width = APP_SCREEN_WIDTH;
+        canvas.height = APP_SCREEN_HEIGHT;
+        canvas.setAttribute('role', 'img');
+        canvas.setAttribute('aria-label', t('appScreenshotAlt', app.label));
+        canvas.dataset.appId = app.id;
+        const colors = lcdColors();
+        paintAppScreen(canvas, frame, colors.ink, colors.paper);
+        screen.appendChild(canvas);
+      } else {
+        screen.classList.add('is-empty');
+        const pixels = document.createElement('div');
+        pixels.className = 'app-catalog-screen-pixels';
+        const icon = createAppIcon(app);
+        icon.setAttribute('aria-hidden', 'true');
+        pixels.appendChild(icon);
+        screen.appendChild(pixels);
+      }
+      return screen;
+    }
+
+    // Where a card's install / update gauge goes: just above the screenshot,
+    // or at the card's bottom edge while the screenshots are hidden.
+    function progressHost(card) {
+      return (showScreens && card.querySelector('.app-catalog-screen')) || card;
+    }
+
+    function applyScreensVisibility() {
+      if (cardsEl) {
+        cardsEl.classList.toggle('hide-screens', !showScreens);
+        const bar = cardsEl.querySelector('.app-catalog-progress');
+        const card = bar && bar.closest('.app-catalog-card');
+        if (card) progressHost(card).appendChild(bar);
+      }
+      if (screensToggleEl) screensToggleEl.setAttribute('aria-pressed', String(showScreens));
     }
 
     function applyCatalogFilter() {
@@ -703,11 +825,12 @@
           actions.appendChild(remove);
         }
         content.append(title, description, meta);
-        card.append(icon, content, actions);
-        // Same layout for every state: the gauge rides the card's bottom edge.
+        card.append(icon, content, actions, createAppScreen(app));
+        // Same layout for every state: the gauge rides the screenshot's top
+        // edge, or the card's bottom edge when the screenshots are hidden.
         if (progressState) {
           card.classList.add('is-busy');
-          card.appendChild(createCatalogProgress(progressState.shown));
+          progressHost(card).appendChild(createCatalogProgress(progressState.shown));
         }
         cardsEl.appendChild(card);
       });
@@ -946,7 +1069,6 @@
       if (apps) void publishLatestAppVersions(LOCAL_VERSION, apps);
     }
 
-    const preferences = window.UVStudioPreferences;
     if (preferences && typeof preferences.devCatalog === 'function' && preferences.devCatalog() &&
         typeof window.showDirectoryPicker === 'function' && localBuildEl && localBuildButton && localBuildChangeButton) {
       localBuildEl.hidden = false;
@@ -980,6 +1102,22 @@
     });
 
     if (searchEl) searchEl.addEventListener('input', applyCatalogFilter);
+    applyScreensVisibility();
+    if (screensToggleEl) screensToggleEl.addEventListener('click', () => {
+      showScreens = !showScreens;
+      if (preferences && typeof preferences.set === 'function') {
+        preferences.set(APP_SCREENSHOTS_PREFERENCE, showScreens ? '1' : '0');
+      }
+      applyScreensVisibility();
+    });
+    window.addEventListener('uvstudio:lcdcolors', () => {
+      if (!cardsEl) return;
+      const colors = lcdColors();
+      cardsEl.querySelectorAll('canvas.app-catalog-screen-pixels').forEach(canvas => {
+        const frame = appScreenFrame(canvas.dataset.appId);
+        if (frame) paintAppScreen(canvas, frame, colors.ink, colors.paper);
+      });
+    });
     if (catalogTabEl) catalogTabEl.addEventListener('click', () => {
       if (!loaded && !loading) void load();
     });
@@ -1065,6 +1203,8 @@
     appCatalogId,
     appDetails,
     appIconSVG,
+    appScreenFrame,
+    paintAppScreen,
     catalogAppState,
     compareAppVersions,
     compareVersionsDesc,

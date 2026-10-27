@@ -206,7 +206,7 @@ test('provides a catalog and compact installed-app manager without new firmware 
   assert.match(appCatalogSource, /const actionSizers = \[\s*t\('appInstallBtn'\),\s*t\('appDelete'\),\s*`\$\{t\('appUpdateShort'\)\} → \$\{longestVersion\}`/);
   assert.match(toolsCss, /\.app-catalog-action-sizer\s*\{\s*visibility:\s*hidden/);
   assert.match(appCatalogSource, /update\.title = t\('appUpdateAction', updateVersion\)/);
-  assert.match(appCatalogSource, /card\.appendChild\(createCatalogProgress\(progressState\.shown\)\)/);
+  assert.match(appCatalogSource, /progressHost\(card\)\.appendChild\(createCatalogProgress\(progressState\.shown\)\)/);
   assert.doesNotMatch(appCatalogSource, /primarySlot|secondarySlot/);
   assert.match(appCatalogSource, /setCatalogActionContent\(remove, 'delete', t\('appDelete'\), actionSizers\)/);
   assert.match(html, /id="appOrderNotice"[^>]*hidden data-i18n="appOrderApplyFirst"/);
@@ -261,7 +261,7 @@ test('reorders complete app slots through the existing raw flash protocol', () =
   assert.match(toolsCss, /\.app-renumber-button\[hidden\]\s*\{\s*display:\s*none/);
   assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*overflow-anchor:\s*none/s);
   assert.match(toolsCss, /tr\.app-order-drop-before td\s*\{[^}]*box-shadow/s);
-  assert.match(html, /css\/tools\.css\?v=66/);
+  assert.match(html, /css\/tools\.css\?v=70/);
   assert.match(html, /js\/flash\.js\?v=104/);
   assert.doesNotMatch(flashSource, /app-order-(?:up|down)/);
   assert.doesNotMatch(flashSource, /function appMoveInOrder/);
@@ -623,7 +623,7 @@ test('adapts tool badges to the connected firmware generation', () => {
 
 test('detects the firmware profile when Live Viewer owns the serial port', () => {
   assert.match(html, /js\/runtime-protocol\.js\?v=2/);
-  assert.match(html, /js\/k5viewer\.js\?v=37/);
+  assert.match(html, /js\/k5viewer\.js\?v=39/);
   assert.match(viewerSource, /PROFILE_MSG_DEVICE_INFO_REQUEST = 0x0514/);
   assert.match(viewerSource, /PROFILE_MSG_APP_INFO = 0x0730/);
   assert.match(viewerSource, /PROFILE_MSG_EXTERNAL_FLASH_READ = 0x0738/);
@@ -1299,4 +1299,32 @@ test('flashes the firmware image, then writes the asset pack of the package', ()
   assert.match(flashSource, /if \(assets\) await slotWriteAssets\(slot, assets, ts\);/);
   // Payload first, header last: an interrupted upload never validates.
   assert.match(flashSource, /for \(let off = header; off < pack\.length;[\s\S]{0,600}pack\.subarray\(0, header\)/);
+});
+
+test('shows each catalog app screenshot in the Live Viewer colors, with a persisted toggle', () => {
+  assert.match(html, /<button type="button" class="btn app-catalog-screens-toggle" id="appCatalogScreensToggle" aria-pressed="true" data-i18n-title="appCatalogScreensHint"/);
+  assert.match(html, /<span data-i18n="appCatalogScreens">Screenshots<\/span>/);
+  // A script, not image files: it also loads from file://.
+  assert.match(html, /<script src="js\/app-screens\.js\?v=\d+"><\/script>\n<script src="js\/app-catalog\.js/);
+  assert.doesNotMatch(appCatalogSource, /mask-?image/i);
+  assert.match(appCatalogSource, /card\.append\(icon, content, actions, createAppScreen\(app\)\)/);
+  assert.match(appCatalogSource, /canvas\.setAttribute\('aria-label', t\('appScreenshotAlt', app\.label\)\)/);
+  assert.match(appCatalogSource, /preferences\.set\(APP_SCREENSHOTS_PREFERENCE, showScreens \? '1' : '0'\)/);
+  assert.match(appCatalogSource, /window\.addEventListener\('uvstudio:lcdcolors'/);
+  assert.match(viewerSource, /root\.setProperty\('--k5-lcd-fg', invertLcd \? theme\[2\] : theme\[1\]\);\s*root\.setProperty\('--k5-lcd-bg'[^;]+;\s*window\.dispatchEvent\(new CustomEvent\('uvstudio:lcdcolors'\)\)/);
+  assert.match(viewerSource, /function toggleColors\(\) \{\s*invertLcd = 1 - invertLcd;\s*publishLcdColors\(\);/);
+  assert.match(toolsCss, /\.app-catalog-screen-pixels\s*\{[^}]*max-width:\s*384px[^}]*aspect-ratio:\s*12 \/ 7/s);
+  assert.match(appCatalogSource, /const APP_SCREEN_CELL_W = 6;\s*const APP_SCREEN_CELL_H = 7;/);
+  assert.match(toolsCss, /\.app-catalog-screen\s*\{[^}]*background:\s*var\(--k5-lcd-bg, #e5e0ec\)/s);
+  assert.match(toolsCss, /\.app-catalog-cards\.hide-screens \.app-catalog-screen \{ display: none; \}/);
+  // The install / update gauge, 5 px, sits just above the screenshot when shown.
+  assert.match(toolsCss, /\.app-catalog-progress\s*\{[^}]*height:\s*5px/s);
+  assert.match(toolsCss, /\.app-catalog-screen \.app-catalog-progress\s*\{[^}]*top:\s*-9px[^}]*bottom:\s*auto/s);
+  assert.match(appCatalogSource, /return \(showScreens && card\.querySelector\('\.app-catalog-screen'\)\) \|\| card;/);
+  ['appCatalogScreens', 'appCatalogScreensHint', 'appScreenshotAlt'].forEach(key => {
+    ['de', 'en', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'ru', 'zh'].forEach(lang => {
+      const locale = fs.readFileSync(path.join(root, 'locales', `${lang}.js`), 'utf8');
+      assert.match(locale, new RegExp(`"${key}": "[^"]+"`), `${lang} ${key}`);
+    });
+  });
 });

@@ -193,6 +193,7 @@ const invertLcdLocal = parseInt(preferences.get('invertLcd', ''), 10);
 if (!isNaN(invertLcdLocal)) {
     invertLcd = invertLcdLocal;
 }
+publishLcdColors();
 
 const lcdRiseLocal = parseFloat(preferences.get('LCD_RISE', ''));
 const lcdFallLocal = parseFloat(preferences.get('LCD_FALL', ''));
@@ -1654,6 +1655,7 @@ function saveScreenshot() {
 
 function toggleColors() {
     invertLcd = 1 - invertLcd;
+    publishLcdColors();
 
     if (isConnected && !radioDeepSleep) {
         tempInvertLcd = invertLcd;
@@ -1687,11 +1689,23 @@ function changePixelSize(delta) {
     }
 }
 
+// The chosen LCD colors, for the other screen pictures of UV Studio (the app
+// catalog screenshots): pixels in --k5-lcd-fg on --k5-lcd-bg, then an event
+// for the pictures drawn in a canvas.
+function publishLcdColors() {
+    const theme = COLOR_SETS[currentColorKey] || COLOR_SETS[DEFAULT_COLOR];
+    const root = document.documentElement.style;
+    root.setProperty('--k5-lcd-fg', invertLcd ? theme[2] : theme[1]);
+    root.setProperty('--k5-lcd-bg', invertLcd ? theme[1] : theme[2]);
+    window.dispatchEvent(new CustomEvent('uvstudio:lcdcolors'));
+}
+
 function changeColorSet(key) {
     if (key in COLOR_SETS) {
         currentColorKey = key;
         preferences.set('currentColorKey', key);
-        
+        publishLcdColors();
+
         const [labelKey] = COLOR_SETS[key];
         const name = t(labelKey);
         showNotification('color_changed', { color: name }, 'info');

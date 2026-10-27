@@ -234,3 +234,35 @@ test('provides dedicated SVG pictograms for every catalog app and keeps a monogr
   assert.ok(catalog.appIconSVG('cwusb').startsWith(catalog.appIconSVG('cwkeyer')));
   assert.equal(catalog.appIconSVG('futureapp'), '');
 });
+
+test('decodes the raw catalog screens and draws their lit pixels', () => {
+  require('../js/app-screens.js');
+  const ids = Object.keys(globalThis.UVStudioAppScreens);
+  assert.ok(ids.length > 40);
+  ids.forEach(id => {
+    const frame = catalog.appScreenFrame(id);
+    assert.equal(frame.length, 1024, id);
+    assert.ok(frame.some(byte => byte), `${id} is blank`);
+  });
+  ['foxhunt', 'geonav', 'breakout', 'systeminfo', 'sigfinder', 'broadcastfm', 'beam'].forEach(id => {
+    assert.ok(ids.includes(id), id);
+  });
+  // No picture: the card keeps its footprint with the app icon.
+  assert.equal(catalog.appScreenFrame('futureapp'), null);
+
+  // Bit 2 of byte 3 of page 1 is the pixel (3, 10): the Live Viewer pixel
+  // view, 6 x 7 cells drawn 5 x 6, unlit pixels at 5 % of the ink.
+  const frame = new Uint8Array(1024);
+  frame[128 + 3] = 0x04;
+  const passes = [];
+  const context = {
+    fillRect() {},
+    beginPath() { passes.push({ color: this.fillStyle, rects: [] }); },
+    rect(...rect) { passes[passes.length - 1].rects.push(rect); },
+    fill() {}
+  };
+  catalog.paintAppScreen({ getContext: () => context }, frame, '#000000', '#ffffff');
+  assert.deepEqual(passes.map(pass => pass.color), ['rgb(242, 242, 242)', '#000000']);
+  assert.equal(passes[0].rects.length, 128 * 64 - 1);
+  assert.deepEqual(passes[1].rects, [[18, 70, 5, 6]]);
+});
