@@ -152,6 +152,13 @@
     tetris: '<path d="M5 5h4v4H5zm4 0h4v4H9zm0 4h4v4H9zm4 4h4v4h-4zm4 0h4v4h-4zm-4 4h4v4h-4z"/>',
     tonecall: '<rect x="3.5" y="4" width="9" height="16" rx="1.5"/><path d="M6 7h4M6 17h4M15 8.5c2 1.8 2 5.2 0 7M18 5.5c4 3.5 4 9.5 0 13"/><circle cx="8" cy="12" r="1.5"/>'
   };
+  // Card screenshots: the raw LCD of each app (js/app-screens.js, made by
+  // App/apps/app_screenshot.py --catalog in the firmware repository), drawn in
+  // a canvas in the Live Viewer colors. No image file to load: UV Studio also
+  // runs from file://, where the browser refuses images used as CSS masks.
+  const APP_SCREEN_BYTES = 1024;
+  const APP_SCREENSHOTS_PREFERENCE = 'uvstudio.appCatalogScreens';
+  const appScreenFrames = new Map();
 
   function appCatalogId(filename) {
     return String(filename).replace(/\.app$/i, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
@@ -159,6 +166,62 @@
 
   function appIconSVG(id) {
     return APP_ICONS[String(id)] || '';
+  }
+
+  function appScreenFrame(id) {
+    const key = String(id);
+    if (appScreenFrames.has(key)) return appScreenFrames.get(key);
+    const screens = typeof globalThis !== 'undefined' ? globalThis.UVStudioAppScreens : null;
+    if (!screens || !Object.prototype.hasOwnProperty.call(screens, key) || typeof atob !== 'function') return null;
+    const binary = atob(screens[key]);
+    if (binary.length !== APP_SCREEN_BYTES) return null;
+    const frame = new Uint8Array(APP_SCREEN_BYTES);
+    for (let i = 0; i < APP_SCREEN_BYTES; i++) frame[i] = binary.charCodeAt(i);
+    appScreenFrames.set(key, frame);
+    return frame;
+  }
+
+  // The Live Viewer's pixel view with its LCD effect (k5viewer.js drawFrame
+  // at pixel size 7): each LCD pixel is a 6 x 7 cell, as the glass has taller
+  // than wide pixels, drawn 5 x 6 so a one-pixel gap shows between them, lit
+  // in the ink color, unlit at 5 % of it. 768 x 448: 384 CSS px on a 2x display.
+  const APP_SCREEN_CELL_W = 6;
+  const APP_SCREEN_CELL_H = 7;
+  const APP_SCREEN_WIDTH = 128 * APP_SCREEN_CELL_W;
+  const APP_SCREEN_HEIGHT = 64 * APP_SCREEN_CELL_H;
+  const APP_SCREEN_UNLIT = 0.05;
+
+  function mixColor(paper, ink, ratio) {
+    const rgb = hex => {
+      const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex).trim());
+      return match ? match.slice(1).map(part => parseInt(part, 16)) : null;
+    };
+    const from = rgb(paper);
+    const to = rgb(ink);
+    if (!from || !to) return paper;
+    return `rgb(${from.map((value, i) => Math.round(value + (to[i] - value) * ratio)).join(', ')})`;
+  }
+
+  // Bit b of byte x of page p is the pixel (x, 8p + b), page 0 the status line.
+  function paintAppScreen(canvas, frame, ink, paper) {
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    context.fillStyle = paper;
+    context.fillRect(0, 0, APP_SCREEN_WIDTH, APP_SCREEN_HEIGHT);
+    [[false, mixColor(paper, ink, APP_SCREEN_UNLIT)], [true, ink]].forEach(([lit, color]) => {
+      context.fillStyle = color;
+      context.beginPath();
+      for (let y = 0; y < 64; y++) {
+        const page = (y >> 3) * 128;
+        const bit = 1 << (y & 7);
+        for (let x = 0; x < 128; x++) {
+          if (((frame[page + x] & bit) !== 0) === lit) {
+            context.rect(x * APP_SCREEN_CELL_W, y * APP_SCREEN_CELL_H, APP_SCREEN_CELL_W - 1, APP_SCREEN_CELL_H - 1);
+          }
+        }
+      }
+      context.fill();
+    });
   }
 
   // `sizers` are every label an action button can show in the current
@@ -201,6 +264,62 @@
     sondem20:    'laurentneg',
     tonecall:    'jdenoy'
   };
+
+  // Ids taken by the official apps, released or coming: a community app
+  // cannot use one (app-submit.js).
+  function isOfficialApp(id) {
+    return Object.prototype.hasOwnProperty.call(APP_DETAILS, String(id));
+  }
+
+  // Community apps: shared by their authors through the fusion-community
+  // repository and published there by its maintainers (apps.json, format 1).
+  const COMMUNITY_REPO = 'armel/fusion-community';
+  const COMMUNITY_ROOT = `https://raw.githubusercontent.com/${COMMUNITY_REPO}/main`;
+  const COMMUNITY_MANIFEST_URL = `${COMMUNITY_ROOT}/apps.json`;
+  // GitHub serves apps.json from a 5-minute cache: reading it more often
+  // than once a minute would bring nothing new.
+  const COMMUNITY_REFRESH_MS = 60 * 1000;
+  const APP_COMMUNITY_WARNED_PREFERENCE = 'uvstudio.appCommunityWarned';
+  const COMMUNITY_CATEGORIES = new Set(['radio', 'tools', 'games', 'demos']);
+
+  // The cards of a community manifest, entry by entry: a malformed entry is
+  // left out, and an official app id is never taken over.
+  function listCommunityApps(manifest) {
+    const entries = manifest && manifest.format === 1 && Array.isArray(manifest.apps) ? manifest.apps : [];
+    const text = value => (typeof value === 'string' ? value : '');
+    return entries
+      .filter(entry => entry && /^[a-z0-9]+$/.test(text(entry.id)) && !isOfficialApp(entry.id) &&
+        text(entry.name) && text(entry.version) && /^[0-9a-f]{64}$/.test(text(entry.sha256)) &&
+        new RegExp(`^apps/${entry.id}/[\\w.-]+/[A-Za-z0-9]+\\.app$`).test(text(entry.file)))
+      .map(entry => ({
+        id: entry.id,
+        name: entry.file.split('/').pop(),
+        label: entry.name,
+        url: `${COMMUNITY_ROOT}/${entry.file}`,
+        size: entry.size,
+        category: COMMUNITY_CATEGORIES.has(entry.category) ? entry.category : 'other',
+        description: text(entry.description),
+        descriptionKey: '',   // shown as its author wrote it
+        author: text(entry.author),
+        source: /^https:\/\/\S+$/.test(text(entry.source)) ? entry.source : '',
+        sha256: entry.sha256,
+        screen: text(entry.screen),
+        community: true,
+        metadata: { name: entry.name, version: entry.version, codeSize: entry.codeSize, assetSize: entry.assetSize }
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+  }
+
+  // A community app's screen joins the catalog screens, by its id.
+  function registerCommunityScreen(app) {
+    if (!app.screen || typeof atob !== 'function') return;
+    try {
+      const frame = Uint8Array.from(atob(app.screen), char => char.charCodeAt(0));
+      if (frame.length === APP_SCREEN_BYTES) appScreenFrames.set(app.id, frame);
+    } catch (error) {
+      /* Not base64: the card keeps its icon. */
+    }
+  }
 
   function appDetails(filename) {
     const id = appCatalogId(filename);
@@ -371,6 +490,14 @@
     const localBuildEl = document.getElementById('appCatalogLocalBuild');
     const localBuildButton = document.getElementById('appCatalogLocalBuildButton');
     const localBuildChangeButton = document.getElementById('appCatalogLocalBuildChange');
+    const screensToggles = ['appCatalogScreensToggle', 'appCommunityScreensToggle']
+      .map(id => document.getElementById(id)).filter(Boolean);
+    const communityTabEl = document.getElementById('appCommunityTab');
+    const communitySummaryEl = document.getElementById('appCommunitySummary');
+    const communityNoneEl = document.getElementById('appCommunityNone');
+    const communityNoticeEl = document.getElementById('appCommunityNotice');
+    const communityModal = document.getElementById('appCommunityModal');
+    const communityBodyEl = document.getElementById('appCommunityBody');
     if (!section || !versionSelect || !appSelect) return;
 
     let versions = [];
@@ -382,7 +509,6 @@
     let requestedFirmwareVersion = '';
     let currentVersionEntry = null;
     let currentApps = [];
-    let activeCategory = 'all';
     let currentMetadata = new Map();
     let inventoryReady = false;
     let freeSlots = 0;
@@ -390,6 +516,47 @@
     let catalogOperationPending = false;
     let catalogProgress = null;   // { id, percent, shown, ... } while a card installs/updates
     const metadataCache = new Map();
+    const preferences = window.UVStudioPreferences;
+    // Screenshots are shown unless the user hid them (one choice for every card).
+    let showScreens = !preferences || typeof preferences.get !== 'function' ||
+      preferences.get(APP_SCREENSHOTS_PREFERENCE, '1') !== '0';
+    let communityApps = [];
+    let communityState = 'idle';   // then 'loaded' or 'failed'
+    let communityReading = false;
+    let communityReadAt = 0;       // the last successful read
+    let communitySignature = '';   // what the cards show, to skip a redraw
+    let communityGone = new Set();  // files found removed since the list was read
+    let communityNotice = null;     // [key, ...values] above the community cards
+    let communityResolve = null;
+    let communityFocusOrigin = null;
+
+    // The two card lists, drawn by the same code: the official apps of the
+    // chosen firmware (Catalog tab) and the community's (Community tab).
+    const officialView = {
+      cards: cardsEl,
+      search: searchEl,
+      filters: filtersEl,
+      resultCount: resultCountEl,
+      empty: emptyEl,
+      countKey: 'appManagerResultCount',
+      category: 'all',
+      apps: () => currentApps
+    };
+    const communityView = {
+      cards: document.getElementById('appCommunityCards'),
+      search: document.getElementById('appCommunitySearch'),
+      filters: document.getElementById('appCommunityFilters'),
+      resultCount: document.getElementById('appCommunityResultCount'),
+      empty: document.getElementById('appCommunityEmpty'),
+      countKey: 'appCommunityResultCount',   // not sorted by firmware: no "compatible"
+      category: 'all',
+      apps: () => listedCommunityApps()
+    };
+    const views = [officialView, communityView];
+
+    function appMetadata(app) {
+      return app.community ? app.metadata : currentMetadata.get(appCatalogId(app.name));
+    }
 
     function t(key, ...values) {
       return window.uvStudioI18n ? window.uvStudioI18n.t(key, ...values) : key;
@@ -449,18 +616,181 @@
       return icon;
     }
 
-    function applyCatalogFilter() {
-      if (!cardsEl) return;
-      const query = String(searchEl?.value || '').trim().toLocaleLowerCase();
+    // The Live Viewer colors (k5viewer.js publishes them): pixels on glass.
+    function lcdColors() {
+      const style = getComputedStyle(document.documentElement);
+      return {
+        ink: style.getPropertyValue('--k5-lcd-fg').trim() || '#2a213f',
+        paper: style.getPropertyValue('--k5-lcd-bg').trim() || '#e5e0ec'
+      };
+    }
+
+    // The app's screen under the card details, in the Live Viewer colors. An
+    // app without a screenshot keeps the same footprint, with its icon.
+    function createAppScreen(app) {
+      const screen = document.createElement('div');
+      screen.className = 'app-catalog-screen';
+      const frame = appScreenFrame(app.id);
+      if (frame) {
+        const canvas = document.createElement('canvas');
+        canvas.className = 'app-catalog-screen-pixels';
+        canvas.width = APP_SCREEN_WIDTH;
+        canvas.height = APP_SCREEN_HEIGHT;
+        canvas.setAttribute('role', 'img');
+        canvas.setAttribute('aria-label', t('appScreenshotAlt', app.label));
+        canvas.dataset.appId = app.id;
+        const colors = lcdColors();
+        paintAppScreen(canvas, frame, colors.ink, colors.paper);
+        screen.appendChild(canvas);
+      } else {
+        screen.classList.add('is-empty');
+        const pixels = document.createElement('div');
+        pixels.className = 'app-catalog-screen-pixels';
+        const icon = createAppIcon(app);
+        icon.setAttribute('aria-hidden', 'true');
+        pixels.appendChild(icon);
+        screen.appendChild(pixels);
+      }
+      return screen;
+    }
+
+    // Where a card's install / update gauge goes: just above the screenshot,
+    // or at the card's bottom edge while the screenshots are hidden.
+    function progressHost(card) {
+      return (showScreens && card.querySelector('.app-catalog-screen')) || card;
+    }
+
+    // The gauge of the card being installed or updated, in either list.
+    function catalogProgressBar() {
+      for (const view of views) {
+        const bar = view.cards?.querySelector('.app-catalog-progress');
+        if (bar) return bar;
+      }
+      return null;
+    }
+
+    function applyScreensVisibility() {
+      views.forEach(view => view.cards?.classList.toggle('hide-screens', !showScreens));
+      const bar = catalogProgressBar();
+      const card = bar && bar.closest('.app-catalog-card');
+      if (card) progressHost(card).appendChild(bar);
+      screensToggles.forEach(toggle => toggle.setAttribute('aria-pressed', String(showScreens)));
+    }
+
+    // The Community tab without cards says why: still reading, unreadable, or
+    // nothing published yet. Search and filters wait for the first card; its
+    // two shortcuts (local install, submission) are always there.
+    // The community apps still published. GitHub serves apps.json from a
+    // 5-minute cache that no request can bypass, so an app removed meanwhile
+    // may still be listed: once its file is found gone, its card goes too.
+    function listedCommunityApps() {
+      return communityGone.size ? communityApps.filter(app => !communityGone.has(app.url)) : communityApps;
+    }
+
+    function applyCommunityState() {
+      const listed = listedCommunityApps();
+      const hasApps = listed.length > 0;
+      [communityView.search?.closest('label'), communityView.filters, communitySummaryEl].forEach(element => {
+        if (element) element.hidden = !hasApps;
+      });
+      if (communityNoneEl) {
+        const key = communityState === 'failed' ? 'appCommunityUnavailable'
+          : (communityState === 'loaded' ? 'appCommunityNone' : 'appCommunityLoading');
+        communityNoneEl.hidden = hasApps;
+        communityNoneEl.dataset.i18n = key;
+        communityNoneEl.textContent = t(key);
+      }
+      if (communityNoticeEl) {
+        communityNoticeEl.hidden = !communityNotice;
+        communityNoticeEl.textContent = communityNotice ? t(...communityNotice) : '';
+      }
+      const tabCount = document.getElementById('appCommunityTabCount');
+      if (tabCount) tabCount.textContent = communityState === 'loaded' ? String(listed.length) : '—';
+    }
+
+    function publishCommunity() {
+      window.dispatchEvent(new CustomEvent('uvstudio:appcommunity', {
+        detail: {
+          apps: listedCommunityApps().map(app => ({
+            name: app.metadata.name,
+            version: app.metadata.version,
+            url: app.url,
+            filename: app.name,
+            sha256: app.sha256,
+            author: app.author
+          }))
+        }
+      }));
+    }
+
+    // Before a community install or update: an app removed from the catalog
+    // within GitHub's cache delay is still listed, but its file answers 404.
+    // Its card then goes, with a word, instead of a failed download.
+    async function whenStillListed(app, action) {
+      if (app.community) {
+        let gone = false;
+        try {
+          gone = (await fetch(app.url, { method: 'HEAD', cache: 'no-cache' })).status === 404;
+        } catch (error) {
+          /* Offline: the download reports it itself. */
+        }
+        if (gone) {
+          communityGone.add(app.url);
+          communityNotice = ['appCommunityGone', app.label];
+          publishCommunity();
+          renderCatalogCards();
+          return;
+        }
+      }
+      action();
+    }
+
+    // Read on entering the Apps view or the Community tab, once a minute at
+    // most, whatever the official catalog does: the Installed tab marks the
+    // community apps on the radio and offers their updates. The cards are only
+    // drawn again when the list changed.
+    async function loadCommunity() {
+      if (communityReading || Date.now() - communityReadAt < COMMUNITY_REFRESH_MS) return;
+      communityReading = true;
+      let apps = communityApps;
+      let state = communityState;
+      try {
+        const response = await fetch(COMMUNITY_MANIFEST_URL, { cache: 'no-cache' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        apps = listCommunityApps(await response.json());
+        state = 'loaded';
+        communityReadAt = Date.now();
+      } catch (error) {
+        // A failed read keeps the list already shown; the official catalog
+        // stays usable without any.
+        if (state !== 'loaded') state = 'failed';
+      } finally {
+        communityReading = false;
+      }
+      const signature = JSON.stringify(apps);
+      if (state === communityState && signature === communitySignature) return;
+      communityApps = apps;
+      communityState = state;
+      communitySignature = signature;
+      communityGone = new Set();
+      communityNotice = null;
+      communityApps.forEach(registerCommunityScreen);
+      publishCommunity();
+      renderCatalogCards();
+    }
+
+    function applyCatalogFilter(view) {
+      if (!view.cards) return;
+      const query = String(view.search?.value || '').trim().toLocaleLowerCase();
       let visible = 0;
-      cardsEl.querySelectorAll('.app-catalog-card').forEach(card => {
-        const categoryMatches = activeCategory === 'all' || card.dataset.category === activeCategory;
+      view.cards.querySelectorAll('.app-catalog-card').forEach(card => {
+        const categoryMatches = view.category === 'all' || card.dataset.category === view.category;
         const queryMatches = !query || String(card.dataset.search || '').includes(query);
         card.hidden = !(categoryMatches && queryMatches);
         if (!card.hidden) visible++;
       });
-      if (resultCountEl) resultCountEl.textContent = t('appManagerResultCount', visible);
-      if (emptyEl) emptyEl.hidden = visible !== 0;
+      if (view.resultCount) view.resultCount.textContent = t(view.countKey, visible);
+      if (view.empty) view.empty.hidden = visible !== 0 || view.apps().length === 0;
     }
 
     async function runCatalogOperation(operation, progressApp) {
@@ -532,7 +862,7 @@
         if (catalogProgress !== progress) return;
         const step = ((now - last) / CATALOG_PROGRESS_FILL_MS) * 100;
         progress.shown = Math.min(progress.percent, progress.shown + Math.max(0, step));
-        const bar = cardsEl?.querySelector('.app-catalog-progress');
+        const bar = catalogProgressBar();
         if (bar) setCatalogProgressValue(bar, progress.shown);
         if (progress.shown >= 100) {
           progress.animating = false;
@@ -555,43 +885,95 @@
       animateCatalogProgress(progress, performance.now());
     }
 
-    function selectCatalogApp(app) {
+    function closeCommunityModal(confirmed) {
+      if (!communityModal?.classList.contains('show')) return;
+      const resolve = communityResolve;
+      const focusTarget = communityFocusOrigin;
+      communityResolve = null;
+      communityFocusOrigin = null;
+      communityModal.classList.remove('show');
+      communityModal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      if (focusTarget && document.contains(focusTarget)) focusTarget.focus({ preventScroll: true });
+      if (resolve) resolve(Boolean(confirmed));
+    }
+
+    // The first community install is confirmed, once: the app comes from its
+    // author, not from F4HWN, as the Community tab's banner keeps saying.
+    function confirmCommunityInstall(app) {
+      if (preferences && typeof preferences.get === 'function' &&
+          preferences.get(APP_COMMUNITY_WARNED_PREFERENCE, '0') === '1') return Promise.resolve(true);
+      if (!communityModal || communityResolve) return Promise.resolve(false);
+      communityFocusOrigin = document.activeElement;
+      if (communityBodyEl) communityBodyEl.textContent = t('appCommunityWarningBody', app.label, app.author || '?');
+      communityModal.classList.add('show');
+      communityModal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      requestAnimationFrame(() => document.getElementById('appCommunityCancelBtn')?.focus());
+      return new Promise(resolve => { communityResolve = resolve; });
+    }
+
+    function installCatalogApp(app) {
       const option = [...appSelect.options].find(item => item.value === app.url);
       if (option) appSelect.value = app.url;
       const flash = window.UVStudioFlash;
       if (flash && typeof flash.installAppFromURL === 'function') {
         void runCatalogOperation(
-          () => flash.installAppFromURL(app.url, app.name, { onProgress: updateCatalogProgress }),
+          () => flash.installAppFromURL(app.url, app.name, { onProgress: updateCatalogProgress, sha256: app.sha256 }),
           app
         );
       } else if (flash && typeof flash.loadAppFromURL === 'function') {
-        flash.loadAppFromURL(app.url, app.name);
+        flash.loadAppFromURL(app.url, app.name, app.sha256);
       }
     }
 
+    function selectCatalogApp(app) {
+      if (!app.community) {
+        installCatalogApp(app);
+        return;
+      }
+      void whenStillListed(app, () => confirmCommunityInstall(app).then(confirmed => {
+        if (!confirmed) return;
+        if (preferences && typeof preferences.set === 'function') {
+          preferences.set(APP_COMMUNITY_WARNED_PREFERENCE, '1');
+        }
+        installCatalogApp(app);
+      }));
+    }
+
     function renderCatalogCards() {
-      if (!cardsEl) return;
-      const otherFilter = filtersEl?.querySelector('[data-category="other"]');
-      const hasOtherApps = currentApps.some(app => app.category === 'other');
+      views.forEach(renderCardView);
+      if (catalogTabCountEl) catalogTabCountEl.textContent = String(currentApps.length);
+      if (firmwareHintEl) firmwareHintEl.textContent = currentVersionEntry
+        ? t('appManagerForFirmware', currentVersionEntry.version)
+        : '';
+      applyCommunityState();
+    }
+
+    function renderCardView(view) {
+      if (!view.cards) return;
+      const otherFilter = view.filters?.querySelector('[data-category="other"]');
+      const apps = view.apps();
+      const hasOtherApps = apps.some(app => app.category === 'other');
       if (otherFilter) otherFilter.hidden = !hasOtherApps;
-      if (!hasOtherApps && activeCategory === 'other') {
-        activeCategory = 'all';
-        filtersEl?.querySelectorAll('[data-category]').forEach(item => {
+      if (!hasOtherApps && view.category === 'other') {
+        view.category = 'all';
+        view.filters?.querySelectorAll('[data-category]').forEach(item => {
           item.classList.toggle('active', item.dataset.category === 'all');
         });
       }
-      cardsEl.textContent = '';
-      const longestVersion = currentApps
-        .map(app => String(currentMetadata.get(appCatalogId(app.name))?.version || '').replace(/^v/i, ''))
+      view.cards.textContent = '';
+      const longestVersion = apps
+        .map(app => String(appMetadata(app)?.version || '').replace(/^v/i, ''))
         .reduce((longest, version) => (version.length > longest.length ? version : longest), '0.0');
       const actionSizers = [
         t('appInstallBtn'),
         t('appDelete'),
         `${t('appUpdateShort')} → ${longestVersion}`
       ];
-      currentApps.forEach(app => {
+      apps.forEach(app => {
         const appId = appCatalogId(app.name);
-        const metadata = currentMetadata.get(appId);
+        const metadata = appMetadata(app);
         const progressState = catalogProgress?.id === appId ? catalogProgress : null;
         const installed = progressState
           ? progressState.installedSnapshot
@@ -656,6 +1038,16 @@
           author.title = t('studio_about_author');
           meta.appendChild(author);
         }
+        if (app.source) {
+          const source = document.createElement('a');
+          source.className = 'app-catalog-source';
+          source.href = app.source;
+          source.target = '_blank';
+          source.rel = 'noopener noreferrer';
+          source.textContent = t('appCommunitySource');
+          source.title = app.source;
+          meta.appendChild(source);
+        }
         const actions = document.createElement('div');
         actions.className = 'app-catalog-actions';
         if (!installed) {
@@ -678,15 +1070,16 @@
             setCatalogActionContent(update, 'update', `${t('appUpdateShort')} → ${updateVersion}`, actionSizers);
             update.title = t('appUpdateAction', updateVersion);
             update.disabled = catalogOperationPending || !inventoryReady;
-            update.addEventListener('click', () => {
+            update.addEventListener('click', () => void whenStillListed(app, () => {
               const flash = window.UVStudioFlash;
               if (flash && typeof flash.updateAppFromURL === 'function') {
                 void runCatalogOperation(
-                  () => flash.updateAppFromURL(installed.slot, app.url, app.name, { onProgress: updateCatalogProgress }),
+                  () => flash.updateAppFromURL(installed.slot, app.url, app.name,
+                    { onProgress: updateCatalogProgress, sha256: app.sha256 }),
                   app
                 );
               }
-            });
+            }));
             actions.appendChild(update);
           }
           const remove = document.createElement('button');
@@ -703,19 +1096,16 @@
           actions.appendChild(remove);
         }
         content.append(title, description, meta);
-        card.append(icon, content, actions);
-        // Same layout for every state: the gauge rides the card's bottom edge.
+        card.append(icon, content, actions, createAppScreen(app));
+        // Same layout for every state: the gauge rides the screenshot's top
+        // edge, or the card's bottom edge when the screenshots are hidden.
         if (progressState) {
           card.classList.add('is-busy');
-          card.appendChild(createCatalogProgress(progressState.shown));
+          progressHost(card).appendChild(createCatalogProgress(progressState.shown));
         }
-        cardsEl.appendChild(card);
+        view.cards.appendChild(card);
       });
-      if (catalogTabCountEl) catalogTabCountEl.textContent = String(currentApps.length);
-      if (firmwareHintEl) firmwareHintEl.textContent = currentVersionEntry
-        ? t('appManagerForFirmware', currentVersionEntry.version)
-        : '';
-      applyCatalogFilter();
+      applyCatalogFilter(view);
     }
 
     // Developer mode: a local build folder (build/Apps) offered separately
@@ -946,7 +1336,6 @@
       if (apps) void publishLatestAppVersions(LOCAL_VERSION, apps);
     }
 
-    const preferences = window.UVStudioPreferences;
     if (preferences && typeof preferences.devCatalog === 'function' && preferences.devCatalog() &&
         typeof window.showDirectoryPicker === 'function' && localBuildEl && localBuildButton && localBuildChangeButton) {
       localBuildEl.hidden = false;
@@ -979,19 +1368,59 @@
       });
     });
 
-    if (searchEl) searchEl.addEventListener('input', applyCatalogFilter);
-    if (catalogTabEl) catalogTabEl.addEventListener('click', () => {
-      if (!loaded && !loading) void load();
-    });
-    if (filtersEl) filtersEl.addEventListener('click', event => {
-      const button = event.target.closest('[data-category]');
-      if (!button) return;
-      activeCategory = button.dataset.category || 'all';
-      filtersEl.querySelectorAll('[data-category]').forEach(item => {
-        item.classList.toggle('active', item === button);
+    views.forEach(view => {
+      if (view.search) view.search.addEventListener('input', () => applyCatalogFilter(view));
+      if (view.filters) view.filters.addEventListener('click', event => {
+        const button = event.target.closest('[data-category]');
+        if (!button) return;
+        view.category = button.dataset.category || 'all';
+        view.filters.querySelectorAll('[data-category]').forEach(item => {
+          item.classList.toggle('active', item === button);
+        });
+        applyCatalogFilter(view);
       });
-      applyCatalogFilter();
     });
+    applyScreensVisibility();
+    applyCommunityState();
+    document.getElementById('appCommunityClose')?.addEventListener('click', () => closeCommunityModal(false));
+    document.getElementById('appCommunityCancelBtn')?.addEventListener('click', () => closeCommunityModal(false));
+    document.getElementById('appCommunityConfirmBtn')?.addEventListener('click', () => closeCommunityModal(true));
+    if (communityModal) {
+      communityModal.addEventListener('click', event => {
+        if (event.target === communityModal) closeCommunityModal(false);
+      });
+      communityModal.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeCommunityModal(false);
+      });
+    }
+    screensToggles.forEach(toggle => toggle.addEventListener('click', () => {
+      showScreens = !showScreens;
+      if (preferences && typeof preferences.set === 'function') {
+        preferences.set(APP_SCREENSHOTS_PREFERENCE, showScreens ? '1' : '0');
+      }
+      applyScreensVisibility();
+    }));
+    window.addEventListener('uvstudio:lcdcolors', () => {
+      const colors = lcdColors();
+      views.forEach(view => view.cards?.querySelectorAll('canvas.app-catalog-screen-pixels').forEach(canvas => {
+        const frame = appScreenFrame(canvas.dataset.appId);
+        if (frame) paintAppScreen(canvas, frame, colors.ink, colors.paper);
+      }));
+    });
+    // The shortcuts at the top of the Community tab open their panel, below
+    // the cards, and bring it into view.
+    [['appCommunityLocalBtn', 'appLocalInstall'], ['appCommunitySubmitBtn', 'appSubmit']].forEach(([buttonId, panelId]) => {
+      const button = document.getElementById(buttonId);
+      const panel = document.getElementById(panelId);
+      if (!button || !panel) return;
+      button.addEventListener('click', () => {
+        panel.open = true;
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        panel.querySelector('summary')?.focus({ preventScroll: true });
+      });
+    });
+    if (catalogTabEl) catalogTabEl.addEventListener('click', () => { void load(); });
+    if (communityTabEl) communityTabEl.addEventListener('click', openApps);
 
     appSelect.addEventListener('change', () => {
       const option = appSelect.options[appSelect.selectedIndex];
@@ -1047,16 +1476,23 @@
       renderCatalogCards();
     });
 
+    // The Apps view or the Community tab opens: the official catalog, read
+    // once, and the community list, read again when a minute has passed.
+    function openApps() {
+      void load();
+      void loadCommunity();
+    }
+
     window.addEventListener('uvstudio:toolviewchange', event => {
-      if (event.detail && event.detail.view === 'apps') load();
+      if (event.detail && event.detail.view === 'apps') openApps();
     });
-    window.addEventListener('online', () => { if (!loaded) load(); });
+    window.addEventListener('online', openApps);
 
     const paneTools = document.getElementById('pane-tools');
     const appsView = document.getElementById('apps-content');
     if (paneTools && paneTools.classList.contains('active') &&
         appsView && appsView.classList.contains('active')) {
-      load();
+      openApps();
     }
   }
 
@@ -1065,6 +1501,13 @@
     appCatalogId,
     appDetails,
     appIconSVG,
+    appScreenFrame,
+    paintAppScreen,
+    APP_SCREEN_WIDTH,
+    APP_SCREEN_HEIGHT,
+    isOfficialApp,
+    COMMUNITY_MANIFEST_URL,
+    listCommunityApps,
     catalogAppState,
     compareAppVersions,
     compareVersionsDesc,

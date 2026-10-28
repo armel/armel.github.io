@@ -193,6 +193,7 @@ const invertLcdLocal = parseInt(preferences.get('invertLcd', ''), 10);
 if (!isNaN(invertLcdLocal)) {
     invertLcd = invertLcdLocal;
 }
+publishLcdColors();
 
 const lcdRiseLocal = parseFloat(preferences.get('LCD_RISE', ''));
 const lcdFallLocal = parseFloat(preferences.get('LCD_FALL', ''));
@@ -1595,6 +1596,7 @@ function hexToRgb(hex) {
 
 function updateFPS() {
     frameCount++;
+    viewerFrameReceived = true;
     const now = performance.now();
 
     const reconnected = firstFrameAfterReconnect;
@@ -1654,6 +1656,7 @@ function saveScreenshot() {
 
 function toggleColors() {
     invertLcd = 1 - invertLcd;
+    publishLcdColors();
 
     if (isConnected && !radioDeepSleep) {
         tempInvertLcd = invertLcd;
@@ -1687,11 +1690,42 @@ function changePixelSize(delta) {
     }
 }
 
+// The radio's last screen, for the app submission panel (app-submit.js) while
+// the Live Viewer holds the radio: the 1024 LCD bytes as the radio lays them
+// out, 8 pages of 128 column bytes with bit 0 on top, or null before the first
+// frame. It stays after a disconnect.
+let viewerFrameReceived = false;
+window.UVStudioViewer = {
+    connected: () => isConnected,
+    lastFrame() {
+        if (!viewerFrameReceived) return null;
+        const pages = new Uint8Array(FRAME_SIZE);
+        for (let y = 0; y < HEIGHT; y++) {
+            for (let x = 0; x < WIDTH; x++) {
+                if (getBit(y * WIDTH + x)) pages[(y >> 3) * WIDTH + x] |= 1 << (y & 7);
+            }
+        }
+        return pages;
+    }
+};
+
+// The chosen LCD colors, for the other screen pictures of UV Studio (the app
+// catalog screenshots): pixels in --k5-lcd-fg on --k5-lcd-bg, then an event
+// for the pictures drawn in a canvas.
+function publishLcdColors() {
+    const theme = COLOR_SETS[currentColorKey] || COLOR_SETS[DEFAULT_COLOR];
+    const root = document.documentElement.style;
+    root.setProperty('--k5-lcd-fg', invertLcd ? theme[2] : theme[1]);
+    root.setProperty('--k5-lcd-bg', invertLcd ? theme[1] : theme[2]);
+    window.dispatchEvent(new CustomEvent('uvstudio:lcdcolors'));
+}
+
 function changeColorSet(key) {
     if (key in COLOR_SETS) {
         currentColorKey = key;
         preferences.set('currentColorKey', key);
-        
+        publishLcdColors();
+
         const [labelKey] = COLOR_SETS[key];
         const name = t(labelKey);
         showNotification('color_changed', { color: name }, 'info');
@@ -1770,9 +1804,16 @@ const PC_KEY_MAP = {
     '#': 0x0F, // F
 };
 
+// The viewer's shortcuts only act while the viewer is on screen, or its keypad
+// floats in its own window (keypad-detach.js forwards that window's keys): a
+// letter typed elsewhere in UV Studio must not change its colors (G, O, B, W,
+// I), which the app catalog screenshots share, nor disconnect the radio (Q).
+const viewerPane = document.getElementById('pane-viewer');
+
 document.addEventListener('keydown', (event) => {
     if (helpModal.classList.contains('show')) return;
     if (event.repeat) return;
+    if (viewerPane && !viewerPane.classList.contains('active') && document.contains(k1Keyboard)) return;
 
     const eventTarget = event.target instanceof Element ? event.target : null;
     if (eventTarget?.closest('input, select, textarea, [contenteditable="true"]')) {

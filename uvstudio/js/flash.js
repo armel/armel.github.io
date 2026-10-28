@@ -766,7 +766,11 @@ window.UVStudioFlash = Object.freeze({
   updateAppFromURL,
   deleteAppSlot,
   clearAppFromCatalog: () => beginAppImageLoad('catalog'),
-  hasFirmware: () => Boolean(firmwareData)
+  hasFirmware: () => Boolean(firmwareData),
+  // App submission panel: the radio connected here, its screen and firmware.
+  radioConnected: () => Boolean(port && writer && toolsSerial.isOwner()),
+  captureScreen: captureRadioScreen,
+  radioFirmwareName: () => appCurrentFirmwareName
 });
 
 function updateFlashButton() {
@@ -1165,6 +1169,7 @@ async function readLoop() {
       }
       if (value?.length) {
         readBuffer.push(...value);
+        trackScreenBytes(value);
         const isBulkFlashTransfer = activeOperationName === 'dump-flash' ||
           activeOperationName === 'restore-flash' ||
           activeOperationName === 'factory-reset';
@@ -1182,6 +1187,96 @@ async function readLoop() {
   }
   log(t('readComplete'), 'info');
   if (unexpectedlyClosed) void handleToolsHardwareDisconnect();
+}
+
+// ========== RADIO SCREEN CAPTURE ==========
+// The radio's screen over the tools connection, for the app submission panel
+// (app-submit.js): no detour through the Live Viewer. Its keepalive ping
+// makes the radio stream K5Viewer frames on the same port, [0xFn] AA 55 02
+// <length BE> then 9-byte chunks [index, 8 row-major bytes], then 0A. The
+// first frame after a ping pause holds all 128 chunks. Once a capture asked
+// for it, every frame of the session is applied here too: a radio still
+// streaming from an earlier ping sends only what changes, and those diffs
+// keep this copy right.
+const K5VIEWER_PING = Uint8Array.of(0x55, 0xAA, 0x00, 0x00);
+const K5VIEWER_FULL_FRAME = 128 * 9;
+let screenTrack = null;
+
+function trackScreenBytes(value) {
+  const track = screenTrack;
+  if (!track || track.session !== toolsSerialSession) return;
+  const bytes = track.bytes;
+  bytes.push(...value);
+  let i = 0;
+  while (i + 5 <= bytes.length) {
+    const size = (bytes[i + 3] << 8) | bytes[i + 4];
+    if (bytes[i] !== 0xAA || bytes[i + 1] !== 0x55 || bytes[i + 2] !== 0x02 ||
+        size % 9 !== 0 || size > K5VIEWER_FULL_FRAME) {
+      i++;
+      continue;
+    }
+    if (bytes.length < i + 6 + size) break;
+    let valid = bytes[i + 5 + size] === 0x0A;
+    for (let at = i + 5; valid && at < i + 5 + size; at += 9) valid = bytes[at] < 128;
+    if (!valid) {
+      i++;
+      continue;
+    }
+    for (let at = i + 5; at < i + 5 + size; at += 9) {
+      track.rows.set(bytes.slice(at + 1, at + 9), bytes[at] * 8);
+      track.known[bytes[at]] = 1;
+    }
+    if (size === K5VIEWER_FULL_FRAME) track.full = true;
+    i += 6 + size;
+  }
+  bytes.splice(0, i);
+}
+
+// Row-major bits (pixel x, y = bit (y * 128 + x)) to the catalog LCD layout:
+// 8 pages of 128 column bytes, bit 0 on top.
+function screenPagesFromRows(rows) {
+  const pages = new Uint8Array(1024);
+  for (let y = 0; y < 64; y++) {
+    for (let x = 0; x < 128; x++) {
+      const bit = y * 128 + x;
+      if ((rows[bit >> 3] >> (bit & 7)) & 1) pages[(y >> 3) * 128 + x] |= 1 << (y & 7);
+    }
+  }
+  return pages;
+}
+
+// { frame } or { error: 'offline' | 'busy' | 'timeout' }.
+async function captureRadioScreen(timeoutMs = 3000) {
+  if (!port || !writer || !toolsSerial.isOwner()) return { error: 'offline' };
+  const token = beginToolsOperation('capture-screen', false);
+  if (!token) return { error: 'busy' };
+  const session = toolsSerialSession;
+  if (!screenTrack || screenTrack.session !== session) {
+    screenTrack = { session, rows: new Uint8Array(1024), known: new Uint8Array(128), bytes: [], full: false };
+  }
+  const track = screenTrack;
+  track.full = false;
+  const start = performance.now();
+  try {
+    for (;;) {
+      if (session !== toolsSerialSession) return { error: 'offline' };
+      await writer.write(K5VIEWER_PING);
+      await sleep(200);
+      // A radio that was not streaming answers with a full frame at once. One
+      // still streaming sends nothing for an unchanged screen: the copy is
+      // then current, provided it was complete.
+      const elapsed = performance.now() - start;
+      if (track.full || (elapsed >= 600 && track.known.every(Boolean))) {
+        return { frame: screenPagesFromRows(track.rows) };
+      }
+      if (elapsed >= timeoutMs) return { error: 'timeout' };
+    }
+  } catch (error) {
+    if (error?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) return { error: 'offline' };
+    throw error;
+  } finally {
+    endToolsOperation(token);
+  }
 }
 
 // ========== RUNTIME TOOLS AUTO-RECONNECT ==========
@@ -3770,8 +3865,12 @@ const appManagerFirmware = document.getElementById('appManagerFirmware');
 const appManagerCompatibility = document.getElementById('appManagerCompatibility');
 const appInstalledTab = document.getElementById('appInstalledTab');
 const appCatalogTab = document.getElementById('appCatalogTab');
-const appInstalledPanel = document.getElementById('appInstalledPanel');
-const appCatalogPanel = document.getElementById('appCatalogPanel');
+const appCommunityTab = document.getElementById('appCommunityTab');
+const appManagerPanels = {
+  installed: [appInstalledTab, document.getElementById('appInstalledPanel')],
+  catalog: [appCatalogTab, document.getElementById('appCatalogPanel')],
+  community: [appCommunityTab, document.getElementById('appCommunityPanel')]
+};
 
 let appImage = null;   // full .app bytes (header + code)
 let appMeta  = { name: '', version: '', codeSize: 0, assetSize: 0 };
@@ -3779,7 +3878,11 @@ let appImageLoadSeq = 0;
 let appImageLoadAbort = null;
 let appLatestVersions = new Map();
 let appCompatibleVersions = new Map();
+// Community apps by header name (app-catalog.js): their rows get a badge, and
+// a newer published version the update button, checked against its sha256.
+let appCommunityApps = new Map();
 let appCurrentFirmwareVersion = '';
+let appCurrentFirmwareName = '';
 let appActiveSlotCount = APP_SLOT_COUNT;
 let appCompatibilityKnown = false;
 let appUpdateDownloadPending = false;
@@ -3790,25 +3893,18 @@ let appOrderDragSlot = null;
 let appOrderDropIndex = null;
 
 function appManagerSelectPanel(name) {
-  const catalog = name === 'catalog';
-  if (appInstalledTab) {
-    appInstalledTab.classList.toggle('active', !catalog);
-    appInstalledTab.setAttribute('aria-selected', String(!catalog));
-    appInstalledTab.tabIndex = catalog ? -1 : 0;
-  }
-  if (appCatalogTab) {
-    appCatalogTab.classList.toggle('active', catalog);
-    appCatalogTab.setAttribute('aria-selected', String(catalog));
-    appCatalogTab.tabIndex = catalog ? 0 : -1;
-  }
-  if (appInstalledPanel) {
-    appInstalledPanel.classList.toggle('active', !catalog);
-    appInstalledPanel.hidden = catalog;
-  }
-  if (appCatalogPanel) {
-    appCatalogPanel.classList.toggle('active', catalog);
-    appCatalogPanel.hidden = !catalog;
-  }
+  Object.entries(appManagerPanels).forEach(([key, [tab, panel]]) => {
+    const active = key === name;
+    if (tab) {
+      tab.classList.toggle('active', active);
+      tab.setAttribute('aria-selected', String(active));
+      tab.tabIndex = active ? 0 : -1;
+    }
+    if (panel) {
+      panel.classList.toggle('active', active);
+      panel.hidden = !active;
+    }
+  });
 }
 
 function appUpdateManagerSummary() {
@@ -4149,6 +4245,7 @@ function appRenderRow(slot, info) {
   }
   appRenderRowSize(row);
   appRenderRowState(row);
+  appRenderCommunityBadge(row);
   const del = row.querySelector('.app-act-delete');
   if (del) {
     del.hidden = !valid;
@@ -4203,12 +4300,35 @@ function appRenderRowState(row) {
   stateCell.className = 'slot-state ' + (compat || mismatch ? 'bad' : (status === 0 ? 'ok' : (status === 2 ? 'empty' : 'bad')));
 }
 
+function appRenderCommunityBadge(row) {
+  const cell = row.querySelector('.slot-name');
+  if (!cell) return;
+  let badge = cell.querySelector('.app-community-badge');
+  if (!row.dataset.appName || !appCommunityApps.has(appCatalogKey(row.dataset.appName))) {
+    if (badge) badge.remove();
+    return;
+  }
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.className = 'app-community-badge';
+    cell.appendChild(badge);
+  }
+  badge.textContent = t('appManagerCommunity');
+  badge.title = t('appCommunityBadgeHint');
+}
+
+// The version an installed app can be updated to: the official catalog of the
+// radio's firmware, else the community's (whose ids never clash with it).
+function appLatestAvailable(row) {
+  const key = appCatalogKey(row.dataset.appName);
+  if (appCompatibilityKnown && appCompatibleVersions.has(key)) return appCompatibleVersions.get(key);
+  return appCommunityApps.get(key) || null;
+}
+
 function appRenderUpdateIndicator(row) {
   const button = row.querySelector('.app-update-button');
   if (!button) return;
-  const latest = appCompatibilityKnown
-    ? appCompatibleVersions.get(appCatalogKey(row.dataset.appName))
-    : null;
+  const latest = row.dataset.appName ? appLatestAvailable(row) : null;
   const comparison = latest ? appCompareVersions(row.dataset.appVersion, latest.version) : null;
   const outdated = comparison !== null && comparison < 0;
   row.classList.toggle('app-outdated', Boolean(outdated));
@@ -4230,6 +4350,7 @@ function appRefreshUpdateIndicators() {
   appsTableBody.querySelectorAll('tr[data-slot]').forEach(row => {
     appRenderRowSize(row);
     appRenderRowState(row);
+    appRenderCommunityBadge(row);
     appRenderUpdateIndicator(row);
   });
 }
@@ -4320,6 +4441,7 @@ async function appRefreshFlow() {
       if (appManagerFirmware) appManagerFirmware.textContent = fw.name || t('appUnknownFirmware');
       if (appManagerCompatibility) appManagerCompatibility.textContent = t('appManagerCheckingCompatibility');
       const firmwareVersion = appFirmwareVersionFromName(fw.name);
+      appCurrentFirmwareName = fw.name || '';
       appSetSlotCount(appSlotCountForFirmware(fw.name));
       if (firmwareVersion !== appCurrentFirmwareVersion) {
         appCurrentFirmwareVersion = firmwareVersion;
@@ -4718,7 +4840,14 @@ function setAppImageBuffer(buf, name) {
   return true;
 }
 
-async function loadAppFromURL(url, catalogName = 'application.app') {
+async function sha256Hex(buffer) {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', buffer));
+  return Array.from(digest, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+// expectedSha256: a community app must be the very file its catalog entry
+// describes (raw.githubusercontent.com caches files and the manifest apart).
+async function loadAppFromURL(url, catalogName = 'application.app', expectedSha256 = '') {
   const seq = beginAppImageLoad('catalog');
   const controller = new AbortController();
   appImageLoadAbort = controller;
@@ -4733,6 +4862,12 @@ async function loadAppFromURL(url, catalogName = 'application.app') {
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const buf = await response.arrayBuffer();
+    if (seq !== appImageLoadSeq) return false;
+    if (expectedSha256 && await sha256Hex(buf) !== expectedSha256) {
+      log(t('appCommunityHashMismatch'), 'error');
+      if (seq === appImageLoadSeq) clearAppImage();
+      return false;
+    }
     if (seq !== appImageLoadSeq) return false;
     const filename = catalogName || urlObj.pathname.split('/').pop() || 'application.app';
     return setAppImageBuffer(buf, filename);
@@ -4755,7 +4890,7 @@ async function installAppFromURL(url, catalogName = 'application.app', options =
     log(t('appManagerNoFreeSlot'), 'error');
     return false;
   }
-  const loaded = await loadAppFromURL(url, catalogName);
+  const loaded = await loadAppFromURL(url, catalogName, options.sha256);
   if (!loaded) return false;
   appSelectFirstEmptySlot();
   await appInstallFlow(options);
@@ -4773,7 +4908,7 @@ async function updateAppFromURL(slot, url, catalogName = 'application.app', opti
   appUpdateDownloadPending = true;
   updateAppButtons();
   try {
-    const loaded = await loadAppFromURL(url, catalogName);
+    const loaded = await loadAppFromURL(url, catalogName, options.sha256);
     if (!loaded) return false;
     if (appTargetSelect) appTargetSelect.value = String(slot);
     await appInstallFlow(options);
@@ -4792,15 +4927,13 @@ async function deleteAppSlot(slot) {
 
 async function appUpdateFlow(slot) {
   const row = appsTableBody?.querySelector(`tr[data-slot="${slot}"]`);
-  const latest = row && appCompatibilityKnown
-    ? appCompatibleVersions.get(appCatalogKey(row.dataset.appName))
-    : null;
+  const latest = row?.dataset.appName ? appLatestAvailable(row) : null;
   if (!latest?.url || appUpdateDownloadPending || activeOperationToken) return;
 
   appUpdateDownloadPending = true;
   updateAppButtons();
   try {
-    const loaded = await loadAppFromURL(latest.url, latest.filename || `${latest.name}.app`);
+    const loaded = await loadAppFromURL(latest.url, latest.filename || `${latest.name}.app`, latest.sha256 || '');
     if (!loaded) return;
     if (appTargetSelect) appTargetSelect.value = String(slot);
     await appInstallFlow();
@@ -4830,12 +4963,14 @@ if (appOrderApplyBtn) appOrderApplyBtn.addEventListener('click', () => { void ap
 if (appOrderCancelBtn) appOrderCancelBtn.addEventListener('click', appCancelOrder);
 if (appInstalledTab) appInstalledTab.addEventListener('click', () => appManagerSelectPanel('installed'));
 // A pending order belongs to the Installed list: settle it there first.
-if (appCatalogTab) appCatalogTab.addEventListener('click', () => {
-  if (appOrderIsDirty()) {
-    if (appOrderNotice) appOrderNotice.hidden = false;
-    return;
-  }
-  appManagerSelectPanel('catalog');
+[[appCatalogTab, 'catalog'], [appCommunityTab, 'community']].forEach(([tab, name]) => {
+  if (tab) tab.addEventListener('click', () => {
+    if (appOrderIsDirty()) {
+      if (appOrderNotice) appOrderNotice.hidden = false;
+      return;
+    }
+    appManagerSelectPanel(name);
+  });
 });
 appBuildTable();
 appResetOrder();
@@ -4854,6 +4989,13 @@ window.addEventListener('uvstudio:appcatalogversions', event => {
   const apps = Array.isArray(event.detail?.apps) ? event.detail.apps : [];
   appLatestVersions = new Map(apps
     .filter(app => app && app.name && app.version)
+    .map(app => [appCatalogKey(app.name), app]));
+  appRefreshUpdateIndicators();
+});
+window.addEventListener('uvstudio:appcommunity', event => {
+  const apps = Array.isArray(event.detail?.apps) ? event.detail.apps : [];
+  appCommunityApps = new Map(apps
+    .filter(app => app && app.name && app.version && app.url)
     .map(app => [appCatalogKey(app.name), app]));
   appRefreshUpdateIndicators();
 });
