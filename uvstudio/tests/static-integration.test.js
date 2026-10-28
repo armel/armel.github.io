@@ -213,7 +213,7 @@ test('provides a catalog and compact installed-app manager without new firmware 
   assert.ok(html.indexOf('id="appCatalogTab"') < html.indexOf('id="appOrderNotice"'));
   assert.ok(html.indexOf('id="appOrderNotice"') < html.indexOf('id="appInstalledPanel"'));
   assert.match(toolsCss, /\.app-manager-tabs-row\s*\{[^}]*display:\s*flex/);
-  assert.match(flashSource, /appCatalogTab\.addEventListener\('click', \(\) => \{\s*if \(appOrderIsDirty\(\)\) \{\s*if \(appOrderNotice\) appOrderNotice\.hidden = false;\s*return;/);
+  assert.match(flashSource, /\[\[appCatalogTab, 'catalog'\], \[appCommunityTab, 'community'\]\]\.forEach\(\(\[tab, name\]\) => \{\s*if \(tab\) tab\.addEventListener\('click', \(\) => \{\s*if \(appOrderIsDirty\(\)\) \{\s*if \(appOrderNotice\) appOrderNotice\.hidden = false;\s*return;/);
   assert.match(flashSource, /if \(appOrderNotice && !dirty\) appOrderNotice\.hidden = true/);
   assert.match(flashSource, /async function installAppFromURL\([^)]*\) \{\s*if \(appOrderIsDirty\(\)\)/);
   assert.doesNotMatch(appCatalogSource, /orderPending|uvstudio:apporder/);
@@ -229,7 +229,7 @@ test('provides a catalog and compact installed-app manager without new firmware 
   assert.match(toolsCss, /\.app-catalog-tag\s*\{[^}]*color:\s*color-mix\(in oklab, var\(--app-category-color\) 78%[^}]*background:\s*color-mix\(in oklab, var\(--app-category-color\) 12%/s);
   assert.match(toolsCss, /\.app-category\.btn\[data-category="radio"\]\s*\{\s*--app-category-color:\s*#3b82f6/);
   assert.match(toolsCss, /\.app-category\.btn\.active\s*\{[^}]*var\(--app-category-color\) 84%[^}]*var\(--app-category-color\) 14%/s);
-  assert.match(appCatalogSource, /catalogTabEl\.addEventListener\('click'.*if \(!loaded && !loading\) void load\(\)/s);
+  assert.match(appCatalogSource, /catalogTabEl\.addEventListener\('click', \(\) => \{ void load\(\); \}\);\s*if \(communityTabEl\) communityTabEl\.addEventListener\('click', openApps\);/);
   assert.match(toolsCss, /\.apps-table-wrap tr\.app-slot-empty\s*\{\s*display:\s*none/);
   assert.doesNotMatch(html, /id="appEmptyReadBtn"/);
   assert.match(flashSource, /appRefreshBtn\.disabled = !serialSupported \|\| busy \|\| orderDirty/);
@@ -261,8 +261,8 @@ test('reorders complete app slots through the existing raw flash protocol', () =
   assert.match(toolsCss, /\.app-renumber-button\[hidden\]\s*\{\s*display:\s*none/);
   assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*overflow-anchor:\s*none/s);
   assert.match(toolsCss, /tr\.app-order-drop-before td\s*\{[^}]*box-shadow/s);
-  assert.match(html, /css\/tools\.css\?v=70/);
-  assert.match(html, /js\/flash\.js\?v=104/);
+  assert.match(html, /css\/tools\.css\?v=71/);
+  assert.match(html, /js\/flash\.js\?v=105/);
   assert.doesNotMatch(flashSource, /app-order-(?:up|down)/);
   assert.doesNotMatch(flashSource, /function appMoveInOrder/);
 
@@ -623,7 +623,7 @@ test('adapts tool badges to the connected firmware generation', () => {
 
 test('detects the firmware profile when Live Viewer owns the serial port', () => {
   assert.match(html, /js\/runtime-protocol\.js\?v=2/);
-  assert.match(html, /js\/k5viewer\.js\?v=39/);
+  assert.match(html, /js\/k5viewer\.js\?v=40/);
   assert.match(viewerSource, /PROFILE_MSG_DEVICE_INFO_REQUEST = 0x0514/);
   assert.match(viewerSource, /PROFILE_MSG_APP_INFO = 0x0730/);
   assert.match(viewerSource, /PROFILE_MSG_EXTERNAL_FLASH_READ = 0x0738/);
@@ -1313,6 +1313,9 @@ test('shows each catalog app screenshot in the Live Viewer colors, with a persis
   assert.match(appCatalogSource, /window\.addEventListener\('uvstudio:lcdcolors'/);
   assert.match(viewerSource, /root\.setProperty\('--k5-lcd-fg', invertLcd \? theme\[2\] : theme\[1\]\);\s*root\.setProperty\('--k5-lcd-bg'[^;]+;\s*window\.dispatchEvent\(new CustomEvent\('uvstudio:lcdcolors'\)\)/);
   assert.match(viewerSource, /function toggleColors\(\) \{\s*invertLcd = 1 - invertLcd;\s*publishLcdColors\(\);/);
+  // Its shortcuts (G, O, B, W, I change those colors) only act on the viewer
+  // screen or from its detached keypad, never from the Apps view.
+  assert.match(viewerSource, /if \(viewerPane && !viewerPane\.classList\.contains\('active'\) && document\.contains\(k1Keyboard\)\) return;/);
   assert.match(toolsCss, /\.app-catalog-screen-pixels\s*\{[^}]*max-width:\s*384px[^}]*aspect-ratio:\s*12 \/ 7/s);
   assert.match(appCatalogSource, /const APP_SCREEN_CELL_W = 6;\s*const APP_SCREEN_CELL_H = 7;/);
   assert.match(toolsCss, /\.app-catalog-screen\s*\{[^}]*background:\s*var\(--k5-lcd-bg, #e5e0ec\)/s);
@@ -1322,6 +1325,116 @@ test('shows each catalog app screenshot in the Live Viewer colors, with a persis
   assert.match(toolsCss, /\.app-catalog-screen \.app-catalog-progress\s*\{[^}]*top:\s*-9px[^}]*bottom:\s*auto/s);
   assert.match(appCatalogSource, /return \(showScreens && card\.querySelector\('\.app-catalog-screen'\)\) \|\| card;/);
   ['appCatalogScreens', 'appCatalogScreensHint', 'appScreenshotAlt'].forEach(key => {
+    ['de', 'en', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'ru', 'zh'].forEach(lang => {
+      const locale = fs.readFileSync(path.join(root, 'locales', `${lang}.js`), 'utf8');
+      assert.match(locale, new RegExp(`"${key}": "[^"]+"`), `${lang} ${key}`);
+    });
+  });
+});
+
+test('gives the community apps their own tab, with a banner, one warning and a checked download', () => {
+  // Installed, Catalog, Community: the community's apps, the local install and
+  // the submission live in the third tab, never among the official apps.
+  assert.match(html, /<button type="button" class="btn app-manager-tab" id="appCommunityTab" role="tab" aria-selected="false" aria-controls="appCommunityPanel" tabindex="-1">/);
+  assert.match(html, /<section class="app-manager-panel" id="appCommunityPanel" role="tabpanel" aria-labelledby="appCommunityTab" hidden>/);
+  const communityStart = html.indexOf('id="appCommunityPanel"');
+  const catalogPanel = html.slice(html.indexOf('id="appCatalogPanel"'), communityStart);
+  ['appCatalogCommunityToggle', 'id="appFile"', 'id="appSubmit"'].forEach(part => {
+    assert.ok(!catalogPanel.includes(part), part);
+  });
+  ['data-i18n="appCommunityBanner"', 'id="appCommunityCards"', 'id="appCommunityNone"',
+    'id="appFile"', 'id="appSubmit"'].forEach(part => {
+    assert.ok(html.indexOf(part) > communityStart, part);
+  });
+  assert.match(flashSource, /community: \[appCommunityTab, document\.getElementById\('appCommunityPanel'\)\]/);
+  // Two shortcuts at the top, there even without a card, open those panels.
+  assert.match(html, /<div class="app-catalog-toolbar app-community-toolbar" id="appCommunityToolbar">/);
+  assert.match(html, /id="appCommunityLocalBtn" aria-controls="appLocalInstall"/);
+  assert.match(html, /id="appCommunitySubmitBtn" aria-controls="appSubmit"/);
+  assert.match(html, /<details class="app-local-install" id="appLocalInstall">/);
+  assert.ok(html.indexOf('id="appCommunitySubmitBtn"') < html.indexOf('id="appCommunityCards"'));
+  assert.match(appCatalogSource, /\[\['appCommunityLocalBtn', 'appLocalInstall'\], \['appCommunitySubmitBtn', 'appSubmit'\]\]\.forEach/);
+  assert.match(appCatalogSource, /panel\.open = true;\s*panel\.scrollIntoView/);
+  assert.match(appCatalogSource, /\[communityView\.search\?\.closest\('label'\), communityView\.filters, communitySummaryEl\]/);
+  assert.match(toolsCss, /\.app-community \.app-catalog-summary\[hidden\] \{ display: none; \}/);
+  // Read on entering the Apps view or the Community tab, whatever the official
+  // catalog does, once a minute at most, and drawn again only when it changed.
+  assert.match(appCatalogSource, /function openApps\(\) \{\s*void load\(\);\s*void loadCommunity\(\);/);
+  assert.match(appCatalogSource, /if \(event\.detail && event\.detail\.view === 'apps'\) openApps\(\);/);
+  assert.match(appCatalogSource, /const COMMUNITY_REFRESH_MS = 60 \* 1000;/);
+  assert.match(appCatalogSource, /if \(communityReading \|\| Date\.now\(\) - communityReadAt < COMMUNITY_REFRESH_MS\) return;/);
+  assert.match(appCatalogSource, /if \(state === communityState && signature === communitySignature\) return;/);
+  // A removed app still listed within GitHub's cache delay: its file answers
+  // 404 before an install or update, and its card goes with a notice.
+  assert.match(appCatalogSource, /gone = \(await fetch\(app\.url, \{ method: 'HEAD', cache: 'no-cache' \}\)\)\.status === 404;/);
+  assert.match(appCatalogSource, /void whenStillListed\(app, \(\) => confirmCommunityInstall\(app\)/);
+  assert.match(html, /<p class="app-community-notice" id="appCommunityNotice" role="status" hidden><\/p>/);
+  assert.match(appCatalogSource, /fetch\(COMMUNITY_MANIFEST_URL, \{ cache: 'no-cache' \}\)/);
+  assert.match(appCatalogSource, /const views = \[officialView, communityView\];/);
+  assert.match(appCatalogSource, /source\.rel = 'noopener noreferrer';/);
+  // The Installed list marks a community app and offers its updates.
+  assert.match(appCatalogSource, /new CustomEvent\('uvstudio:appcommunity'/);
+  assert.match(flashSource, /window\.addEventListener\('uvstudio:appcommunity'/);
+  assert.match(flashSource, /badge\.className = 'app-community-badge';/);
+  assert.match(flashSource, /return appCommunityApps\.get\(key\) \|\| null;/);
+  // The first install is confirmed, once; every file must match its entry.
+  assert.match(html, /<div class="modal" id="appCommunityModal" role="dialog" aria-modal="true"/);
+  assert.match(appCatalogSource, /preferences\.get\(APP_COMMUNITY_WARNED_PREFERENCE, '0'\) === '1'\) return Promise\.resolve\(true\);/);
+  assert.match(appCatalogSource, /preferences\.set\(APP_COMMUNITY_WARNED_PREFERENCE, '1'\);\s*\}\s*installCatalogApp\(app\);/);
+  assert.match(appCatalogSource, /flash\.installAppFromURL\(app\.url, app\.name, \{ onProgress: updateCatalogProgress, sha256: app\.sha256 \}\)/);
+  assert.match(appCatalogSource, /\{ onProgress: updateCatalogProgress, sha256: app\.sha256 \}\),/);
+  assert.match(flashSource, /if \(expectedSha256 && await sha256Hex\(buf\) !== expectedSha256\) \{\s*log\(t\('appCommunityHashMismatch'\), 'error'\);/);
+  assert.equal((flashSource.match(/loadAppFromURL\(url, catalogName, options\.sha256\)/g) || []).length, 2);
+  assert.match(flashSource, /loadAppFromURL\(latest\.url, latest\.filename \|\| `\$\{latest\.name\}\.app`, latest\.sha256 \|\| ''\)/);
+  ['appManagerCommunity', 'appCommunityBadgeHint', 'appCommunityBanner', 'appCommunityLoading',
+    'appCommunityNone', 'appCommunityUnavailable', 'appCommunityGone', 'appCommunityResultCount', 'appCommunityLocalButton',
+    'appCommunitySubmitButton', 'appCommunitySource', 'appCommunityWarningTitle',
+    'appCommunityWarningBody', 'appCommunityWarningConfirm', 'appCommunityHashMismatch'].forEach(key => {
+    ['de', 'en', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'ru', 'zh'].forEach(lang => {
+      const locale = fs.readFileSync(path.join(root, 'locales', `${lang}.js`), 'utf8');
+      assert.match(locale, new RegExp(`"${key}": "[^"]+"`), `${lang} ${key}`);
+    });
+  });
+});
+
+test('lets a developer propose an app from the Community tab', () => {
+  const submitSource = fs.readFileSync(path.join(root, 'js', 'app-submit.js'), 'utf8');
+  assert.match(html, /<details class="app-local-install app-submit" id="appSubmit">/);
+  assert.match(html, /<form class="app-local-install-body app-submit-body" id="appSubmitForm">/);
+  ['appSubmitFile', 'appSubmitCapture', 'appSubmitAuthor', 'appSubmitCategory',
+    'appSubmitDescription', 'appSubmitSource', 'appSubmitPreview', 'appSubmitSend', 'appSubmitSignIn',
+    'appSubmitPaste'].forEach(id => assert.match(html, new RegExp(`id="${id}"`), id));
+  // The step to follow after opening GitHub is set in bold (say() reads **...**).
+  assert.match(submitSource, /split\(\/\\\*\\\*\(\.\+\?\)\\\*\\\*\/\)/);
+  ['de', 'en', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'ru', 'zh'].forEach(lang => {
+    const locale = fs.readFileSync(path.join(root, 'locales', `${lang}.js`), 'utf8');
+    assert.match(locale, /"appSubmitOpened": "[^"]*\*\*[^"*]+Create\*\*/, lang);
+  });
+  // No firmware field: the issue carries the firmware read from the radio.
+  assert.doesNotMatch(html, /id="appSubmitFirmware"/);
+  assert.match(submitSource, /firmware: flash && flash\.radioFirmwareName \? flash\.radioFirmwareName\(\) : ''/);
+  assert.match(flashSource, /appCurrentFirmwareName = fw\.name \|\| '';/);
+  // The screen comes over the tools connection, the Live Viewer only when it holds the radio.
+  assert.match(flashSource, /radioConnected: \(\) => Boolean\(port && writer && toolsSerial\.isOwner\(\)\),\s*captureScreen: captureRadioScreen,/);
+  assert.match(flashSource, /readBuffer\.push\(\.\.\.value\);\s*trackScreenBytes\(value\);/);
+  assert.match(flashSource, /const K5VIEWER_PING = Uint8Array\.of\(0x55, 0xAA, 0x00, 0x00\);/);
+  assert.match(flashSource, /const token = beginToolsOperation\('capture-screen', false\);/);
+  assert.match(submitSource, /viewer\.connected && viewer\.connected\(\) \? viewer\.lastFrame\(\) : null/);
+  assert.equal(html.match(/<input type="checkbox" id="appSubmit\w+" required \/>/g).length, 3);
+  // Loaded after the catalog, whose painter and official ids it uses.
+  assert.match(html, /<script src="js\/app-catalog\.js\?v=\d+"><\/script>\n<script src="js\/app-submit\.js\?v=\d+"><\/script>/);
+  assert.match(appCatalogSource, /function isOfficialApp\(id\)/);
+  // The Live Viewer hands over its last screen in the catalog's LCD layout.
+  assert.match(viewerSource, /window\.UVStudioViewer = \{\s*connected: \(\) => isConnected,\s*lastFrame\(\)/);
+  assert.match(viewerSource, /function updateFPS\(\) \{\s*frameCount\+\+;\s*viewerFrameReceived = true;/);
+  // The window opens in the click itself, without waiting for anything.
+  assert.match(submitSource, /if \(link\.paste\) copy\(link\.paste\);\s*window\.open\(link\.url, '_blank', 'noopener'\);/);
+  assert.match(submitSource, /const URL_LIMIT = 7800;/);
+  assert.doesNotMatch(submitSource, /fetch\(/);
+  // Every message key of the module and the panel (element ids aside) is translated.
+  const keys = [...submitSource.matchAll(/(?<!\$\(|getElementById\()'(appSubmit\w+)'/g)].map(match => match[1])
+    .concat([...html.matchAll(/data-i18n(?:-placeholder|-aria-label)?="(appSubmit\w+)"/g)].map(match => match[1]));
+  new Set(keys).forEach(key => {
     ['de', 'en', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'ru', 'zh'].forEach(lang => {
       const locale = fs.readFileSync(path.join(root, 'locales', `${lang}.js`), 'utf8');
       assert.match(locale, new RegExp(`"${key}": "[^"]+"`), `${lang} ${key}`);

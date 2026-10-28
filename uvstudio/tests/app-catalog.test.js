@@ -266,3 +266,37 @@ test('decodes the raw catalog screens and draws their lit pixels', () => {
   assert.equal(passes[0].rects.length, 128 * 64 - 1);
   assert.deepEqual(passes[1].rects, [[18, 70, 5, 6]]);
 });
+
+test('lists the community apps of apps.json, never in place of an official one', () => {
+  assert.equal(catalog.COMMUNITY_MANIFEST_URL, 'https://raw.githubusercontent.com/armel/fusion-community/main/apps.json');
+  const screen = Buffer.alloc(1024, 0x11).toString('base64');
+  const entry = (id, more = {}) => ({
+    id, name: 'Sky Watch', version: '1.2', file: `apps/${id}/1.2/SkyWatch.app`, size: 1500, codeSize: 1200,
+    assetSize: 236, sha256: 'a'.repeat(64), category: 'tools', author: 'F4XYZ', owner: 'f4xyz',
+    description: 'Track satellite passes.', source: 'https://github.com/f4xyz/skywatch', screen, ...more
+  });
+  const apps = catalog.listCommunityApps({ format: 1, apps: [
+    entry('skywatch'),
+    entry('alpha', { name: 'Alpha', file: 'apps/alpha/0.1/Alpha.app', category: 'weird', source: 'javascript:alert(1)' }),
+    entry('foxhunt', { file: 'apps/foxhunt/1.2/FoxHunt.app' }),   // an official id
+    entry('bad', { file: '../../etc/passwd' }),
+    entry('nohash', { file: 'apps/nohash/1.2/NoHash.app', sha256: 'xyz' }),
+    null
+  ] });
+  assert.deepEqual(apps.map(app => app.id), ['alpha', 'skywatch']);
+  const [alpha, sky] = apps;
+  assert.equal(alpha.category, 'other');
+  assert.equal(alpha.source, '');
+  assert.deepEqual({ ...sky, screen: undefined }, {
+    id: 'skywatch', name: 'SkyWatch.app', label: 'Sky Watch',
+    url: 'https://raw.githubusercontent.com/armel/fusion-community/main/apps/skywatch/1.2/SkyWatch.app',
+    size: 1500, category: 'tools', description: 'Track satellite passes.', descriptionKey: '', author: 'F4XYZ',
+    source: 'https://github.com/f4xyz/skywatch', sha256: 'a'.repeat(64), screen: undefined, community: true,
+    metadata: { name: 'Sky Watch', version: '1.2', codeSize: 1200, assetSize: 236 }
+  });
+  // The installed copy of a community app is found by the same id.
+  assert.equal(catalog.appCatalogId(sky.name), sky.id);
+  assert.equal(catalog.catalogAppState({ version: '1.1' }, sky.metadata), 'update');
+  assert.deepEqual(catalog.listCommunityApps({ format: 2, apps: [entry('skywatch')] }), []);
+  assert.deepEqual(catalog.listCommunityApps(null), []);
+});

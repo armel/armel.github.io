@@ -4,11 +4,11 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>UV Studio by F4HWN</title>
-    <script src="js/studio-version.js?v=2.2.0"></script>
+    <script src="js/studio-version.js?v=2.3.0"></script>
 <link rel="icon" type="image/svg+xml" href="assets/uv-studio-radio.svg">
 <link href="css/core.css?v=5" rel="stylesheet">
 <link href="css/viewer.css?v=13" rel="stylesheet">
-<link href="css/tools.css?v=70" rel="stylesheet">
+<link href="css/tools.css?v=71" rel="stylesheet">
 <link href="css/studio.css?v=28" rel="stylesheet">
 </head>
 <body data-theme="light">
@@ -592,6 +592,9 @@
                         <button type="button" class="btn app-manager-tab" id="appCatalogTab" role="tab" aria-selected="false" aria-controls="appCatalogPanel" tabindex="-1">
                             <span data-i18n="appManagerCatalog">Catalog</span><span class="app-tab-count" id="appCatalogTabCount">—</span>
                         </button>
+                        <button type="button" class="btn app-manager-tab" id="appCommunityTab" role="tab" aria-selected="false" aria-controls="appCommunityPanel" tabindex="-1">
+                            <span data-i18n="appManagerCommunity">Community</span><span class="app-tab-count" id="appCommunityTabCount">—</span>
+                        </button>
                     </div>
                     <div class="info-box app-order-notice" id="appOrderNotice" role="status" hidden data-i18n="appOrderApplyFirst">Apply or cancel the new app order before continuing.</div>
                 </div>
@@ -665,7 +668,39 @@
                         </select>
                     </section>
 
-                    <details class="app-local-install">
+                </section>
+
+                <section class="app-manager-panel" id="appCommunityPanel" role="tabpanel" aria-labelledby="appCommunityTab" hidden>
+                    <p class="info-box app-community-banner" data-i18n="appCommunityBanner">Apps shared by their authors, not reviewed by F4HWN. Install them only if you trust their author.</p>
+                    <section class="firmware-catalog app-catalog app-community" id="appCommunitySection" aria-labelledby="appCommunityTab">
+                        <div class="app-catalog-toolbar app-community-toolbar" id="appCommunityToolbar">
+                            <label class="app-catalog-search" for="appCommunitySearch" hidden>
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                                <input id="appCommunitySearch" type="search" data-i18n-placeholder="appManagerSearch" placeholder="Search apps…" autocomplete="off" />
+                            </label>
+                            <div class="app-community-actions">
+                                <button type="button" class="btn app-community-action" id="appCommunityLocalBtn" aria-controls="appLocalInstall"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M3.5 14.5 6.5 5h11l3 9.5"/><path d="M7 16.5h.01M10.5 16.5h.01"/></svg><span data-i18n="appCommunityLocalButton">Install a .app</span></button>
+                                <button type="button" class="btn app-community-action" id="appCommunitySubmitBtn" aria-controls="appSubmit"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 18a4.5 4.5 0 0 1-.4-9A6 6 0 0 1 18 10a4 4 0 0 1 0 8h-1"/><path d="M12 12v9M9 15l3-3 3 3"/></svg><span data-i18n="appCommunitySubmitButton">Propose an app</span></button>
+                            </div>
+                        </div>
+                        <div class="app-category-filters" id="appCommunityFilters" hidden role="group" data-i18n-aria-label="appManagerCategories" aria-label="Categories">
+                            <button type="button" class="btn app-category active" data-category="all" data-i18n="appCategoryAll">All</button>
+                            <button type="button" class="btn app-category" data-category="radio" data-i18n="appCategoryRadio">Radio &amp; signals</button>
+                            <button type="button" class="btn app-category" data-category="tools" data-i18n="appCategoryTools">Tools</button>
+                            <button type="button" class="btn app-category" data-category="games" data-i18n="appCategoryGames">Games</button>
+                            <button type="button" class="btn app-category" data-category="demos" data-i18n="appCategoryDemos">Demos</button>
+                            <button type="button" class="btn app-category" data-category="other" data-i18n="appCategoryOther" hidden>Other</button>
+                        </div>
+                        <div class="app-catalog-summary" id="appCommunitySummary" hidden><strong id="appCommunityResultCount">—</strong>
+                            <button type="button" class="btn app-catalog-screens-toggle" id="appCommunityScreensToggle" aria-pressed="true" data-i18n-title="appCatalogScreensHint" title="Show or hide the app screenshots"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M7 13l3-3 2.5 2 2.5-3 2 2.5M9 21h6"/></svg><span data-i18n="appCatalogScreens">Screenshots</span></button>
+                        </div>
+                        <p class="app-community-notice" id="appCommunityNotice" role="status" hidden></p>
+                        <div class="app-catalog-cards" id="appCommunityCards"></div>
+                        <div class="app-catalog-empty" id="appCommunityEmpty" hidden data-i18n="appManagerNoResults">No apps match this search.</div>
+                        <div class="app-catalog-empty" id="appCommunityNone" data-i18n="appCommunityLoading">Reading the community apps…</div>
+                    </section>
+
+                    <details class="app-local-install" id="appLocalInstall">
                         <summary><span data-i18n="appManagerLocalInstall">Install a local app</span><code>.app</code></summary>
                         <div class="app-local-install-body">
                             <section class="section" aria-labelledby="labelAppFile">
@@ -685,6 +720,69 @@
                                 </div>
                             </section>
                         </div>
+                    </details>
+
+                    <details class="app-local-install app-submit" id="appSubmit">
+                        <summary><span data-i18n="appSubmitTitle">Propose an app to the community</span></summary>
+                        <form class="app-local-install-body app-submit-body" id="appSubmitForm">
+                            <p class="tab-description"><span data-i18n="appSubmitIntro">Share an app you made: UV Studio checks it here, then opens GitHub with the submission ready to send.</span> <strong data-i18n="appSubmitAccount">You need a GitHub account.</strong></p>
+                            <section class="section">
+                                <label for="appSubmitFile" data-i18n="appFileLabel">App file (.app)</label>
+                                <div class="file-input-wrapper">
+                                    <input type="file" id="appSubmitFile" accept=".app" />
+                                    <div class="file-input-label" id="appSubmitFileLabel">
+                                        <span class="file-name" id="appSubmitFileName" data-i18n="fileNoFile">No file selected</span>
+                                        <span class="file-button" data-i18n="fileChoose">Choose file</span>
+                                    </div>
+                                </div>
+                                <p class="slot-meta app-submit-status" id="appSubmitAppStatus" aria-live="polite"></p>
+                            </section>
+                            <section class="section">
+                                <label for="appSubmitCapture" data-i18n="appSubmitScreen">Screenshot</label>
+                                <button type="button" class="btn" id="appSubmitCapture" data-i18n="appSubmitCapture">Capture the radio screen</button>
+                                <p class="slot-meta app-submit-status" id="appSubmitScreenStatus" aria-live="polite"></p>
+                            </section>
+                            <div class="app-submit-fields">
+                                <div>
+                                    <label for="appSubmitAuthor" data-i18n="appSubmitAuthor">Author</label>
+                                    <input type="text" id="appSubmitAuthor" maxlength="24" required autocomplete="nickname" spellcheck="false" data-i18n-placeholder="appSubmitAuthorHint" placeholder="Nickname or callsign" />
+                                </div>
+                                <div>
+                                    <label for="appSubmitCategory" data-i18n="appSubmitCategory">Category</label>
+                                    <select id="appSubmitCategory" class="firmware-catalog-select">
+                                        <option value="Radio" data-i18n="appCategoryRadio">Radio &amp; signals</option>
+                                        <option value="Tools" data-i18n="appCategoryTools">Tools</option>
+                                        <option value="Games" data-i18n="appCategoryGames">Games</option>
+                                        <option value="Demos" data-i18n="appCategoryDemos">Demos</option>
+                                    </select>
+                                </div>
+                                <div class="app-submit-wide">
+                                    <label for="appSubmitDescription"><span data-i18n="appSubmitDescription">Description</span><span class="app-submit-count" id="appSubmitDescriptionCount">0/140</span></label>
+                                    <input type="text" id="appSubmitDescription" minlength="10" maxlength="140" required data-i18n-placeholder="appSubmitDescriptionHint" placeholder="One sentence in English" />
+                                </div>
+                                <div class="app-submit-wide">
+                                    <label for="appSubmitSource" data-i18n="appSubmitSource">Source code (optional)</label>
+                                    <input type="text" id="appSubmitSource" inputmode="url" maxlength="208" pattern="https://\S{4,200}" spellcheck="false" placeholder="https://github.com/…" />
+                                </div>
+                            </div>
+                            <fieldset class="app-submit-agree">
+                                <label><input type="checkbox" id="appSubmitTested" required /><span data-i18n="appSubmitAgreeTested">I tested this app on my radio.</span></label>
+                                <label><input type="checkbox" id="appSubmitRights" required /><span data-i18n="appSubmitAgreeRights">I may distribute this app and agree to its redistribution through UV Studio.</span></label>
+                                <label><input type="checkbox" id="appSubmitRemoval" required /><span data-i18n="appSubmitAgreeRemoval">I understand that the app can be removed from the catalog at any time.</span></label>
+                            </fieldset>
+                            <section class="app-submit-preview" id="appSubmitPreviewSection" hidden>
+                                <span class="app-submit-preview-label" data-i18n="appSubmitPreview">Preview in the catalog</span>
+                                <div class="app-catalog-cards" id="appSubmitPreview"></div>
+                            </section>
+                            <div class="app-submit-actions">
+                                <div class="app-submit-send-row">
+                                    <button type="submit" id="appSubmitSend"><span data-i18n="appSubmitSend">Open the submission on GitHub</span></button>
+                                    <p class="app-submit-signin" id="appSubmitSignIn"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.5h.01"/></svg><span data-i18n="appSubmitSignIn">Sign in to GitHub before clicking.</span></p>
+                                </div>
+                                <p class="slot-meta app-submit-status" id="appSubmitStatus" aria-live="polite"></p>
+                            </div>
+                            <textarea class="app-submit-paste" id="appSubmitPaste" readonly hidden data-i18n-aria-label="appSubmitTitle" aria-label="Propose an app to the community"></textarea>
+                        </form>
                     </details>
                 </section>
             </div>
@@ -848,6 +946,27 @@
     </div>
 </div>
 
+<!-- Community app installation warning -->
+<div class="modal" id="appCommunityModal" role="dialog" aria-modal="true"
+     aria-labelledby="appCommunityTitle" aria-describedby="appCommunityBody"
+     aria-hidden="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="appCommunityTitle" data-i18n="appCommunityWarningTitle">Install a community app?</h2>
+            <button class="modal-close" id="appCommunityClose" type="button"
+                    data-i18n-title="appClose" data-i18n-aria-label="appClose"
+                    title="Close" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="appCommunityBody"></p>
+            <div class="modal-actions">
+                <button class="btn" id="appCommunityCancelBtn" type="button" data-i18n="flashRestoreCancel">Cancel</button>
+                <button class="btn primary" id="appCommunityConfirmBtn" type="button" data-i18n="appCommunityWarningConfirm">Install</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Delete all overlay applications confirmation -->
 <div class="modal" id="appDeleteAllModal" role="dialog" aria-modal="true"
      aria-labelledby="appDeleteAllTitle" aria-describedby="appDeleteAllBody"
@@ -891,28 +1010,29 @@
 </div>
 
 <!-- ═══════════ Scripts (all local, file://-friendly) ═══════════ -->
-<script src="locales/en.js?v=74"></script>
-<script src="locales/fr.js?v=74"></script>
-<script src="locales/it.js?v=74"></script>
-<script src="locales/es.js?v=74"></script>
-<script src="locales/de.js?v=74"></script>
-<script src="locales/pt.js?v=74"></script>
-<script src="locales/ru.js?v=74"></script>
-<script src="locales/pl.js?v=74"></script>
-<script src="locales/zh.js?v=74"></script>
-<script src="locales/nl.js?v=74"></script>
+<script src="locales/en.js?v=75"></script>
+<script src="locales/fr.js?v=75"></script>
+<script src="locales/it.js?v=75"></script>
+<script src="locales/es.js?v=75"></script>
+<script src="locales/de.js?v=75"></script>
+<script src="locales/pt.js?v=75"></script>
+<script src="locales/ru.js?v=75"></script>
+<script src="locales/pl.js?v=75"></script>
+<script src="locales/zh.js?v=75"></script>
+<script src="locales/nl.js?v=75"></script>
 <script src="js/studio-preferences.js?v=3"></script>
 <script src="js/studio-i18n.js?v=5"></script>
 <script src="js/studio-serial.js?v=5"></script>
 <script src="js/runtime-protocol.js?v=2"></script>
 <script src="js/rf-log.js?v=4"></script>
-    <script src="js/k5viewer.js?v=39"></script>
+    <script src="js/k5viewer.js?v=40"></script>
 <script src="js/keypad-detach.js?v=1"></script>
 <script src="js/firmware-package.js?v=1"></script>
-<script src="js/flash.js?v=104"></script>
+<script src="js/flash.js?v=105"></script>
 <script src="js/flash-catalog.js?v=20"></script>
 <script src="js/app-screens.js?v=8"></script>
-<script src="js/app-catalog.js?v=25"></script>
+<script src="js/app-catalog.js?v=26"></script>
+<script src="js/app-submit.js?v=1"></script>
 <script src="js/studio.js?v=24"></script>
 <script src="js/studio-flash-counter.js?v=2"></script>
 </body>
