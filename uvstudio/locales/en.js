@@ -594,6 +594,7 @@ window.UVSTUDIO_LOCALES.en = {
   "appDescription_qrmap": "Show a position received from another app as a QR code that a phone can scan to open it on a map.",
   "appDescription_rapidroll": "Fast vertical arcade game.",
   "appDescription_resistor": "Read resistor color codes: value, tolerance and temperature coefficient (3 to 6 bands).",
+  "appDescription_scan406": "Scan every Cospas-Sarsat 406 MHz channel and hand detected first-generation beacon bursts to EPIRB 406.",
   "appDescription_sigfinder": "Find signal direction and strength.",
   "appDescription_snake": "Classic Snake for the radio keypad.",
   "appDescription_sokoban": "The classic box-pushing puzzle.",

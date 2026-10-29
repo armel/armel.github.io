@@ -594,6 +594,7 @@ window.UVSTUDIO_LOCALES.zh = {
   "appDescription_qrmap": "将从其他应用接收的位置显示为二维码，手机扫描后即可在地图中打开。",
   "appDescription_rapidroll": "快节奏纵向街机游戏。",
   "appDescription_resistor": "读取电阻色环：阻值、误差和温度系数（3 至 6 环）。",
+  "appDescription_scan406": "扫描所有 406 MHz Cospas-Sarsat 信道，并将检测到的第一代信标突发交给 EPIRB 406。",
   "appDescription_sigfinder": "查找信号的方向和强度。",
   "appDescription_snake": "适配电台键盘的经典贪吃蛇。",
   "appDescription_sokoban": "经典推箱子益智游戏。",

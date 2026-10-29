@@ -594,6 +594,7 @@ window.UVSTUDIO_LOCALES.pl = {
   "appDescription_qrmap": "Wyświetla pozycję otrzymaną z innej aplikacji jako kod QR, który można zeskanować telefonem, aby otworzyć ją na mapie.",
   "appDescription_rapidroll": "Szybka pionowa gra zręcznościowa.",
   "appDescription_resistor": "Odczyt kodu barwnego rezystorów: wartość, tolerancja i współczynnik temperaturowy (od 3 do 6 pasków).",
+  "appDescription_scan406": "Skanuje wszystkie kanały Cospas-Sarsat 406 MHz i przekazuje wykryte emisje radiopław pierwszej generacji do EPIRB 406.",
   "appDescription_sigfinder": "Określa kierunek i siłę sygnału.",
   "appDescription_snake": "Klasyczny Snake dostosowany do klawiatury radia.",
   "appDescription_sokoban": "Klasyczna łamigłówka z przesuwaniem skrzyń.",

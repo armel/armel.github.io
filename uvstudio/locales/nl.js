@@ -594,6 +594,7 @@ window.UVSTUDIO_LOCALES.nl = {
   "appDescription_qrmap": "Toont een positie uit een andere app als QR-code, te scannen met een telefoon om de positie op een kaart te openen.",
   "appDescription_rapidroll": "Snel verticaal arcadespel.",
   "appDescription_resistor": "Lees de kleurcode van weerstanden: waarde, tolerantie en temperatuurcoëfficiënt (3 tot 6 ringen).",
+  "appDescription_scan406": "Scant alle Cospas-Sarsat-kanalen op 406 MHz en geeft gedetecteerde bursts van eerste-generatie-noodbakens door aan EPIRB 406.",
   "appDescription_sigfinder": "Bepaalt de richting en sterkte van een signaal.",
   "appDescription_snake": "De klassieke Snake voor het radiotoetsenbord.",
   "appDescription_sokoban": "De klassieke puzzel met verschuifbare kisten.",

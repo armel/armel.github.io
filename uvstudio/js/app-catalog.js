@@ -77,6 +77,7 @@
     qrmap:       ['tools', 'Show a position received from another app as a QR code that a phone can scan to open it on a map.'],
     rapidroll:   ['games', 'Fast vertical arcade game.'],
     resistor:    ['tools', 'Read resistor color codes: value, tolerance and temperature coefficient (3 to 6 bands).'],
+    scan406:     ['radio', 'Scan every Cospas-Sarsat 406 MHz channel and hand detected first-generation beacon bursts to EPIRB 406.'],
     sigfinder:   ['radio', 'Find signal direction and strength.'],
     snake:       ['games', 'Classic Snake for the radio keypad.'],
     sokoban:     ['games', 'The classic box-pushing puzzle.'],
@@ -95,7 +96,7 @@
     acarsrx: 'ACARS RX', afscope: 'AF Scope', afspectro: 'AF Spectro', aisrx: 'AIS RX', aprsdigi: 'APRS DIGI', aprsedit: 'APRS Edit',
     aprsrx: 'APRS RX', aprstx: 'APRS TX', atisdscrx: 'ATIS DSC RX', atisrx: 'ATIS RX', broadcastfm: 'Broadcast FM',
     cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cwmem: 'CW Mem', cwmemedit: 'CW Mem Edit', cwtrainer: 'CW Trainer', cwusb: 'CW USB', cube3d: 'Cube 3D',
-    epirb406: 'EPIRB 406', flashmap: 'Flash Map', hellmaze: 'Hell Maze', kisstnc: 'KISS TNC', pocsagrx: 'POCSAG RX', qrmap: 'QR Map', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20', sondemrz: 'Sonde MRZ', sonders41: 'Sonde RS41',
+    epirb406: 'EPIRB 406', flashmap: 'Flash Map', hellmaze: 'Hell Maze', kisstnc: 'KISS TNC', pocsagrx: 'POCSAG RX', qrmap: 'QR Map', scan406: 'Scan 406', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20', sondemrz: 'Sonde MRZ', sonders41: 'Sonde RS41',
     spaceimpact: 'Space Impact',
     spectrum3d: 'Spectrum 3D', systeminfo: 'System Info', tonecall: 'Tone Call'
   };
@@ -138,6 +139,7 @@
     qrmap: '<path d="M3 8V4.2C3 3.5 3.5 3 4.2 3H8m8 0h3.8c.7 0 1.2.5 1.2 1.2V8m0 8v3.8c0 .7-.5 1.2-1.2 1.2H16m-8 0H4.2C3.5 21 3 20.5 3 19.8V16"/><path d="M12 6.5a4 4 0 0 1 4 4c0 2.9-4 6.5-4 6.5s-4-3.6-4-6.5a4 4 0 0 1 4-4z"/><circle cx="12" cy="10.5" r="1.3" fill="currentColor" stroke="none"/>',
     rapidroll: '<circle cx="12" cy="5.5" r="2.2"/><path d="M3.5 10.5h7m3 4h7m-13 4h8M10 9l2 2 2-2"/>',
     resistor: '<path d="M1.5 12h2m17 0h2"/><path d="M3.5 10A2.5 2.5 0 0 1 6 7.5h1.5L9 9h6l1.5-1.5H18a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1-2.5 2.5h-1.5L15 15H9l-1.5 1.5H6A2.5 2.5 0 0 1 3.5 14z"/><path d="M6.5 7.5v9m4-7.5v6m2.5-6v6m4.5-7.5v9"/>',
+    scan406: '<circle cx="12" cy="12" r="8.5"/><path d="M12 12l6.3-3.6M12 3.5v2M3.5 12h2M12 18.5v2M18.5 12h2M8.2 15.8a5.4 5.4 0 0 1 0-7.6"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="17.3" cy="9" r=".9" fill="currentColor" stroke="none"/>',
     sigfinder: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v2m0 13v2m-8.5-8.5h2m13 0h2M12 5l2 7-2 7-2-7z"/><path d="m12 5 2 7h-4z" fill="currentColor" stroke="none"/>',
     snake: '<path d="M5 17h5a2 2 0 0 0 2-2v-5a2 2 0 0 1 2-2h3"/><circle cx="18.3" cy="8" r="1.9"/><circle cx="18.8" cy="7.5" r=".3" fill="currentColor" stroke="none"/><path d="M5 17l-1.5-1.5M5 17l-1.5 1.5"/>',
     sokoban: '<circle cx="6.8" cy="5.9" r="1.8"/><path d="M6.3 8.2 5 14l-2 5.5M5 14l2.6 5.5M6 10.5l4.5 1.3"/><rect x="10.5" y="9.5" width="10" height="10" rx=".8"/><rect x="13.25" y="12.25" width="4.5" height="4.5" rx=".4"/>',
@@ -258,6 +260,7 @@
     kisstnc:     'jdenoy',
     minesweeper: 'Sarijen',
     qrmap:       'jdenoy',
+    scan406:     'jdenoy',
     sigfinder:   'jdenoy',
     snake:       'mrkusypl',
     sokoban:     'BI8SYN',

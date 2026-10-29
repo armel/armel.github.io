@@ -226,7 +226,7 @@ test('provides dedicated SVG pictograms for every catalog app and keeps a monogr
   [
     'acarsrx', 'aisrx', 'aprsdigi', 'aprsedit', 'aprsrx', 'aprstx', 'atisdscrx', 'atisrx', 'beacon', 'beam', 'breakout', 'broadcastfm',
     'cwdecode', 'cwkeyer', 'cwmem', 'cwmemedit', 'cwtrainer', 'cwusb', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'hellmaze', 'minesweeper',
-    'plasma', 'pocsagrx', 'qrmap', 'rapidroll', 'resistor', 'sigfinder', 'snake', 'sokoban', 'sondem10', 'sondem20', 'sondemrz', 'sonders41', 'spaceimpact',
+    'plasma', 'pocsagrx', 'qrmap', 'rapidroll', 'resistor', 'scan406', 'sigfinder', 'snake', 'sokoban', 'sondem10', 'sondem20', 'sondemrz', 'sonders41', 'spaceimpact',
     'spectrum3d', 'sstv', 'systeminfo', 'tetris', 'tonecall'
   ].forEach(id => {
     assert.match(catalog.appIconSVG(id), /<(?:path|circle)/);
