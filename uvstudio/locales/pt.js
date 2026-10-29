@@ -594,6 +594,7 @@ window.UVSTUDIO_LOCALES.pt = {
   "appDescription_qrmap": "Mostra uma posição recebida de outra app como código QR, que pode ser digitalizado por um telemóvel para abrir a posição num mapa.",
   "appDescription_rapidroll": "Jogo arcade vertical e rápido.",
   "appDescription_resistor": "Lê o código de cores das resistências: valor, tolerância e coeficiente de temperatura (de 3 a 6 faixas).",
+  "appDescription_scan406": "Pesquisa todos os canais Cospas-Sarsat de 406 MHz e entrega ao EPIRB 406 as rajadas detetadas de balizas de primeira geração.",
   "appDescription_sigfinder": "Localiza a direção e a intensidade de um sinal.",
   "appDescription_snake": "O clássico Snake adaptado ao teclado do rádio.",
   "appDescription_sokoban": "O clássico jogo de empurrar caixas.",
