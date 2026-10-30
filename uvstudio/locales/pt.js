@@ -579,6 +579,7 @@ window.UVSTUDIO_LOCALES.pt = {
   "appDescription_cwkeyer": "Manipulador Morse com as teclas PTT e laterais do rádio.",
   "appDescription_cwmem": "Envia mensagens Morse guardadas a partir do CW Keyer ou CW USB.",
   "appDescription_cwmemedit": "Edita o indicativo e as mensagens personalizadas usadas pelo CW Mem.",
+  "appDescription_cwqsoauto": "Envia e repete automaticamente 16 mensagens Morse personalizáveis para contactos em CW.",
   "appDescription_cwtrainer": "Aprende e pratica Morse: manipulação livre com descodificação em direto, exercícios de escuta e de repetição.",
   "appDescription_cwusb": "Manipulador Morse para paddle externo ligado por USB-C.",
   "appDescription_cube3d": "Demonstração gráfica 3D animada.",

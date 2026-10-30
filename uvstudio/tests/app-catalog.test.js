@@ -77,6 +77,14 @@ test('adds presentation metadata without changing the app binary format', () => 
     author: 'jdenoy',
     label: 'CW Mem Edit'
   });
+  assert.deepEqual(catalog.appDetails('CWQSOAuto.app'), {
+    id: 'cwqsoauto',
+    category: 'radio',
+    description: 'Send and automatically repeat 16 customizable Morse messages for CW contacts.',
+    descriptionKey: 'appDescription_cwqsoauto',
+    author: 'lemiller-dev',
+    label: 'CW QSO Auto'
+  });
   assert.deepEqual(catalog.appDetails('CWTrainer.app'), {
     id: 'cwtrainer',
     category: 'radio',
@@ -225,7 +233,7 @@ test('compares app versions numerically and treats a release as newer than its p
 test('provides dedicated SVG pictograms for every catalog app and keeps a monogram fallback', () => {
   [
     'acarsrx', 'aisrx', 'aprsdigi', 'aprsedit', 'aprsrx', 'aprstx', 'atisdscrx', 'atisrx', 'beacon', 'beam', 'breakout', 'broadcastfm',
-    'cwdecode', 'cwkeyer', 'cwmem', 'cwmemedit', 'cwtrainer', 'cwusb', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'hellmaze', 'minesweeper',
+    'cwdecode', 'cwkeyer', 'cwmem', 'cwmemedit', 'cwqsoauto', 'cwtrainer', 'cwusb', 'cube3d', 'epirb406', 'flashmap', 'foxhunt', 'hellmaze', 'minesweeper',
     'plasma', 'pocsagrx', 'qrmap', 'rapidroll', 'resistor', 'scan406', 'sigfinder', 'snake', 'sokoban', 'sondem10', 'sondem20', 'sondemrz', 'sonders41', 'spaceimpact',
     'spectrum3d', 'sstv', 'systeminfo', 'tetris', 'tonecall'
   ].forEach(id => {

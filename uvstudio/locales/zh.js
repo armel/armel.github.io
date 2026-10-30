@@ -579,6 +579,7 @@ window.UVSTUDIO_LOCALES.zh = {
   "appDescription_cwkeyer": "使用电台 PTT 和侧键的摩尔斯电键。",
   "appDescription_cwmem": "从 CW Keyer 或 CW USB 发送已保存的摩尔斯电码消息。",
   "appDescription_cwmemedit": "编辑 CW Mem 使用的呼号和自定义消息。",
+  "appDescription_cwqsoauto": "为 CW 通联发送并自动重复 16 条可自定义的摩尔斯电码消息。",
   "appDescription_cwtrainer": "学习和练习摩尔斯电码：自由拍发并实时解码、听抄练习和听后复现练习。",
   "appDescription_cwusb": "使用通过 USB-C 连接的外置双桨电键的摩尔斯电键。",
   "appDescription_cube3d": "动态 3D 图形演示。",

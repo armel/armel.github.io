@@ -579,6 +579,7 @@ window.UVSTUDIO_LOCALES.de = {
   "appDescription_cwkeyer": "Morsegeber mit PTT- und Seitentasten des Funkgeräts.",
   "appDescription_cwmem": "Gespeicherte Morse-Nachrichten aus CW Keyer oder CW USB senden.",
   "appDescription_cwmemedit": "Rufzeichen und benutzerdefinierte Nachrichten für CW Mem bearbeiten.",
+  "appDescription_cwqsoauto": "Sendet und wiederholt automatisch 16 anpassbare Morse-Nachrichten für CW-Funkkontakte.",
   "appDescription_cwtrainer": "Morse lernen und üben: freies Geben mit Live-Dekodierung, Hörübungen und Nachgeben gehörter Zeichen.",
   "appDescription_cwusb": "Morsegeber für ein externes Paddle am USB-C-Anschluss.",
   "appDescription_cube3d": "Animierte 3D-Grafikdemonstration.",
