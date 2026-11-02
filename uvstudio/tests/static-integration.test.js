@@ -262,7 +262,7 @@ test('reorders complete app slots through the existing raw flash protocol', () =
   assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*overflow-anchor:\s*none/s);
   assert.match(toolsCss, /tr\.app-order-drop-before td\s*\{[^}]*box-shadow/s);
   assert.match(html, /css\/tools\.css\?v=72/);
-  assert.match(html, /js\/flash\.js\?v=105/);
+  assert.match(html, /js\/flash\.js\?v=106/);
   assert.doesNotMatch(flashSource, /app-order-(?:up|down)/);
   assert.doesNotMatch(flashSource, /function appMoveInOrder/);
 
@@ -1297,6 +1297,10 @@ test('flashes the firmware image, then writes the asset pack of the package', ()
   assert.match(flashSource, /if \(!report\) hideProgressSoon\(\)/);
   assert.match(flashSource, /await flashFirmware\(fw, [^;]+\);[\s\S]{0,120}await installAssetsAfterFlash\(assets\);/);
   assert.match(flashSource, /if \(assets\) await slotWriteAssets\(slot, assets, ts\);/);
+  // A firmware with assets is not written into a slot the running firmware
+  // cannot give them to: it would boot to a blank screen.
+  assert.match(flashSource, /if \(assets && !await slotCanWriteAssets\(slot\)\) \{\s*const text = slotNeedsV7Text\(dev\.name\);\s*log\(text, 'error'\);/);
+  assert.ok(flashSource.indexOf('slotCanWriteAssets(slot)') < flashSource.indexOf("log(t('slotErasing', slot)"));
   // Payload first, header last: an interrupted upload never validates.
   assert.match(flashSource, /for \(let off = header; off < pack\.length;[\s\S]{0,600}pack\.subarray\(0, header\)/);
 });

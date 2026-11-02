@@ -194,6 +194,7 @@ const flashFileButton = document.getElementById('flashFileButton');
 const flashFileLabel = document.getElementById('flashFileLabel');
 const labelFlashFileEl = document.getElementById('labelFlashFile');
 const flashRestoreConfirmModal = document.getElementById('flashRestoreConfirmModal');
+const slotAssetsModal = document.getElementById('slotAssetsModal');
 const flashRestoreConfirmClose = document.getElementById('flashRestoreConfirmClose');
 const flashRestoreConfirmBody = document.getElementById('flashRestoreConfirmBody');
 const flashRestoreCancelBtn = document.getElementById('flashRestoreCancelBtn');
@@ -2108,6 +2109,55 @@ if (flashRestoreConfirmModal) {
   });
 }
 
+// Firmware Slots refusing a v7.0+ firmware (one with assets) while the radio
+// runs an older one: said in a dialog, in terms of versions, with a way to
+// Flash Firmware.
+let slotAssetsFocusOrigin = null;
+
+function closeSlotAssetsModal() {
+  if (!slotAssetsModal?.classList.contains('show')) return;
+  const focusTarget = slotAssetsFocusOrigin;
+  slotAssetsFocusOrigin = null;
+  slotAssetsModal.classList.remove('show');
+  slotAssetsModal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  if (focusTarget && document.contains(focusTarget)) {
+    focusTarget.focus({ preventScroll: true });
+  }
+}
+
+function slotNeedsV7Text(runningName) {
+  const version = String(runningName || '').match(/\bv?(\d+(?:\.\d+){1,2})\b/i)?.[1];
+  return (version ? t('slotNeedsV7Running', version) + ' ' : '') + t('slotNeedsV7');
+}
+
+function showSlotAssetsModal(text) {
+  if (!slotAssetsModal) return;
+  const body = document.getElementById('slotAssetsBody');
+  if (body) body.textContent = text;
+  slotAssetsFocusOrigin = document.activeElement;
+  slotAssetsModal.classList.add('show');
+  slotAssetsModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => document.getElementById('slotAssetsFlashBtn')?.focus());
+}
+
+if (slotAssetsModal) {
+  document.getElementById('slotAssetsClose')?.addEventListener('click', closeSlotAssetsModal);
+  document.getElementById('slotAssetsCloseBtn')?.addEventListener('click', closeSlotAssetsModal);
+  document.getElementById('slotAssetsFlashBtn')?.addEventListener('click', () => {
+    slotAssetsFocusOrigin = null;
+    closeSlotAssetsModal();
+    document.querySelector('.nav-item[data-route="flash"]')?.click();
+  });
+  slotAssetsModal.addEventListener('click', event => {
+    if (event.target === slotAssetsModal) closeSlotAssetsModal();
+  });
+  slotAssetsModal.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeSlotAssetsModal();
+  });
+}
+
 let factoryResetModalResolve = null;
 let factoryResetModalFocusOrigin = null;
 let factoryResetModalStep = 'confirm';
@@ -3335,19 +3385,23 @@ async function installAssetsAfterFlash(pack) {
   log(t('fwAssetsReconnect'), 'info');
 }
 
-// Assets of a firmware written into a multiboot slot. A running firmware
-// without the 0x075x commands, or the slot being the running one (its build
-// differs from the new image), leaves them for "Install firmware assets"
-// once the slot has been restored.
-async function slotWriteAssets(slot, pack, ts) {
-  let info;
+// Whether the running firmware can write the assets of a slot: one without
+// the 0x075x commands (before 7.0) cannot, and the firmware written there
+// would then boot to a blank screen, so the slot is not written at all.
+async function slotCanWriteAssets(slot) {
   try {
-    info = await assetInfo(slot, 1500);
+    await assetInfo(slot, 1500);
+    return true;
   } catch (e) {
-    log(t('fwAssetsSlotUnsupported', slot), 'error');
-    pendingFirmwareAssets = pack;
-    return;
+    return false;
   }
+}
+
+// Assets of a firmware written into a multiboot slot. The slot being the
+// running one (its build differs from the new image) leaves them for
+// "Install firmware assets" once the slot has been restored.
+async function slotWriteAssets(slot, pack, ts) {
+  const info = await assetInfo(slot, 1500);
   if (info.runningSlot === slot) {
     log(t('fwAssetsSlotRunning', slot), 'info');
     pendingFirmwareAssets = pack;
@@ -3586,6 +3640,13 @@ async function slotWriteFlow() {
     const image = slotImage;
     const assets = slotAssets;
     const crc = crc32Bytes(image);
+    if (assets && !await slotCanWriteAssets(slot)) {
+      const text = slotNeedsV7Text(dev.name);
+      log(text, 'error');
+      if (progressContainer) progressContainer.style.display = 'none';
+      showSlotAssetsModal(text);
+      return;
+    }
 
     log(t('slotErasing', slot), 'info');
     let st = await slotErase(slot, ts);
