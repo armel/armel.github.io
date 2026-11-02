@@ -67,7 +67,7 @@
     cwusb:       ['radio', 'Morse keyer for an external paddle connected through USB-C.'],
     cube3d:      ['demos', 'Animated 3D graphics demonstration.'],
     epirb406:    ['radio', 'Analyze and decode 406 MHz beacon frames.'],
-    flashmap:    ['tools', 'Browse the external flash map: firmware slots, apps, active state and a hex viewer.'],
+    flashmap:    ['tools', 'Browse the external flash map: firmware slots, apps, active state, security registers and a hex viewer.'],
     foxhunt:     ['radio', 'Assist with radio direction finding.'],
     geonav:      ['tools', 'Azimuth, distance and elevation from the APRS position to a radiosonde, opened from Sonde M10, M20, MRZ or RS41.'],
     hellmaze:    ['games', 'First-person shooter in a demon-haunted maze.'],
@@ -101,6 +101,34 @@
     spaceimpact: 'Space Impact',
     spectrum3d: 'Spectrum 3D', systeminfo: 'System Info', tonecall: 'Tone Call'
   };
+  // Each app's manual: a page of the firmware Wiki, or the author's own README
+  // for the apps the Wiki does not cover yet. An app without one gets no link.
+  const WIKI_ROOT = `https://github.com/${REPO}/wiki`;
+  const APP_MANUALS = {
+    acarsrx: 'App-ACARS-RX', afscope: 'App-AF-Scope', afspectro: 'App-AF-Spectro', aisrx: 'App-AIS-RX',
+    aprsdigi: 'App-APRS-DIGI', aprsedit: 'App-APRS-Edit', aprsrx: 'App-APRS-RX', aprstx: 'App-APRS-TX',
+    atisdscrx: 'App-ATIS-DSC-RX', atisrx: 'App-ATIS-RX', beacon: 'Beacon', beam: 'App-Beam',
+    breakout: 'App-Breakout', broadcastfm: 'FM-broadcast-radio-receiver', cwdecode: 'App-CW-Decode',
+    cwkeyer: 'App-CW-Keyer', cwtrainer: 'App-CW-Trainer', cwusb: 'App-CW-USB', cube3d: 'App-Cube3D',
+    epirb406: 'App-EPIRB-406', flashmap: 'App-Flash-Map', foxhunt: 'Fox-Hunt', geonav: 'App-GeoNav',
+    hellmaze: 'App-Hell-Maze', kisstnc: 'App-KISS-TNC', minesweeper: 'App-Minesweeper', plasma: 'App-Plasma',
+    pocsagrx: 'App-POCSAG-RX', qrmap: 'App-QR-Map', rapidroll: 'App-Rapid-Roll', resistor: 'App-Resistor',
+    sigfinder: 'App-Sig-Finder', snake: 'App-Snake', sokoban: 'App-Sokoban', sondem10: 'App-Sonde-M10',
+    sondem20: 'App-Sonde-M20', sondemrz: 'App-Sonde-MRZ', sonders41: 'App-Sonde-RS41',
+    spaceimpact: 'App-Space-Impact', spectrum3d: 'App-Spectrum3D', sstv: 'App-SSTV',
+    systeminfo: 'App-SystemInfo', tetris: 'App-Tetris', tonecall: 'App-ToneCall',
+    cwmem: 'https://github.com/jdenoy/uv-k1-k5v3-firmware-custom/blob/feature/cw-mem/App/apps/cwmem/README.md',
+    cwmemedit: 'https://github.com/jdenoy/uv-k1-k5v3-firmware-custom/blob/feature/cw-mem/App/apps/cwmemedit/README.md',
+    cwqsoauto: 'https://github.com/lemiller-dev/uv-k1-k5v3-firmware-custom/blob/stable/cw-qso-auto-v1.0/App/apps/cwqsoauto/README-UVSTUDIO.md',
+    scan406: 'https://github.com/jdenoy/uv-k1-k5v3-firmware-custom/blob/feature/scan406/App/apps/scan406/README.md'
+  };
+
+  function appManualURL(id) {
+    const page = APP_MANUALS[id];
+    if (!page) return '';
+    return /^https:/.test(page) ? page : `${WIKI_ROOT}/${page}`;
+  }
+
   const APP_ACTION_ICONS = {
     install: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
     update: '<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v6h-6"/>',
@@ -1038,21 +1066,29 @@
           : t('appColSize');
         meta.append(version, size);
         if (app.author) {
-          const author = document.createElement('span');
+          // Official authors are GitHub logins; a community author is a free
+          // nickname or callsign, so it stays plain text.
+          const author = document.createElement(app.community ? 'span' : 'a');
           author.className = 'app-catalog-author';
           author.textContent = `@${app.author}`;
           author.title = t('studio_about_author');
+          if (!app.community) {
+            author.href = `https://github.com/${encodeURIComponent(app.author)}`;
+            author.target = '_blank';
+            author.rel = 'noopener noreferrer';
+          }
           meta.appendChild(author);
         }
-        if (app.source) {
-          const source = document.createElement('a');
-          source.className = 'app-catalog-source';
-          source.href = app.source;
-          source.target = '_blank';
-          source.rel = 'noopener noreferrer';
-          source.textContent = t('appCommunitySource');
-          source.title = app.source;
-          meta.appendChild(source);
+        const manualURL = app.community ? app.source : appManualURL(app.id);
+        if (manualURL) {
+          const manual = document.createElement('a');
+          manual.className = 'app-catalog-source';
+          manual.href = manualURL;
+          manual.target = '_blank';
+          manual.rel = 'noopener noreferrer';
+          manual.textContent = t('appManual');
+          manual.title = manualURL;
+          meta.appendChild(manual);
         }
         const actions = document.createElement('div');
         actions.className = 'app-catalog-actions';
@@ -1506,6 +1542,7 @@
     boot,
     appCatalogId,
     appDetails,
+    appManualURL,
     appIconSVG,
     appScreenFrame,
     paintAppScreen,
