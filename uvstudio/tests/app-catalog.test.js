@@ -33,6 +33,13 @@ test('lists app files alphabetically and ignores unrelated archive entries', () 
   assert.equal(catalog.formatAppLabel(apps[0], { codeSize: 3584, assetSize: 384 }), 'Beacon · 3.5 KB');
 });
 
+test('points every official app to its manual', () => {
+  assert.equal(catalog.appManualURL('cwdecode'), 'https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/App-CW-Decode');
+  assert.equal(catalog.appManualURL('broadcastfm'), 'https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/FM-broadcast-radio-receiver');
+  assert.match(catalog.appManualURL('scan406'), /^https:\/\/github\.com\/jdenoy\/.*\/scan406\/README\.md$/);
+  assert.equal(catalog.appManualURL('futureapp'), '');
+});
+
 test('adds presentation metadata without changing the app binary format', () => {
   assert.deepEqual(catalog.appDetails('CWDecode.app'), {
     id: 'cwdecode',
@@ -147,7 +154,7 @@ test('adds presentation metadata without changing the app binary format', () => 
   assert.deepEqual(catalog.appDetails('FlashMap.app'), {
     id: 'flashmap',
     category: 'tools',
-    description: 'Browse the external flash map: firmware slots, apps, active state and a hex viewer.',
+    description: 'Browse the external flash map: firmware slots, apps, active state, security registers and a hex viewer.',
     descriptionKey: 'appDescription_flashmap',
     author: 'armel',
     label: 'Flash Map'

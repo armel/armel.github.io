@@ -261,7 +261,7 @@ test('reorders complete app slots through the existing raw flash protocol', () =
   assert.match(toolsCss, /\.app-renumber-button\[hidden\]\s*\{\s*display:\s*none/);
   assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*overflow-anchor:\s*none/s);
   assert.match(toolsCss, /tr\.app-order-drop-before td\s*\{[^}]*box-shadow/s);
-  assert.match(html, /css\/tools\.css\?v=71/);
+  assert.match(html, /css\/tools\.css\?v=72/);
   assert.match(html, /js\/flash\.js\?v=105/);
   assert.doesNotMatch(flashSource, /app-order-(?:up|down)/);
   assert.doesNotMatch(flashSource, /function appMoveInOrder/);
@@ -1371,7 +1371,8 @@ test('gives the community apps their own tab, with a banner, one warning and a c
   assert.match(html, /<p class="app-community-notice" id="appCommunityNotice" role="status" hidden><\/p>/);
   assert.match(appCatalogSource, /fetch\(COMMUNITY_MANIFEST_URL, \{ cache: 'no-cache' \}\)/);
   assert.match(appCatalogSource, /const views = \[officialView, communityView\];/);
-  assert.match(appCatalogSource, /source\.rel = 'noopener noreferrer';/);
+  assert.match(appCatalogSource, /const manualURL = app\.community \? app\.source : appManualURL\(app\.id\);/);
+  assert.match(appCatalogSource, /manual\.rel = 'noopener noreferrer';/);
   // The Installed list marks a community app and offers its updates.
   assert.match(appCatalogSource, /new CustomEvent\('uvstudio:appcommunity'/);
   assert.match(flashSource, /window\.addEventListener\('uvstudio:appcommunity'/);
@@ -1388,7 +1389,7 @@ test('gives the community apps their own tab, with a banner, one warning and a c
   assert.match(flashSource, /loadAppFromURL\(latest\.url, latest\.filename \|\| `\$\{latest\.name\}\.app`, latest\.sha256 \|\| ''\)/);
   ['appManagerCommunity', 'appCommunityBadgeHint', 'appCommunityBanner', 'appCommunityLoading',
     'appCommunityNone', 'appCommunityUnavailable', 'appCommunityGone', 'appCommunityResultCount', 'appCommunityLocalButton',
-    'appCommunitySubmitButton', 'appCommunitySource', 'appCommunityWarningTitle',
+    'appCommunitySubmitButton', 'appCommunityWarningTitle',
     'appCommunityWarningBody', 'appCommunityWarningConfirm', 'appCommunityHashMismatch'].forEach(key => {
     ['de', 'en', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'ru', 'zh'].forEach(lang => {
       const locale = fs.readFileSync(path.join(root, 'locales', `${lang}.js`), 'utf8');
