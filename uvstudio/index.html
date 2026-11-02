@@ -946,6 +946,27 @@
     </div>
 </div>
 
+<!-- Firmware with assets refused by Firmware Slots -->
+<div class="modal" id="slotAssetsModal" role="dialog" aria-modal="true"
+     aria-labelledby="slotAssetsTitle" aria-describedby="slotAssetsBody"
+     aria-hidden="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="slotAssetsTitle" data-i18n="slotAssetsBlockedTitle">Update required</h2>
+            <button class="modal-close" id="slotAssetsClose" type="button"
+                    data-i18n-title="appClose" data-i18n-aria-label="appClose"
+                    title="Close" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="slotAssetsBody"></p>
+            <div class="modal-actions">
+                <button class="btn" id="slotAssetsCloseBtn" type="button" data-i18n="appClose">Close</button>
+                <button class="btn primary" id="slotAssetsFlashBtn" type="button" data-i18n="studio_nav_flash">Flash Firmware</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Community app installation warning -->
 <div class="modal" id="appCommunityModal" role="dialog" aria-modal="true"
      aria-labelledby="appCommunityTitle" aria-describedby="appCommunityBody"
@@ -1010,16 +1031,16 @@
 </div>
 
 <!-- ═══════════ Scripts (all local, file://-friendly) ═══════════ -->
-<script src="locales/en.js?v=76"></script>
-<script src="locales/fr.js?v=76"></script>
-<script src="locales/it.js?v=76"></script>
-<script src="locales/es.js?v=76"></script>
-<script src="locales/de.js?v=76"></script>
-<script src="locales/pt.js?v=76"></script>
-<script src="locales/ru.js?v=76"></script>
-<script src="locales/pl.js?v=76"></script>
-<script src="locales/zh.js?v=76"></script>
-<script src="locales/nl.js?v=76"></script>
+<script src="locales/en.js?v=77"></script>
+<script src="locales/fr.js?v=77"></script>
+<script src="locales/it.js?v=77"></script>
+<script src="locales/es.js?v=77"></script>
+<script src="locales/de.js?v=77"></script>
+<script src="locales/pt.js?v=77"></script>
+<script src="locales/ru.js?v=77"></script>
+<script src="locales/pl.js?v=77"></script>
+<script src="locales/zh.js?v=77"></script>
+<script src="locales/nl.js?v=77"></script>
 <script src="js/studio-preferences.js?v=3"></script>
 <script src="js/studio-i18n.js?v=5"></script>
 <script src="js/studio-serial.js?v=5"></script>
@@ -1028,7 +1049,7 @@
     <script src="js/k5viewer.js?v=40"></script>
 <script src="js/keypad-detach.js?v=1"></script>
 <script src="js/firmware-package.js?v=1"></script>
-<script src="js/flash.js?v=105"></script>
+<script src="js/flash.js?v=106"></script>
 <script src="js/flash-catalog.js?v=20"></script>
 <script src="js/app-screens.js?v=8"></script>
 <script src="js/app-catalog.js?v=27"></script>
