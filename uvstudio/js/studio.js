@@ -25,6 +25,12 @@
     const preferences = window.UVStudioPreferences;
     const editionSensitiveRoutes = new Set(["apps", "external-flash", "factory-reset"]);
     let currentItem = null;
+    // The page an operation runs on stays on screen through it, whatever the
+    // link does meanwhile, then with its result until the link changes again
+    // or another page opens. Factory reset drops the runtime link for the
+    // bootloader's, which cannot tell the edition: the edition-sensitive gate
+    // would otherwise hide its gauge and its log for the whole DFU flash.
+    let operationItem = null;
     let lastSerialSnapshot = serialController
         ? serialController.getSnapshot()
         : { owner: null, state: "disconnected", operation: null };
@@ -188,10 +194,11 @@
 
         const sensitive = currentItem?.dataset.app === "tools" &&
             editionSensitiveRoutes.has(currentItem.dataset.route);
+        const held = operationItem !== null && operationItem === currentItem;
         const disconnected = lastSerialSnapshot?.state !== "connected";
         const editionKnown = currentItem?.dataset.capabilityKnown === "true";
         const unavailable = currentItem?.dataset.capabilityDisabled === "true";
-        const state = sensitive
+        const state = sensitive && !held
             ? ((disconnected || !editionKnown) ? "disconnected" : (unavailable ? "unavailable" : ""))
             : "";
 
@@ -250,6 +257,7 @@
             if (currentItem) replaceHash(currentItem.dataset.route);
             return;
         }
+        if (item !== currentItem) operationItem = null;
         if (serialController) {
             try {
                 if (isFirmwareFlash) {
@@ -342,6 +350,8 @@
     }));
 
     window.addEventListener("uvstudio:serialstatechange", event => {
+        if (event.detail?.operation) operationItem = currentItem;
+        else if (event.detail?.reason !== "operation-ended") operationItem = null;
         renderSerialStatus(event.detail);
         applyNavigationDisabledState();
         const blocked = Boolean(event.detail?.operation);
