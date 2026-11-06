@@ -261,8 +261,8 @@ test('reorders complete app slots through the existing raw flash protocol', () =
   assert.match(toolsCss, /\.app-renumber-button\[hidden\]\s*\{\s*display:\s*none/);
   assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*overflow-anchor:\s*none/s);
   assert.match(toolsCss, /tr\.app-order-drop-before td\s*\{[^}]*box-shadow/s);
-  assert.match(html, /css\/tools\.css\?v=72/);
-  assert.match(html, /js\/flash\.js\?v=106/);
+  assert.match(html, /css\/tools\.css\?v=73/);
+  assert.match(html, /js\/flash\.js\?v=108/);
   assert.doesNotMatch(flashSource, /app-order-(?:up|down)/);
   assert.doesNotMatch(flashSource, /function appMoveInOrder/);
 
@@ -730,6 +730,7 @@ test('replaces stale edition-sensitive content with an inline connection state',
     editionStateTitle: { textContent: '' },
     editionStateBody: { textContent: '' },
     currentItem,
+    operationItem: null,
     lastSerialSnapshot: { state: 'connected' },
     editionSensitiveRoutes: new Set(['apps', 'external-flash', 'factory-reset']),
     activateToolAction() {},
@@ -765,6 +766,24 @@ test('replaces stale edition-sensitive content with an inline connection state',
   context.renderEditionState();
   assert.equal(editionStateView.dataset.state, 'disconnected');
   assert.equal(editionStateView.hidden, false);
+
+  // The page an operation runs on stays, gauge and log included, while the
+  // link drops and comes back without an edition (Factory reset in DFU).
+  context.operationItem = currentItem;
+  context.lastSerialSnapshot = { state: 'disconnected', operation: { owner: 'tools', name: 'factory-reset' } };
+  context.renderEditionState();
+  assert.equal(appsView.hidden, false);
+  assert.equal(editionStateView.hidden, true);
+  assert.equal(paneTools.classList.contains('showing-edition-state'), false);
+  context.operationItem = null;
+  context.renderEditionState();
+  assert.equal(editionStateView.hidden, false);
+
+  // Held from the start of an operation, through its end (its result stays),
+  // released by the next link change or another page.
+  assert.match(studioSource, /"uvstudio:serialstatechange", event => \{\s*if \(event\.detail\?\.operation\) operationItem = currentItem;\s*else if \(event\.detail\?\.reason !== "operation-ended"\) operationItem = null;/);
+  assert.match(studioSource, /if \(item !== currentItem\) operationItem = null;/);
+  assert.match(serialSource, /publish\(\{ reason: "operation-ended" \}\)/);
 });
 
 test('keeps compact app and firmware controls usable on narrow screens', () => {
@@ -1303,6 +1322,371 @@ test('flashes the firmware image, then writes the asset pack of the package', ()
   assert.ok(flashSource.indexOf('slotCanWriteAssets(slot)') < flashSource.indexOf("log(t('slotErasing', slot)"));
   // Payload first, header last: an interrupted upload never validates.
   assert.match(flashSource, /for \(let off = header; off < pack\.length;[\s\S]{0,600}pack\.subarray\(0, header\)/);
+});
+
+function mockSerialPort(name, info, open = false) {
+  const port = {
+    name,
+    opens: 0,
+    readable: null,
+    writable: null,
+    getInfo() { return info; },
+    async open() {
+      port.opens++;
+      port.readable = { getReader: () => ({}) };
+      port.writable = { getWriter: () => ({}) };
+    },
+    async close() {
+      port.readable = null;
+      port.writable = null;
+    }
+  };
+  if (open) {
+    port.readable = {};
+    port.writable = {};
+  }
+  return port;
+}
+
+// The wait for the new firmware after a bootloader flash, on a fake clock:
+// answer(port) gives the device info, null (no reply within the request) or
+// 'hang' (a write the browser never settles).
+function loadAssetWait({ port = null, ports, answer, toolsSerial, requestPort }) {
+  const start = flashSource.indexOf('const FW_VCP_INFO');
+  const end = flashSource.indexOf('\n\n// Whether the running firmware can write the assets', start);
+  assert.ok(start >= 0 && end > start);
+  let clock = 0;
+  const calls = [];
+  const prompt = { hidden: true };
+  const promptText = {
+    attributes: { 'data-i18n': 'flash_select_radio_hint' },
+    textContent: '',
+    getAttribute(name) { return this.attributes[name] ?? null; },
+    setAttribute(name, value) { this.attributes[name] = String(value); }
+  };
+  const selectButton = {
+    hidden: false,
+    listener: null,
+    addEventListener(type, listener) { if (type === 'click') this.listener = listener; }
+  };
+  const context = {
+    flashRadioPrompt: prompt,
+    flashRadioPromptText: promptText,
+    flashSelectRadioBtn: selectButton,
+    logPortIdentity() {},
+    port,
+    reader: port ? {} : null,
+    writer: port ? {} : null,
+    readBuffer: [],
+    toolsSerialSession: 0,
+    pendingFirmwareAssets: null,
+    BAUDRATE: 38400,
+    ASSET_RUNNING_SLOT: 0xFF,
+    performance: { now: () => clock },
+    setTimeout(fn, ms, ...args) {
+      return setTimeout(() => { clock += ms; fn(...args); }, 0);
+    },
+    clearTimeout,
+    sleep(ms) {
+      clock += ms;
+      return new Promise(resolve => setImmediate(resolve));
+    },
+    navigator: {
+      serial: {
+        getPorts: async () => ports(),
+        requestPort: async options => requestPort(options)
+      }
+    },
+    window: {
+      UVStudioSerial: {
+        portMatchesInfo(candidate, info) {
+          const own = candidate.getInfo();
+          return Boolean(info) && own.usbVendorId === info.usbVendorId &&
+            own.usbProductId === info.usbProductId;
+        }
+      }
+    },
+    toolsSerial: toolsSerial || { isOwner: () => true, async acquire() {}, setState() {} },
+    startReading() {},
+    async disconnectPort(details) {
+      const dropped = context.port;
+      calls.push(['disconnect', dropped?.name, details.reason]);
+      context.port = null;
+      context.reader = null;
+      context.writer = null;
+      if (dropped) await dropped.close();
+    },
+    requestDeviceInfo() {
+      const reply = answer(context.port);
+      if (reply === 'hang') return new Promise(() => {});
+      if (!reply) {
+        clock += 1000;
+        return Promise.reject(new Error('timeoutNoDevice'));
+      }
+      return Promise.resolve(reply);
+    },
+    async writeFirmwareAssets(slot, pack, ts) { calls.push(['assets', context.port.name, ts]); },
+    setFlashStep(step, state) { calls.push(['step', step, state]); },
+    setFlashStepWaiting(step) { calls.push(['step', step, 'waiting']); },
+    setFlashStepProgress() {},
+    setFlashStepsComplete() {},
+    log(message) { if (message === 'fwAssetsReopenPort') calls.push(['reopen']); },
+    t(key) { return key; }
+  };
+  vm.runInNewContext(
+    `${flashSource.slice(start, end)}; this.run = installAssetsAfterFlash;`,
+    context
+  );
+  return {
+    run: context.run,
+    context,
+    calls,
+    prompt,
+    clickSelectRadio: () => selectButton.listener(),
+    // The prompt as shown: null when hidden, else its text key and whether
+    // the "Select the radio" button is offered.
+    promptState: () => prompt.hidden ? null : {
+      text: promptText.getAttribute('data-i18n'),
+      selectButton: !selectButton.hidden
+    },
+    now: () => clock
+  };
+}
+
+const CABLE_INFO = { usbVendorId: 0x1A86, usbProductId: 0x7523 };
+const BOOTLOADER_INFO = { usbVendorId: 0x36B7, usbProductId: 0x0001 };   // seen on a UV-K1 in DFU mode
+const FIRMWARE_VCP_INFO = { usbVendorId: 0x36B7, usbProductId: 0xFFFF };
+
+test('reopens a port the new firmware stays silent on, which raises DTR again', async () => {
+  const cable = mockSerialPort('cable', CABLE_INFO, true);
+  let probes = 0;
+  const { run, calls } = loadAssetWait({
+    port: cable,
+    ports: () => [cable],
+    answer: current => {
+      probes++;
+      return current === cable && cable.opens > 0 ? { timestamp: 42 } : null;
+    }
+  });
+  await run(new Uint8Array(4));
+  assert.equal(probes, 6);   // five silent requests, then the reopened port answers
+  assert.deepEqual(calls, [
+    ['step', 'restart', 'waiting'],
+    ['reopen'],
+    ['disconnect', 'cable', 'connection-error'],
+    ['step', 'restart', 'done'],
+    ['step', 'assets', 'active'],
+    ['assets', 'cable', 42],
+    ['step', 'assets', 'done']
+  ]);
+});
+
+test('leaves a device-info request that never settles and tries the other port first', async () => {
+  const bootloader = mockSerialPort('bootloader', BOOTLOADER_INFO, true);
+  const firmware = mockSerialPort('firmware', FIRMWARE_VCP_INFO);
+  const { run, calls } = loadAssetWait({
+    port: bootloader,
+    ports: () => [bootloader, firmware],
+    answer: current => current === firmware ? { timestamp: 7 } : 'hang'
+  });
+  await run(new Uint8Array(4));
+  assert.equal(bootloader.opens, 0);
+  assert.equal(firmware.opens, 1);
+  assert.deepEqual(calls, [
+    ['step', 'restart', 'waiting'],
+    ['reopen'],
+    ['disconnect', 'bootloader', 'connection-error'],
+    ['step', 'restart', 'done'],
+    ['step', 'assets', 'active'],
+    ['assets', 'firmware', 7],
+    ['step', 'assets', 'done']
+  ]);
+});
+
+test('ends the wait on time when taking the serial link never completes', async () => {
+  const firmware = mockSerialPort('firmware', FIRMWARE_VCP_INFO);
+  let owner = false;
+  let acquires = 0;
+  let grant;
+  const granted = new Promise(resolve => { grant = resolve; });
+  const pack = new Uint8Array(4);
+  const { run, context, calls } = loadAssetWait({
+    ports: () => [firmware],
+    answer: () => ({ timestamp: 1 }),
+    toolsSerial: {
+      isOwner: () => owner,
+      acquire() {
+        acquires++;
+        return granted.then(() => { owner = true; });
+      },
+      setState() {}
+    }
+  });
+  await run(pack);
+  assert.equal(acquires, 1);   // one opening at a time, even left behind
+  assert.equal(context.pendingFirmwareAssets, pack);
+  assert.deepEqual(calls.at(-1), ['step', 'restart', 'error']);
+  // Granted after the wait: the opening left behind no longer takes the port.
+  grant();
+  for (let i = 0; i < 5; i++) await new Promise(resolve => setImmediate(resolve));
+  assert.equal(firmware.opens, 0);
+  assert.equal(context.port, null);
+});
+
+test('asks to select the radio when the browser was never allowed its firmware port', async () => {
+  assert.match(html, /<ol class="flash-steps-list">[\s\S]*<\/ol>\s*<div class="flash-radio-prompt" id="flashRadioPrompt" hidden>\s*<p id="flashRadioPromptText" data-i18n="flash_select_radio_hint">[\s\S]{0,300}<button type="button" class="btn primary" id="flashSelectRadioBtn" data-i18n="flash_select_radio">/);
+  assert.match(toolsCss, /#pane-tools \.flash-radio-prompt\[hidden\],\s*#pane-tools \.flash-radio-prompt \.btn\[hidden\]/);
+
+  // The bootloader's port is gone and the firmware's is not granted yet: the
+  // page sees no port at all until the click.
+  const firmware = mockSerialPort('firmware', FIRMWARE_VCP_INFO);
+  const granted = [];
+  const requests = [];
+  const { run, calls, prompt, promptState, clickSelectRadio, now } = loadAssetWait({
+    ports: () => granted,
+    answer: current => current === firmware ? { timestamp: 9 } : null,
+    requestPort: options => {
+      requests.push(options);
+      granted.push(firmware);
+      return firmware;
+    }
+  });
+  const done = run(new Uint8Array(4));
+  for (let i = 0; i < 200 && prompt.hidden; i++) await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(promptState(), { text: 'flash_select_radio_hint', selectButton: true });
+  assert.ok(now() >= 6000 && now() < 9000);   // after ASSET_SELECT_RADIO_MS, not before
+  await clickSelectRadio();
+  await done;
+  assert.deepEqual(JSON.parse(JSON.stringify(requests)), [
+    { filters: [{ usbVendorId: 0x36B7, usbProductId: 0xFFFF }] }
+  ]);
+  assert.equal(prompt.hidden, true);
+  assert.equal(firmware.opens, 1);
+  assert.deepEqual(calls.slice(-4), [
+    ['step', 'restart', 'done'],
+    ['step', 'assets', 'active'],
+    ['assets', 'firmware', 9],
+    ['step', 'assets', 'done']
+  ]);
+});
+
+test('asks to switch the radio off and on while the flash port stays silent', async () => {
+  // The bootloader's port never goes away and nothing answers on it. Once the
+  // radio is switched off and on, that port is lost and the firmware's (already
+  // granted) shows up.
+  const bootloader = mockSerialPort('bootloader', BOOTLOADER_INFO, true);
+  const firmware = mockSerialPort('firmware', FIRMWARE_VCP_INFO);
+  let present = [bootloader];
+  const { run, context, calls, prompt, promptState, now } = loadAssetWait({
+    port: bootloader,
+    ports: () => present,
+    answer: current => current === firmware ? { timestamp: 5 } : null
+  });
+  const done = run(new Uint8Array(4));
+  for (let i = 0; i < 400 && prompt.hidden; i++) await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(promptState(), { text: 'flash_restart_radio_hint', selectButton: false });
+  assert.ok(now() >= 15000 && now() < 18000);   // after ASSET_RESTART_RADIO_MS, not before
+  assert.ok(calls.some(call => call[0] === 'reopen'));   // reopening did not help
+
+  // Switched off and on: the read loop sees the bootloader's port go.
+  present = [firmware];
+  await context.disconnectPort({ reason: 'hardware-disconnect' });
+  await done;
+  assert.equal(prompt.hidden, true);
+  assert.equal(firmware.opens, 1);
+  assert.deepEqual(calls.slice(-4), [
+    ['step', 'restart', 'done'],
+    ['step', 'assets', 'active'],
+    ['assets', 'firmware', 5],
+    ['step', 'assets', 'done']
+  ]);
+});
+
+test('asks to switch off and on for any silent port, counting from the last one that came by itself', async () => {
+  // The bootloader's port is already gone; the firmware's shows up at once
+  // but never answers. Switched off and on, a new firmware port shows up: the
+  // count starts again, so the prompt does not ask for what was just done.
+  const firmware = mockSerialPort('firmware', FIRMWARE_VCP_INFO);
+  const restarted = mockSerialPort('restarted', FIRMWARE_VCP_INFO);
+  let present = [firmware];
+  let restartedProbes = 0;
+  let state = () => null;
+  const seen = [];
+  const { run, context, calls, prompt, promptState, now } = loadAssetWait({
+    ports: () => present,
+    answer: current => {
+      seen.push([current.name, state()]);
+      if (current !== restarted) return null;
+      return ++restartedProbes >= 2 ? { timestamp: 3 } : null;
+    }
+  });
+  state = promptState;
+  const done = run(new Uint8Array(4));
+  for (let i = 0; i < 400 && prompt.hidden; i++) await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(promptState(), { text: 'flash_restart_radio_hint', selectButton: false });
+  assert.ok(now() >= 15000 && now() < 18000);
+  assert.ok(calls.some(call => call[0] === 'reopen'));   // its own reopening does not restart the count
+
+  present = [restarted];
+  await context.disconnectPort({ reason: 'hardware-disconnect' });
+  await done;
+  // The first request to the new port runs with the prompt withdrawn.
+  assert.deepEqual(seen.find(([name]) => name === 'restarted'), ['restarted', null]);
+  assert.equal(prompt.hidden, true);
+  assert.deepEqual(calls.slice(-2), [['assets', 'restarted', 3], ['step', 'assets', 'done']]);
+});
+
+test('does not count a port lost during a request as one it closed', async () => {
+  // The radio is switched off and on while the fifth request waits on the
+  // bootloader's port: that port went by itself, there is nothing to close.
+  const bootloader = mockSerialPort('bootloader', BOOTLOADER_INFO, true);
+  const firmware = mockSerialPort('firmware', FIRMWARE_VCP_INFO);
+  let present = [bootloader];
+  let probes = 0;
+  let lose = () => {};
+  const { run, context, calls } = loadAssetWait({
+    port: bootloader,
+    ports: () => present,
+    answer: current => {
+      if (current === firmware) return { timestamp: 4 };
+      if (++probes === 5) lose();
+      return null;
+    }
+  });
+  lose = () => {
+    present = [firmware];
+    context.port = null;
+    context.reader = null;
+    context.writer = null;
+  };
+  await run(new Uint8Array(4));
+  assert.equal(probes, 5);
+  assert.equal(calls.some(call => call[0] === 'reopen' || call[0] === 'disconnect'), false);
+  assert.deepEqual(calls.slice(-2), [['assets', 'firmware', 4], ['step', 'assets', 'done']]);
+});
+
+test('releases the serial link after a flash even when the wait closed its port', () => {
+  const handler = flashSource.slice(
+    flashSource.indexOf("flashBtn.addEventListener('click'"),
+    flashSource.indexOf('\n\nasync function flashFirmware')
+  );
+  assert.match(handler, /await installAssetsAfterFlash\(assets\);/);
+  assert.match(handler, /\} finally \{[\s\S]*if \(port \|\| toolsSerial\.isOwner\(\)\) await disconnect\(\);\s*endToolsOperation\(operation\);/);
+});
+
+test('logs the USB identity of each opened port', () => {
+  const start = flashSource.indexOf('function logPortIdentity');
+  const end = flashSource.indexOf('\n\nasync function connect', start);
+  assert.ok(start >= 0 && end > start);
+  const lines = [];
+  const context = { log(message, level) { lines.push([message, level]); } };
+  vm.runInNewContext(`${flashSource.slice(start, end)}; this.run = logPortIdentity;`, context);
+  context.run({ getInfo: () => ({ usbVendorId: 0x36B7, usbProductId: 0xFFFF }) });
+  context.run({ getInfo: () => ({ usbVendorId: 0x1A86, usbProductId: 0x7523 }) });
+  context.run({ getInfo: () => ({}) });   // not a USB port: nothing to say
+  assert.deepEqual(lines, [['USB 36b7:ffff', 'info'], ['USB 1a86:7523', 'info']]);
+  assert.match(flashSource, /await port\.open\(\{ baudRate: BAUDRATE, bufferSize: 65536 \}\);\s*logPortIdentity\(port\);/);
+  assert.match(flashSource, /port = candidate;\s*logPortIdentity\(port\);/);
 });
 
 test('shows each catalog app screenshot in the Live Viewer colors, with a persisted toggle', () => {

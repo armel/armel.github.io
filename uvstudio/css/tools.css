@@ -280,7 +280,9 @@ display: none !important;
 #pane-tools .firmware-catalog[hidden],
 #pane-tools .catalog-or[hidden],
 #pane-tools #flashAssetsBtn[hidden],
-#pane-tools .flash-steps[hidden] {
+#pane-tools .flash-steps[hidden],
+#pane-tools .flash-radio-prompt[hidden],
+#pane-tools .flash-radio-prompt .btn[hidden] {
   display: none;
 }
 
@@ -459,6 +461,33 @@ display: none !important;
 
 @keyframes flash-step-wait {
   to { background-position: -45px 0; }
+}
+
+/* Under the steps while the restarted radio cannot be reached: either the
+   browser has never been allowed to open the firmware's own USB port (only a
+   click can grant it), or the radio has to be switched off and on again. */
+#pane-tools .flash-radio-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+#pane-tools .flash-radio-prompt p {
+  flex: 1 1 240px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+#pane-tools .flash-radio-prompt .btn {
+  flex: none;
 }
 
 @media (max-width: 640px) {

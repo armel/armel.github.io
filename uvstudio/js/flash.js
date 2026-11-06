@@ -169,6 +169,9 @@ let logoBitmap = null;            // Uint8Array(1024) ST7565-native, after thres
 const flashBtn = document.getElementById('flashBtn');
 const flashAssetsBtn = document.getElementById('flashAssetsBtn');
 const flashSteps = document.getElementById('flashSteps');
+const flashRadioPrompt = document.getElementById('flashRadioPrompt');
+const flashRadioPromptText = document.getElementById('flashRadioPromptText');
+const flashSelectRadioBtn = document.getElementById('flashSelectRadioBtn');
 const dumpBtn = document.getElementById('dumpBtn');
 const restoreBtn = document.getElementById('restoreBtn');
 const firmwareFileInput = document.getElementById('firmwareFile');
@@ -882,6 +885,16 @@ if (flashAssetsBtn) {
   });
 }
 
+// The USB device behind an opened port, in the log: the bootloader and the
+// firmware enumerate as different devices, which tells a radio still in DFU
+// mode from a firmware that does not answer.
+function logPortIdentity(serialPort) {
+  const info = serialPort?.getInfo?.() || {};
+  if (typeof info.usbVendorId !== 'number') return;
+  const hex = value => (value ?? 0).toString(16).padStart(4, '0');
+  log(`USB ${hex(info.usbVendorId)}:${hex(info.usbProductId)}`, 'info');
+}
+
 async function connect(options = {}) {
   let reusedPort = null;
   try {
@@ -899,6 +912,7 @@ async function connect(options = {}) {
     }
     log(t('openingPort'), 'info');
     await port.open({ baudRate: BAUDRATE, bufferSize: 65536 });
+    logPortIdentity(port);
     if (!toolsSerial.isOwner()) {
       try { await port.close(); } catch {}
       port = null;
@@ -1513,7 +1527,10 @@ flashBtn.addEventListener('click', async () => {
     failActiveFlashStep();
     log(t('flashError', e?.message ?? String(e)), 'error');
   } finally {
-    if (port) await disconnect();
+    // The wait for the radio may end holding the link without a port: it
+    // closes a silent port but keeps the link to reopen one, and it takes the
+    // link before opening a port that can still fail. Release that too.
+    if (port || toolsSerial.isOwner()) await disconnect();
     endToolsOperation(operation);
   }
 });
@@ -3312,10 +3329,81 @@ async function writeFirmwareAssets(slot, pack, ts, onProgress = null) {
 // the page reaches through the ports already granted to it). The firmware
 // keeps the screen blank until then. On timeout the "Install firmware assets"
 // button finishes the job.
+// That CDC device is not the bootloader's to the browser: a radio fresh out of
+// its box, or a browser that never opened the radio running F4HWN, has not
+// granted it, and only a click can. Past ASSET_SELECT_RADIO_MS without any
+// port, a "Select the radio" prompt under the steps asks for that click.
+// A port may also stay open and silent past ASSET_RESTART_RADIO_MS: the flash
+// port of a radio that did not leave the bootloader, or the port of a firmware
+// that does not answer. The same prompt then asks to switch the radio off and
+// on again. That silence counts from the last port that came or went by itself
+// (the radio switched off and on, a cable replugged), not from the ports this
+// wait closes and reopens on its own.
 const FW_VCP_INFO = Object.freeze({ usbVendorId: 0x36B7, usbProductId: 0xFFFF }); // App/usb/usbd_cdc_if.c
 const ASSET_RADIO_TIMEOUT_MS = 120000;
+const ASSET_SELECT_RADIO_MS = 6000;
+const ASSET_RESTART_RADIO_MS = 15000;
+// Time left to reach the radio once its port has just been granted.
+const ASSET_GRANT_GRACE_MS = 15000;
+// One opening of a port or one device-info request. Past this the browser call
+// is left behind and the wait goes on: a write or a close on a USB link gone
+// wrong may never settle, and would otherwise hold the step forever.
+const ASSET_PROBE_TIMEOUT_MS = 3000;
+// Unanswered requests (about 1.5 s each) before the port is closed and looked
+// for again. It may be the bootloader's USB link the browser still reports, or
+// a firmware whose USB went mute after one reply the host did not take in time:
+// it answers again only once the port is reopened, which raises DTR.
+const ASSET_SILENT_PROBES = 5;
 
-async function openRadioPortForAssets(flashPortInfo) {
+// The value of `promise`, or null once it failed or `ms` went by.
+function settleWithin(promise, ms) {
+  let timer = null;
+  return Promise.race([
+    Promise.resolve(promise).catch(() => null),
+    new Promise(resolve => { timer = setTimeout(resolve, ms, null); })
+  ]).finally(() => clearTimeout(timer));
+}
+
+// The wait under way (its `active` flag and `deadline`), for the prompt.
+let assetRadioWait = null;
+
+const RADIO_PROMPT_TEXT = Object.freeze({
+  select: 'flash_select_radio_hint',
+  restart: 'flash_restart_radio_hint'
+});
+
+// The prompt under the steps: null hides it, 'select' asks to grant the
+// firmware's port (with its button), 'restart' to switch the radio off and on.
+function showRadioPrompt(mode) {
+  if (!flashRadioPrompt) return;
+  flashRadioPrompt.hidden = !mode;
+  if (!mode) return;
+  const key = RADIO_PROMPT_TEXT[mode];
+  if (flashRadioPromptText && flashRadioPromptText.getAttribute('data-i18n') !== key) {
+    flashRadioPromptText.setAttribute('data-i18n', key);
+    flashRadioPromptText.textContent = t(key);
+  }
+  if (flashSelectRadioBtn) flashSelectRadioBtn.hidden = mode !== 'select';
+}
+
+// Grant the firmware's port: the wait loop finds it among the granted ports
+// on its next pass. A cancelled chooser leaves the prompt up.
+if (flashSelectRadioBtn) {
+  flashSelectRadioBtn.addEventListener('click', async () => {
+    try {
+      await navigator.serial.requestPort({ filters: [FW_VCP_INFO] });
+    } catch (e) {
+      return;
+    }
+    const wait = assetRadioWait;
+    if (wait?.active) wait.deadline = Math.max(wait.deadline, performance.now() + ASSET_GRANT_GRACE_MS);
+  });
+}
+
+// `wait.active` turns false once the wait is over: an opening left behind then
+// gives the port back instead of taking it. `avoid`, a port that stayed
+// silent, is tried last.
+async function openRadioPortForAssets(flashPortInfo, wait, avoid = null) {
   const matches = window.UVStudioSerial.portMatchesInfo;
   let ports;
   try {
@@ -3324,13 +3412,19 @@ async function openRadioPortForAssets(flashPortInfo) {
     return false;
   }
   const candidates = ports.filter(candidate => !candidate.readable &&
-    (matches(candidate, FW_VCP_INFO) || matches(candidate, flashPortInfo)));
+    (matches(candidate, FW_VCP_INFO) || matches(candidate, flashPortInfo)))
+    .sort((a, b) => (a === avoid) - (b === avoid));
   for (const candidate of candidates) {
     try {
       if (!toolsSerial.isOwner()) await toolsSerial.acquire({ source: 'tools' });
-      if (!toolsSerial.isOwner()) return false;
+      if (!wait.active || !toolsSerial.isOwner()) return false;
       await candidate.open({ baudRate: BAUDRATE, bufferSize: 65536 });
+      if (!wait.active) {
+        try { await candidate.close(); } catch (closeError) {}
+        return false;
+      }
       port = candidate;
+      logPortIdentity(port);
       reader = port.readable.getReader();
       writer = port.writable.getWriter();
       toolsSerialSession++;
@@ -3347,38 +3441,78 @@ async function openRadioPortForAssets(flashPortInfo) {
 
 async function installAssetsAfterFlash(pack) {
   const flashPortInfo = port?.getInfo?.() || null;
+  const wait = { active: true, deadline: performance.now() + ASSET_RADIO_TIMEOUT_MS };
+  let opening = null;
+  let silentProbes = 0;
+  let silentPort = null;
+  let portlessSince = null;
+  let countedPort = port;                  // the port the silence is counted on
+  let silentSince = performance.now();
+  let cycled = false;                      // this wait just closed a silent port
+  assetRadioWait = wait;
   setFlashStepWaiting('restart');
   log(t('fwAssetsWaitRadio'), 'info');
-  const deadline = performance.now() + ASSET_RADIO_TIMEOUT_MS;
-  while (performance.now() < deadline) {
-    if (!port || !writer) await openRadioPortForAssets(flashPortInfo);
-    let dev = null;
-    if (port && writer) {
-      try {
+  try {
+    while (performance.now() < wait.deadline) {
+      if (!port || !writer) {
+        silentProbes = 0;
+        // One opening at a time: one left behind may still be under way.
+        opening ||= openRadioPortForAssets(flashPortInfo, wait, silentPort)
+          .finally(() => { opening = null; });
+        await settleWithin(opening, ASSET_PROBE_TIMEOUT_MS);
+      }
+      if (port && writer) portlessSince = null;
+      else portlessSince ??= performance.now();
+      const now = performance.now();
+      const current = port && writer ? port : null;
+      if (current !== countedPort) {
+        if (!cycled) silentSince = now;    // came or went by itself
+        countedPort = current;
+      }
+      cycled = false;
+      if (portlessSince !== null && now - portlessSince >= ASSET_SELECT_RADIO_MS) {
+        showRadioPrompt('select');
+      } else if (current && now - silentSince >= ASSET_RESTART_RADIO_MS) {
+        showRadioPrompt('restart');
+      } else {
+        showRadioPrompt(null);
+      }
+      let dev = null;
+      if (port && writer) {
         readBuffer = [];
-        dev = await requestDeviceInfo({ timeoutMs: 1000, quiet: true });
-      } catch (e) {
-        dev = null;
+        dev = await settleWithin(requestDeviceInfo({ timeoutMs: 1000, quiet: true }),
+          ASSET_PROBE_TIMEOUT_MS);
+        // A port lost during the request went by itself: nothing to close.
+        if (!dev && port && ++silentProbes >= ASSET_SILENT_PROBES) {
+          silentPort = port;
+          cycled = true;
+          log(t('fwAssetsReopenPort'), 'info');
+          await settleWithin(disconnectPort({ reason: 'connection-error' }), ASSET_PROBE_TIMEOUT_MS);
+        }
       }
-    }
-    if (dev) {
-      setFlashStep('restart', 'done', 'flash_step_detected');
-      setFlashStep('assets', 'active');
-      try {
-        await writeFirmwareAssets(ASSET_RUNNING_SLOT, pack, dev.timestamp,
-          fraction => setFlashStepProgress('assets', fraction));
-        setFlashStep('assets', 'done', 'flash_step_done');
-        setFlashStepsComplete(true);
-        log(t('programmingComplete'), 'success');
-      } catch (e) {
-        setFlashStep('assets', 'error', 'flash_step_failed');
-        log(t('fwAssetsError', e?.message ?? String(e)), 'error');
-        pendingFirmwareAssets = pack;
-        log(t('fwAssetsReconnect'), 'info');
+      if (dev) {
+        setFlashStep('restart', 'done', 'flash_step_detected');
+        setFlashStep('assets', 'active');
+        try {
+          await writeFirmwareAssets(ASSET_RUNNING_SLOT, pack, dev.timestamp,
+            fraction => setFlashStepProgress('assets', fraction));
+          setFlashStep('assets', 'done', 'flash_step_done');
+          setFlashStepsComplete(true);
+          log(t('programmingComplete'), 'success');
+        } catch (e) {
+          setFlashStep('assets', 'error', 'flash_step_failed');
+          log(t('fwAssetsError', e?.message ?? String(e)), 'error');
+          pendingFirmwareAssets = pack;
+          log(t('fwAssetsReconnect'), 'info');
+        }
+        return;
       }
-      return;
+      await sleep(500);
     }
-    await sleep(500);
+  } finally {
+    wait.active = false;
+    if (assetRadioWait === wait) assetRadioWait = null;
+    showRadioPrompt(null);
   }
   setFlashStep('restart', 'error', 'flash_step_failed');
   pendingFirmwareAssets = pack;
