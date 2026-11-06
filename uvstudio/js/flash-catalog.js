@@ -1,7 +1,6 @@
-// Firmware catalog: lists stable archive/ files from the main branch and the
-// optional rolling development build from feature_update_v7 through the GitHub
-// Contents API. Selected builds feed into either the main flash pipeline or the
-// multiboot-slot pipeline through window.UVStudioFlash. Pure helpers are exported
+// Firmware catalog: lists stable F4HWN archive/ files from the main branch
+// through the GitHub Contents API. Selected builds feed into either the main
+// flash pipeline or the multiboot-slot pipeline through window.UVStudioFlash. Pure helpers are exported
 // for Node tests; the browser runtime is guarded and self-boots.
 (function (root, factory) {
   const api = factory();
@@ -28,73 +27,49 @@
   const API_URL =
     `https://api.github.com/repos/${REPO}/contents/${ARCHIVE_PATH}` +
     `?ref=${encodeURIComponent(STABLE_BRANCH)}`;
-  const DEVELOPMENT_BRANCH = 'feature_update_v7';
-  const DEVELOPMENT_FILENAME = 'f4hwn.fusion.development.bin';
-  const DEVELOPMENT_API_URL =
-    `https://api.github.com/repos/${REPO}/contents/${ARCHIVE_PATH}/${DEVELOPMENT_FILENAME}` +
-    `?ref=${encodeURIComponent(DEVELOPMENT_BRANCH)}`;
   // Only current firmwares are offered: v5.0 and newer, no beta or SA818 builds.
+  // Unversioned images (such as a rolling development build) are never offered.
   const MIN_MAJOR_VERSION = 5;
   // Multiboot first ships with v6; older images cannot return to the slot menu.
   const MIN_SLOT_MAJOR_VERSION = 6;
 
   // Group labels are technical terms shared across every language.
   const GROUP_ORDER = [
-    'fusion', 'fieldops', 'transfer', 'labs',
-    'development', 'fusion_k1', 'fusion_k5v3', 'stock'
+    'fusion', 'fieldops', 'transfer', 'labs', 'fusion_k1', 'fusion_k5v3'
   ];
   const GROUP_LABELS = {
     fusion: 'F4HWN Fusion (stable)',
     fieldops: 'F4HWN FieldOps',
     transfer: 'F4HWN Transfer',
     labs: 'F4HWN Labs',
-    development: 'F4HWN Fusion (dev, unstable)',
     fusion_k1: 'F4HWN Fusion · K1',
-    fusion_k5v3: 'F4HWN Fusion · K5v3',
-    stock: 'Quansheng (stock)'
+    fusion_k5v3: 'F4HWN Fusion · K5v3'
   };
 
   // ========== PURE HELPERS (Node-testable) ==========
 
-  // Parse an archive filename into a structured entry, or null when the file is
-  // not a flashable firmware image (logos and other assets are ignored).
+  // Parse an F4HWN archive filename into a structured entry, or null when the
+  // file is not an F4HWN firmware image (logos, stock images and other assets
+  // are ignored).
   function parseFirmwareName(name) {
     if (typeof name !== 'string') return null;
     const lower = name.toLowerCase();
-    if (!lower.endsWith('.bin')) return null;
+    const editionMatch = lower.match(
+      /^f4hwn[._-](?:(k1|k5v3)[._-])?([a-z][a-z0-9-]*)(?:[._-].*)?\.bin$/
+    );
+    if (!editionMatch) return null;
 
     const isBeta = /\.beta\b/.test(lower);
     const isSa818 = /\.sa818\b/.test(lower);
-    const isDevelopment = lower === DEVELOPMENT_FILENAME;
     const versionMatch = lower.match(/[._-]v(\d+(?:\.\d+)*)/);
     const version = versionMatch ? versionMatch[1] : '';
 
-    let brand;
-    let group;
-    let model = '';
+    const modelToken = editionMatch[1] || '';
+    const editionToken = editionMatch[2];
+    const model = modelToken === 'k1' ? 'K1' : (modelToken === 'k5v3' ? 'K5v3' : '');
+    const group = model && editionToken === 'fusion' ? `fusion_${modelToken}` : editionToken;
 
-    if (isDevelopment) {
-      brand = 'f4hwn';
-      group = 'development';
-    } else if (lower.startsWith('quansheng')) {
-      brand = 'stock';
-      group = 'stock';
-      if (lower.includes('.k1.')) model = 'K1';
-      else if (lower.includes('.k5v3.')) model = 'K5v3';
-    } else {
-      brand = 'f4hwn';
-      const editionMatch = lower.match(
-        /^f4hwn[._-](?:(k1|k5v3)[._-])?([a-z][a-z0-9-]*)(?:[._-].*)?\.bin$/
-      );
-      if (!editionMatch) return null;
-      const modelToken = editionMatch[1] || '';
-      const editionToken = editionMatch[2];
-      if (modelToken === 'k1' && editionToken === 'fusion') { group = 'fusion_k1'; model = 'K1'; }
-      else if (modelToken === 'k5v3' && editionToken === 'fusion') { group = 'fusion_k5v3'; model = 'K5v3'; }
-      else { group = editionToken; model = modelToken === 'k1' ? 'K1' : (modelToken === 'k5v3' ? 'K5v3' : ''); }
-    }
-
-    return { name, brand, group, model, version, isBeta, isSa818, isDevelopment };
+    return { name, group, model, version, isBeta, isSa818 };
   }
 
   // Descending semantic comparison so v5.10.0 correctly outranks v5.9.0.
@@ -117,42 +92,20 @@
 
   // Keep only current, stable, non-SA818 firmware images (v5.0 and newer).
   function isOffered(entry) {
-    return entry.isDevelopment ||
-      (!entry.isBeta && !entry.isSa818 && majorVersion(entry.version) >= MIN_MAJOR_VERSION);
+    return Boolean(entry) && !entry.isBeta && !entry.isSa818 &&
+      majorVersion(entry.version) >= MIN_MAJOR_VERSION;
   }
 
-  // Multiboot slots offer stable v6+ F4HWN editions. Older images, the rolling
-  // development build and Quansheng stock images do not embed multiboot.
+  // Multiboot slots offer stable v6+ F4HWN editions; older images do not embed
+  // multiboot.
   function isSlotOffered(entry) {
-    return Boolean(entry) && isOffered(entry) && entry.brand === 'f4hwn' &&
-      !entry.isDevelopment && majorVersion(entry.version) >= MIN_SLOT_MAJOR_VERSION;
+    return isOffered(entry) && majorVersion(entry.version) >= MIN_SLOT_MAJOR_VERSION;
   }
 
-  // Every stable, versioned F4HWN edition shares the CHIRP driver published for
-  // that firmware version. Development and stock Quansheng builds do not.
+  // Every offered F4HWN edition shares the CHIRP driver published for that
+  // firmware version.
   function hasSharedChirpDriver(entry) {
-    return Boolean(entry) && isOffered(entry) && entry.brand === 'f4hwn' &&
-      !entry.isDevelopment && Boolean(entry.version);
-  }
-
-  function normalizeFile(file) {
-    return {
-      name: file && file.name,
-      size: file && file.size,
-      download_url: file && file.download_url
-    };
-  }
-
-  // Stable listings never supply the rolling entry. Its canonical source is the
-  // development branch, even if a stale copy happens to exist on main.
-  function mergeCatalogFiles(stableFiles, developmentFile) {
-    const files = (Array.isArray(stableFiles) ? stableFiles : [])
-      .filter(file => file && file.name !== DEVELOPMENT_FILENAME)
-      .map(normalizeFile);
-    if (developmentFile && developmentFile.name === DEVELOPMENT_FILENAME) {
-      files.push(normalizeFile(developmentFile));
-    }
-    return files;
+    return isOffered(entry);
   }
 
   // Group GitHub file entries ({ name, size, download_url }) into an ordered map
@@ -174,14 +127,9 @@
     return groups;
   }
 
-  // Compact option label, e.g. "v5.7.0 · 58 KB" or "K1 v7.03.01 · 61 KB".
+  // Compact option label, e.g. "v5.7.0 · 58 KB".
   function formatOptionLabel(entry) {
-    const parts = [];
-    if (entry.group === 'stock' && entry.model) parts.push(entry.model);
-    // Kept in English like the other technical tags (stable / dev / stock).
-    if (entry.isDevelopment) parts.push('⚠ Development · unstable');
-    else parts.push(entry.version ? `v${entry.version}` : entry.name);
-    let label = parts.join(' ');
+    let label = entry.version ? `v${entry.version}` : entry.name;
     if (Number.isFinite(entry.size)) label += ` · ${Math.round(entry.size / 1024)} KB`;
     return label;
   }
@@ -193,8 +141,7 @@
     formatOptionLabel,
     hasSharedChirpDriver,
     isOffered,
-    isSlotOffered,
-    mergeCatalogFiles
+    isSlotOffered
   };
 
   // ========== BROWSER RUNTIME ==========
@@ -231,21 +178,6 @@
       if (divider) divider.hidden = !flashVisible;
       if (slotSection) slotSection.hidden = !slotVisible;
       if (slotDivider) slotDivider.hidden = !slotVisible;
-    }
-
-    async function fetchDevelopmentFile() {
-      try {
-        const response = await fetch(DEVELOPMENT_API_URL, { cache: 'no-cache' });
-        if (!response.ok) return null;
-        const item = await response.json();
-        return {
-          name: item.name,
-          size: item.size,
-          download_url: item.download_url
-        };
-      } catch (error) {
-        return null;
-      }
     }
 
     // Build the menu and return how many firmware options it holds.
@@ -307,10 +239,7 @@
           }
           throw new Error(`HTTP ${response.status}`);
         }
-        const stableFiles = await response.json();
-        const developmentFile = await fetchDevelopmentFile();
-        const files = mergeCatalogFiles(stableFiles, developmentFile);
-        groups = categorize(files);
+        groups = categorize(await response.json());
         const counts = render();
         showCatalog(counts.flash > 0, counts.slots > 0);
         loaded = counts.flash > 0 || counts.slots > 0;
