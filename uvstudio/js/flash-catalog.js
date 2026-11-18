@@ -35,10 +35,11 @@
 
   // Group labels are technical terms shared across every language.
   const GROUP_ORDER = [
-    'fusion', 'fieldops', 'transfer', 'labs', 'fusion_k1', 'fusion_k5v3'
+    'fusion', 'service', 'fieldops', 'transfer', 'labs', 'fusion_k1', 'fusion_k5v3'
   ];
   const GROUP_LABELS = {
     fusion: 'F4HWN Fusion (stable)',
+    service: 'F4HWN Service',
     fieldops: 'F4HWN FieldOps',
     transfer: 'F4HWN Transfer',
     labs: 'F4HWN Labs',
