@@ -149,6 +149,7 @@
     beam: '<rect x="3.5" y="6" width="5" height="12" rx="1.2"/><rect x="15.5" y="6" width="5" height="12" rx="1.2"/><path d="M5 9h2m10 0h2M10 10h4m-2-2 2 2-2 2m2 2h-4m2 2-2-2 2-2"/>',
     breakout: '<rect x="3" y="4" width="4.5" height="3" rx=".4"/><rect x="9.75" y="4" width="4.5" height="3" rx=".4"/><rect x="16.5" y="4" width="4.5" height="3" rx=".4"/><rect x="6.4" y="9" width="4.5" height="3" rx=".4"/><rect x="13.1" y="9" width="4.5" height="3" rx=".4"/><circle cx="12" cy="15" r="1.2"/><path d="M7.5 20h9v-2h-9z"/>',
     broadcastfm: '<rect x="3.5" y="7.5" width="17" height="11.5" rx="2"/><path d="m7 7.5 9-4M7 11h7m-7 3h5"/><circle cx="17" cy="13" r="2.2"/><path d="M17 16.5v.1"/>',
+    channelbook: '<path d="M4 4.5h5.5A3 3 0 0 1 12 5.9v14a3 3 0 0 0-2.5-1.4H4zm16 0h-5.5A3 3 0 0 0 12 5.9v14a3 3 0 0 1 2.5-1.4H20zM6.5 8h3m-3 3h3m5-3h3m-3 3h3"/>',
     cwdecode: '<circle cx="4" cy="5.5" r="1"/><path d="M7 5.5h4"/><circle cx="14" cy="5.5" r="1"/><path d="M17 5.5h4M12 9v4m-2-2 2 2 2-2M5 16h14M7 19h10M9 22h6"/>',
     cwkeyer: '<path d="M3 20h18M10 20v-6M6 11.5l12 2M17.5 20v-5"/><circle cx="4.5" cy="11.2" r="1.7"/><circle cx="10" cy="14" r="1.15"/><circle cx="17.5" cy="14" r=".8"/>',
     cwmem: '<path d="M5 3.5h14a2 2 0 0 1 2 2V15a2 2 0 0 1-2 2h-8l-4.5 3.5V17H5a2 2 0 0 1-2-2V5.5a2 2 0 0 1 2-2zM6.3 8.25h2.3m6.8 0h2.3m-7.4 4h3.4"/><circle cx="12" cy="8.25" r="1" fill="currentColor" stroke="none"/><circle cx="7" cy="12.25" r="1" fill="currentColor" stroke="none"/><circle cx="17" cy="12.25" r="1" fill="currentColor" stroke="none"/>',
