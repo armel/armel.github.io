@@ -3971,11 +3971,14 @@ const APP_ASSET_MAX = 0xF00;      // up to the end of the header sector
 const APP_MAGIC = 0x31504146;     // "FAP1"
 const APP_FLAG_COMMITTED = 1;
 const APP_WRITE_CHUNK = 128;      // keep the whole command under the 256 B VCP ring
+const APP_READ_CHUNK = 128;       // firmware reply stays below MAX_REPLY_SIZE
+const APP_ERASE_EXACT = 1;        // discard target settings when restoring a complete slot
 
 const MSG_APP_INFO = 0x0730, MSG_APP_INFO_RESP = 0x0731;
 const MSG_APP_ERASE = 0x0732, MSG_APP_ERASE_RESP = 0x0733;
 const MSG_APP_WRITE = 0x0734, MSG_APP_WRITE_RESP = 0x0735;
 const MSG_APP_VALIDATE = 0x0736, MSG_APP_VALIDATE_RESP = 0x0737;
+const MSG_APP_READ = 0x0760, MSG_APP_READ_RESP = 0x0761;
 
 // APP_ERR_* (0..9) -> i18n status keys.
 const APP_STATUS_KEY = ['appStateValid', 'appStateBadSlot', 'appStateEmpty', 'appStateAbi',
@@ -4326,8 +4329,9 @@ async function appInfo(slot, timeoutMs = 3000) {
   const data = await slotCommand(MSG_APP_INFO, Uint8Array.of(slot), MSG_APP_INFO_RESP, timeoutMs);
   return { slot, status: data[1], hdr: appParseHeader(data.subarray(2, 2 + APP_HDR_SIZE)) };
 }
-async function appErase(slot, ts) {
+async function appErase(slot, ts, exact = false) {
   const d = new Uint8Array(6); d[0] = slot; new DataView(d.buffer).setUint32(2, ts, true);
+  d[1] = exact ? APP_ERASE_EXACT : 0;
   return (await slotCommand(MSG_APP_ERASE, d, MSG_APP_ERASE_RESP, 30000))[1];
 }
 async function appWriteChunk(slot, offset, ts, chunk) {
@@ -4344,6 +4348,35 @@ async function appWriteChunkRetry(slot, offset, ts, chunk) {
 }
 async function appValidate(slot) {
   return (await slotCommand(MSG_APP_VALIDATE, Uint8Array.of(slot), MSG_APP_VALIDATE_RESP, 20000))[1];
+}
+async function appReadChunk(slot, offset, ts, length, timeoutMs = 3000) {
+  const d = new Uint8Array(12);
+  const dv = new DataView(d.buffer);
+  d[0] = slot;
+  dv.setUint32(2, offset, true);
+  dv.setUint16(6, length, true);
+  dv.setUint32(8, ts, true);
+  const data = await slotCommand(MSG_APP_READ, d, MSG_APP_READ_RESP, timeoutMs);
+  if (data.length < 8) throw new Error(t('flashReadError', flashAddress(appSlotAddress(slot) + offset)));
+  const reply = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const status = data[1];
+  if (status !== 0) throw new Error(appStatusText(status));
+  const returnedLength = reply.getUint16(2, true);
+  const returnedOffset = reply.getUint32(4, true);
+  if (data[0] !== slot || returnedOffset !== offset || returnedLength !== length ||
+      data.length < 8 + returnedLength) {
+    throw new Error(t('flashReadError', flashAddress(appSlotAddress(slot) + offset)));
+  }
+  return data.subarray(8, 8 + returnedLength);
+}
+async function hasAppSlotReadSupport(timestamp) {
+  try {
+    await appReadChunk(APP_SLOT_FIRST, 0, timestamp, 1, 1500);
+    return true;
+  } catch (error) {
+    if (error?.code === 'UVSTUDIO_SERIAL_SESSION_CHANGED' || !port) throw error;
+    return false;
+  }
 }
 // Slot info only tells that an app is there. Ask the firmware whether it can
 // launch it (ABI, API level, capabilities): the same check as on the radio.
@@ -4364,6 +4397,52 @@ function appSlotAddress(slot) {
 
 async function appReadSlotImage(slot, timestamp) {
   const image = new Uint8Array(APP_SLOT_STRIDE);
+  for (let offset = 0; offset < image.length; offset += APP_READ_CHUNK) {
+    const length = Math.min(APP_READ_CHUNK, image.length - offset);
+    image.set(await appReadChunk(slot, offset, timestamp, length), offset);
+  }
+  return image;
+}
+
+async function appVerifySlotImage(slot, expected, timestamp) {
+  for (let offset = 0; offset < expected.length; offset += APP_READ_CHUNK) {
+    const chunk = expected.subarray(offset, Math.min(offset + APP_READ_CHUNK, expected.length));
+    const actual = await appReadChunk(slot, offset, timestamp, chunk.length);
+    for (let index = 0; index < chunk.length; index++) {
+      if (actual[index] !== chunk[index]) {
+        throw new Error(t('flashVerifyError', flashAddress(appSlotAddress(slot) + offset + index)));
+      }
+    }
+  }
+}
+
+async function appWriteSlotImage(slot, image, timestamp) {
+  if (image.length !== APP_SLOT_STRIDE) throw new Error(appStatusText(5));
+  let status = await appErase(slot, timestamp, true);
+  if (status !== 0) throw new Error(appStatusText(status));
+
+  // Restore the complete source image, including its settings and mutable
+  // assets. Write the committed header last so an interrupted move cannot
+  // leave a partially restored slot looking valid.
+  for (let offset = APP_HDR_SIZE; offset < image.length; offset += APP_WRITE_CHUNK) {
+    const chunk = image.subarray(offset, Math.min(offset + APP_WRITE_CHUNK, image.length));
+    if (chunk.every(value => value === 0xff)) continue;
+    status = await appWriteChunkRetry(slot, offset, timestamp, chunk);
+    if (status !== 0) throw new Error(appStatusText(status));
+  }
+  const header = image.subarray(0, APP_HDR_SIZE);
+  if (!header.every(value => value === 0xff)) {
+    status = await appWriteChunkRetry(slot, 0, timestamp, header);
+    if (status !== 0) throw new Error(appStatusText(status));
+  }
+  await appVerifySlotImage(slot, image, timestamp);
+}
+
+// Firmware before the scoped slot-read command exposed reorder only through
+// the Labs raw-flash service. Keep that path as a compatibility fallback;
+// current Fusion uses the bounded app-slot protocol above.
+async function appReadSlotImageRaw(slot, timestamp) {
+  const image = new Uint8Array(APP_SLOT_STRIDE);
   const base = appSlotAddress(slot);
   for (let offset = 0; offset < image.length; offset += FLASH_DUMP_CHUNK) {
     const length = Math.min(FLASH_DUMP_CHUNK, image.length - offset);
@@ -4372,12 +4451,11 @@ async function appReadSlotImage(slot, timestamp) {
   return image;
 }
 
-async function appVerifySlotSector(expected, address, timestamp, crcSupported) {
+async function appVerifySlotSectorRaw(expected, address, timestamp, crcSupported) {
   if (crcSupported) {
     const actualCrc = await readExternalFlashCrc32(address, expected.length, timestamp);
     if (actualCrc === crc32Bytes(expected)) return;
   }
-
   for (let offset = 0; offset < expected.length; offset += FLASH_DUMP_CHUNK) {
     const chunk = expected.subarray(offset, Math.min(offset + FLASH_DUMP_CHUNK, expected.length));
     const actual = await readExternalFlashChunk(address + offset, chunk.length, timestamp);
@@ -4389,21 +4467,20 @@ async function appVerifySlotSector(expected, address, timestamp, crcSupported) {
   }
 }
 
-async function appWriteSlotImage(slot, image, timestamp, crcSupported) {
+async function appWriteSlotImageRaw(slot, image, timestamp, crcSupported) {
   const base = appSlotAddress(slot);
   for (let sectorOffset = 0; sectorOffset < APP_SLOT_STRIDE; sectorOffset += FLASH_SECTOR_SIZE) {
     const sector = image.subarray(sectorOffset, sectorOffset + FLASH_SECTOR_SIZE);
     const address = base + sectorOffset;
     if (crcSupported &&
         await readExternalFlashCrc32(address, sector.length, timestamp) === crc32Bytes(sector)) continue;
-
     await eraseExternalFlashSector(address, timestamp);
     for (let offset = 0; offset < sector.length; offset += FLASH_WRITE_CHUNK) {
       const chunk = sector.subarray(offset, Math.min(offset + FLASH_WRITE_CHUNK, sector.length));
       if (chunk.every(value => value === 0xff)) continue;
       await writeExternalFlashChunk(address + offset, chunk, timestamp);
     }
-    await appVerifySlotSector(sector, address, timestamp, crcSupported);
+    await appVerifySlotSectorRaw(sector, address, timestamp, crcSupported);
   }
 }
 
@@ -4921,24 +4998,30 @@ async function appRewriteOrderFlow(moves, validateTargets, operation, doneKey) {
     readBuffer = []; await sleep(300);
     const dev = await requestDeviceInfo();
     if (!(await appsProbe(dev))) return;
-    if (!(await hasExternalFlashSupport(dev.timestamp))) return;
+    const scopedSlotAccess = await hasAppSlotReadSupport(dev.timestamp);
+    if (!scopedSlotAccess && !(await hasExternalFlashSupport(dev.timestamp))) return;
 
     const sources = [...new Set(moves.map(move => move.source))];
     const images = new Map();
     log(t('appOrderReading'), 'info');
     for (let index = 0; index < sources.length; index++) {
       const slot = sources[index];
-      images.set(slot, await appReadSlotImage(slot, dev.timestamp));
+      images.set(slot, scopedSlotAccess
+        ? await appReadSlotImage(slot, dev.timestamp)
+        : await appReadSlotImageRaw(slot, dev.timestamp));
       updateProgress(((index + 1) / sources.length) * 35);
       await waitForProgressPaint();
     }
 
-    const crcSupported = await detectExternalFlashCrcSupport(dev.timestamp);
+    const crcSupported = !scopedSlotAccess && await detectExternalFlashCrcSupport(dev.timestamp);
     log(t('appOrderWriting'), 'info');
     for (let index = 0; index < moves.length; index++) {
       const move = moves[index];
       storageTouched = true;
-      await appWriteSlotImage(move.target, images.get(move.source), dev.timestamp, crcSupported);
+      if (scopedSlotAccess)
+        await appWriteSlotImage(move.target, images.get(move.source), dev.timestamp);
+      else
+        await appWriteSlotImageRaw(move.target, images.get(move.source), dev.timestamp, crcSupported);
       updateProgress(35 + ((index + 1) / moves.length) * 60);
       await waitForProgressPaint();
     }
