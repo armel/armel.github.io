@@ -54,6 +54,14 @@ test('adds presentation metadata without changing the app binary format', () => 
   assert.equal(catalog.appDetails('FoxHunt.app').category, 'radio');
   assert.equal(catalog.appDetails('EPIRB406.app').category, 'radio');
   assert.equal(catalog.appDetails('SigFinder.app').category, 'radio');
+  assert.deepEqual(catalog.appDetails('ChannelBook.app'), {
+    id: 'channelbook',
+    category: 'tools',
+    description: 'Browse the active Multiconfig bank by scan list, name or memory number.',
+    descriptionKey: 'appDescription_channelbook',
+    author: 'armel',
+    label: 'Channel Book'
+  });
   assert.equal(catalog.appDetails('FutureApp.app').category, 'other');
   assert.equal(catalog.appDetails('FutureApp.app').author, '');
   assert.equal(catalog.appDetails('Snake.app').author, 'mrkusypl');

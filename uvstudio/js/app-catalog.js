@@ -58,6 +58,7 @@
     beam:        ['tools', 'Transfer a channel between compatible radios.'],
     breakout:    ['games', 'A compact version of the classic arcade game.'],
     broadcastfm: ['radio', 'Listen to broadcast FM stations.'],
+    channelbook: ['tools', 'Browse the active Multiconfig bank by scan list, name or memory number.'],
     cwdecode:    ['radio', 'Decode Morse code in real time.'],
     cwkeyer:     ['radio', "Morse keyer using the radio's PTT and side keys."],
     cwmem:       ['radio', 'Send reusable Morse messages from CW Keyer or CW USB.'],
@@ -95,7 +96,7 @@
   };
   const APP_DISPLAY_NAMES = {
     acarsrx: 'ACARS RX', afscope: 'AF Scope', afspectro: 'AF Spectro', aisrx: 'AIS RX', aprsdigi: 'APRS DIGI', aprsedit: 'APRS Edit',
-    aprsrx: 'APRS RX', aprstx: 'APRS TX', atisdscrx: 'ATIS DSC RX', atisrx: 'ATIS RX', broadcastfm: 'Broadcast FM',
+    aprsrx: 'APRS RX', aprstx: 'APRS TX', atisdscrx: 'ATIS DSC RX', atisrx: 'ATIS RX', broadcastfm: 'Broadcast FM', channelbook: 'Channel Book',
     cwdecode: 'CW Decode', cwkeyer: 'CW Keyer', cwmem: 'CW Mem', cwmemedit: 'CW Mem Edit', cwqsoauto: 'CW QSO Auto', cwtrainer: 'CW Trainer', cwusb: 'CW USB', cube3d: 'Cube 3D',
     epirb406: 'EPIRB 406', flashmap: 'Flash Map', hellmaze: 'Hell Maze', kisstnc: 'KISS TNC', pocsagrx: 'POCSAG RX', qrmap: 'QR Map', scan406: 'Scan 406', sigfinder: 'Signal Finder', sondem10: 'Sonde M10', sondem20: 'Sonde M20', sondemrz: 'Sonde MRZ', sonders41: 'Sonde RS41',
     spaceimpact: 'Space Impact',
