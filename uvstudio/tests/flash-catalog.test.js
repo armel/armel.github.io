@@ -22,6 +22,7 @@ const SAMPLE = [
   { name: 'f4hwn.fusion.v5.7.0.sa818.bin', size: 85708, download_url: 'https://x/f4hwn.fusion.v5.7.0.sa818.bin' },
   { name: 'f4hwn.fusion.v5.0.1.beta.bin', size: 84304, download_url: 'https://x/f4hwn.fusion.v5.0.1.beta.bin' },
   { name: 'f4hwn.fusion.v5.10.0.bin', size: 86000, download_url: 'https://x/f4hwn.fusion.v5.10.0.bin' },
+  { name: 'f4hwn.service.v7.0.0.bin', size: 85000, download_url: 'https://x/f4hwn.service.v7.0.0.bin' },
   { name: 'f4hwn.fieldops.v6.0.0.bin', size: 85000, download_url: 'https://x/f4hwn.fieldops.v6.0.0.bin' },
   { name: 'f4hwn.transfer.v6.0.0.bin', size: 85000, download_url: 'https://x/f4hwn.transfer.v6.0.0.bin' },
   { name: 'f4hwn.labs.v6.0.0.bin', size: 85000, download_url: 'https://x/f4hwn.labs.v6.0.0.bin' },
@@ -74,6 +75,7 @@ test('routes model-specific firmwares to their groups', () => {
 
 test('routes each stable F4HWN edition to its own catalog section', () => {
   assert.equal(parseFirmwareName('f4hwn.fusion.v5.8.0.bin').group, 'fusion');
+  assert.equal(parseFirmwareName('f4hwn.service.v7.0.0.bin').group, 'service');
   assert.equal(parseFirmwareName('f4hwn.fieldops.v6.0.0.bin').group, 'fieldops');
   assert.equal(parseFirmwareName('f4hwn.transfer.v6.0.0.bin').group, 'transfer');
   assert.equal(parseFirmwareName('f4hwn.labs.v6.0.0.bin').group, 'labs');
@@ -95,6 +97,7 @@ test('offers only current stable builds: v5+ without beta or SA818', () => {
 
 test('offers every stable F4HWN edition in the multiboot slot picker', () => {
   assert.equal(isSlotOffered(parseFirmwareName('f4hwn.fusion.v6.0.0.bin')), true);
+  assert.equal(isSlotOffered(parseFirmwareName('f4hwn.service.v7.0.0.bin')), true);
   assert.equal(isSlotOffered(parseFirmwareName('f4hwn.fieldops.v6.0.0.bin')), true);
   assert.equal(isSlotOffered(parseFirmwareName('f4hwn.transfer.v6.0.0.bin')), true);
   assert.equal(isSlotOffered(parseFirmwareName('f4hwn.labs.v6.0.0.bin')), true);
@@ -102,7 +105,7 @@ test('offers every stable F4HWN edition in the multiboot slot picker', () => {
 });
 
 test('shares one versioned CHIRP driver across every offered stable F4HWN edition', () => {
-  for (const edition of ['fusion', 'fieldops', 'transfer', 'labs']) {
+  for (const edition of ['fusion', 'fieldops', 'transfer', 'labs', 'service']) {
     assert.equal(hasSharedChirpDriver(parseFirmwareName(`f4hwn.${edition}.v6.0.0.bin`)), true);
   }
   assert.equal(hasSharedChirpDriver(parseFirmwareName('f4hwn.fieldops.v6.0.0.beta.bin')), false);
@@ -113,7 +116,7 @@ test('shares one versioned CHIRP driver across every offered stable F4HWN editio
 test('groups offered entries newest-first and drops everything else', () => {
   const groups = categorize(SAMPLE);
   assert.deepEqual([...groups.keys()], [
-    'fusion', 'fieldops', 'transfer', 'labs', 'fusion_k1', 'fusion_k5v3'
+    'fusion', 'service', 'fieldops', 'transfer', 'labs', 'fusion_k1', 'fusion_k5v3'
   ]);
 
   const fusion = groups.get('fusion');
@@ -122,6 +125,7 @@ test('groups offered entries newest-first and drops everything else', () => {
   // Only stable v5+ remain: v5.10.0 and v5.7.0 (development, beta, sa818 and
   // legacy dropped).
   assert.deepEqual(fusion.map(e => e.version), ['5.10.0', '5.7.0']);
+  assert.deepEqual(groups.get('service').map(e => e.version), ['7.0.0']);
   assert.deepEqual(groups.get('fieldops').map(e => e.version), ['6.0.0']);
   assert.deepEqual(groups.get('transfer').map(e => e.version), ['6.0.0']);
   assert.deepEqual(groups.get('labs').map(e => e.version), ['6.0.0']);
