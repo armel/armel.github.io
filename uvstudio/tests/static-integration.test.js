@@ -237,13 +237,14 @@ test('provides a catalog and compact installed-app manager without new firmware 
   assert.doesNotMatch(flashSource, /MSG_APP_(?:ORDER|MOVE|SWAP)/);
 });
 
-test('reorders complete app slots through the existing raw flash protocol', () => {
+test('prefers scoped app-slot reorder and keeps raw-flash fallback for older Labs firmware', () => {
   assert.match(html, /id="appOrderActions" hidden/);
   assert.match(html, /id="appOrderCancelBtn"[^>]+data-i18n="appOrderCancel"/);
   assert.match(html, /id="appOrderApplyBtn"[^>]+data-i18n="appOrderApply"/);
   assert.match(html, /id="appRenumberBtn"[^>]+data-i18n="appRenumber"[^>]+hidden/);
   assert.match(flashSource, /const APP_REGION_BASE = 0x102000/);
   assert.match(flashSource, /const APP_SLOT_STRIDE = 0x2000/);
+  assert.match(flashSource, /const MSG_APP_READ = 0x0760, MSG_APP_READ_RESP = 0x0761/);
   assert.match(flashSource, /async function appReadSlotImage/);
   assert.match(flashSource, /async function appWriteSlotImage/);
   assert.match(flashSource, /function appOrderDragStart\(slot, event\)/);
@@ -251,20 +252,30 @@ test('reorders complete app slots through the existing raw flash protocol', () =
   assert.match(flashSource, /appOrderDraft\.splice\(appOrderDropIndex, 0, slot\)/);
   assert.match(flashSource, /appsTableWrap\.scrollTop \+= 14/);
   assert.match(flashSource, /row\.draggable = visible && !busy/);
-  assert.match(flashSource, /await readExternalFlashChunk\(base \+ offset, length, timestamp\)/);
-  assert.match(flashSource, /await eraseExternalFlashSector\(address, timestamp\)/);
-  assert.match(flashSource, /await appVerifySlotSector\(sector, address, timestamp, crcSupported\)/);
+  assert.match(flashSource, /await appReadChunk\(slot, offset, timestamp, length\)/);
+  assert.match(flashSource, /await appErase\(slot, timestamp, true\)/);
+  assert.match(flashSource, /await appWriteChunkRetry\(slot, offset, timestamp, chunk\)/);
+  assert.match(flashSource, /await appVerifySlotImage\(slot, image, timestamp\)/);
+  assert.match(flashSource, /async function appReadSlotImageRaw/);
+  assert.match(flashSource, /async function appWriteSlotImageRaw/);
   assert.match(flashSource, /for \(const target of validateTargets\)[\s\S]*await appValidate\(target\)/);
-  assert.ok(flashSource.indexOf('images.set(slot, await appReadSlotImage') <
-    flashSource.indexOf('await appWriteSlotImage(move.target'));
   assert.match(toolsCss, /\.app-order-actions\[hidden\]\s*\{\s*display:\s*none/);
   assert.match(toolsCss, /\.app-renumber-button\[hidden\]\s*\{\s*display:\s*none/);
   assert.match(toolsCss, /\.apps-table-wrap\s*\{[^}]*overflow-anchor:\s*none/s);
   assert.match(toolsCss, /tr\.app-order-drop-before td\s*\{[^}]*box-shadow/s);
   assert.match(html, /css\/tools\.css\?v=73/);
-  assert.match(html, /js\/flash\.js\?v=108/);
+  assert.match(html, /js\/flash\.js\?v=109/);
   assert.doesNotMatch(flashSource, /app-order-(?:up|down)/);
   assert.doesNotMatch(flashSource, /function appMoveInOrder/);
+  const rewriteStart = flashSource.indexOf('async function appRewriteOrderFlow');
+  const rewriteEnd = flashSource.indexOf('\n\nasync function appApplyOrderFlow', rewriteStart);
+  const rewriteSource = flashSource.slice(rewriteStart, rewriteEnd);
+  assert.match(rewriteSource, /const scopedSlotAccess = await hasAppSlotReadSupport/);
+  assert.match(rewriteSource, /if \(!scopedSlotAccess && !\(await hasExternalFlashSupport/);
+  assert.match(rewriteSource, /scopedSlotAccess[\s\S]*appReadSlotImageRaw/);
+  assert.match(rewriteSource, /scopedSlotAccess[\s\S]*appWriteSlotImageRaw/);
+  assert.ok(rewriteSource.indexOf('await appReadSlotImage(slot') <
+    rewriteSource.indexOf('await appWriteSlotImage(move.target'));
 
   const start = flashSource.indexOf('function appOrderIsDirty');
   const end = flashSource.indexOf('\n\nfunction appCanReorder', start);
