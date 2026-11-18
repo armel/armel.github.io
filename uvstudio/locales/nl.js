@@ -581,6 +581,7 @@ window.UVSTUDIO_LOCALES.nl = {
   "appDescription_beam": "Draagt een kanaal over tussen compatibele radio’s.",
   "appDescription_breakout": "Compacte versie van het klassieke arcadespel.",
   "appDescription_broadcastfm": "Luistert naar FM-omroepzenders.",
+  "appDescription_channelbook": "Blader door de actieve Multiconfig-bank op scanlijst, naam of geheugennummer.",
   "appDescription_cwdecode": "Decodeert morsecode in realtime.",
   "appDescription_cwkeyer": "Morsesleutel met de PTT- en zijknoppen van de portofoon.",
   "appDescription_cwmem": "Verstuur opgeslagen morseberichten vanuit CW Keyer of CW USB.",

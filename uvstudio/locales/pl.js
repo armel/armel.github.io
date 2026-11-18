@@ -581,6 +581,7 @@ window.UVSTUDIO_LOCALES.pl = {
   "appDescription_beam": "Przenosi kanał między zgodnymi radiami.",
   "appDescription_breakout": "Kompaktowa wersja klasycznej gry zręcznościowej.",
   "appDescription_broadcastfm": "Odbiera stacje radiofoniczne FM.",
+  "appDescription_channelbook": "Przeglądaj aktywny bank Multiconfig według listy skanowania, nazwy lub numeru pamięci.",
   "appDescription_cwdecode": "Dekoduje alfabet Morse’a w czasie rzeczywistym.",
   "appDescription_cwkeyer": "Klucz Morse’a obsługiwany przyciskami PTT i bocznymi radiotelefonu.",
   "appDescription_cwmem": "Wysyła zapisane wiadomości Morse’a z CW Keyer lub CW USB.",

@@ -581,6 +581,7 @@ window.UVSTUDIO_LOCALES.ru = {
   "appDescription_beam": "Передаёт канал между совместимыми радиостанциями.",
   "appDescription_breakout": "Компактная версия классической аркадной игры.",
   "appDescription_broadcastfm": "Принимает радиовещательные FM-станции.",
+  "appDescription_channelbook": "Просматривает активный банк Multiconfig по списку сканирования, имени или номеру ячейки памяти.",
   "appDescription_cwdecode": "Декодирует азбуку Морзе в реальном времени.",
   "appDescription_cwkeyer": "Телеграфный ключ с использованием PTT и боковых клавиш радиостанции.",
   "appDescription_cwmem": "Передаёт сохранённые сообщения азбукой Морзе из CW Keyer или CW USB.",

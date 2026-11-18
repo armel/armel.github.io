@@ -581,6 +581,7 @@ window.UVSTUDIO_LOCALES.de = {
   "appDescription_beam": "Überträgt einen Kanal zwischen kompatiblen Funkgeräten.",
   "appDescription_breakout": "Kompakte Version des klassischen Arcade-Spiels.",
   "appDescription_broadcastfm": "Empfängt UKW-Rundfunksender.",
+  "appDescription_channelbook": "Durchsucht die aktive Multiconfig-Bank nach Scanliste, Name oder Speicherplatznummer.",
   "appDescription_cwdecode": "Decodiert Morsecode in Echtzeit.",
   "appDescription_cwkeyer": "Morsegeber mit PTT- und Seitentasten des Funkgeräts.",
   "appDescription_cwmem": "Gespeicherte Morse-Nachrichten aus CW Keyer oder CW USB senden.",

@@ -581,6 +581,7 @@ window.UVSTUDIO_LOCALES.it = {
   "appDescription_beam": "Trasferisce un canale tra radio compatibili.",
   "appDescription_breakout": "Versione compatta del classico gioco arcade.",
   "appDescription_broadcastfm": "Ascolta le stazioni radio FM.",
+  "appDescription_channelbook": "Sfoglia il banco Multiconfig attivo per lista di scansione, nome o numero di memoria.",
   "appDescription_cwdecode": "Decodifica il codice Morse in tempo reale.",
   "appDescription_cwkeyer": "Manipolatore Morse con i tasti PTT e laterali della radio.",
   "appDescription_cwmem": "Invia messaggi Morse memorizzati da CW Keyer o CW USB.",

@@ -581,6 +581,7 @@ window.UVSTUDIO_LOCALES.zh = {
   "appDescription_beam": "在兼容电台之间传输信道。",
   "appDescription_breakout": "经典街机游戏的精简版本。",
   "appDescription_broadcastfm": "收听 FM 广播电台。",
+  "appDescription_channelbook": "按扫描列表、名称或存储编号浏览当前 Multiconfig 存储库。",
   "appDescription_cwdecode": "实时解码摩尔斯电码。",
   "appDescription_cwkeyer": "使用电台 PTT 和侧键的摩尔斯电键。",
   "appDescription_cwmem": "从 CW Keyer 或 CW USB 发送已保存的摩尔斯电码消息。",
