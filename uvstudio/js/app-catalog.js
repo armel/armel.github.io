@@ -70,7 +70,7 @@
     epirb406:    ['radio', 'Analyze and decode 406 MHz beacon frames.'],
     flashmap:    ['tools', 'Browse the external flash map: firmware slots, apps, active state, security registers and a hex viewer.'],
     foxhunt:     ['radio', 'Assist with radio direction finding.'],
-    geonav:      ['tools', 'Azimuth, distance and elevation from the APRS position to a radiosonde, opened from Sonde M10, M20, MRZ or RS41.'],
+    geonav:      ['tools', 'Azimuth, distance and elevation from the APRS position to a radiosonde or an APRS station, opened from Sonde M10, M20, MRZ, RS41 or APRS RX.'],
     hellmaze:    ['games', 'First-person shooter in a demon-haunted maze.'],
     kisstnc:     ['tools', 'Use the radio as a KISS TNC over USB-C: APRSdroid or any KISS client, 1200-baud AFSK.'],
     minesweeper: ['games', 'The classic mine-clearing puzzle.'],

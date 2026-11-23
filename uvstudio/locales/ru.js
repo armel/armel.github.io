@@ -593,7 +593,7 @@ window.UVSTUDIO_LOCALES.ru = {
   "appDescription_epirb406": "Анализирует и декодирует кадры аварийных маяков 406 МГц.",
   "appDescription_flashmap": "Показывает карту внешней флеш-памяти: слоты прошивок, приложения, активное состояние, регистры безопасности и HEX-просмотр.",
   "appDescription_foxhunt": "Помогает при радиопеленгации.",
-  "appDescription_geonav": "Азимут, расстояние и угол места радиозонда от позиции APRS; открывается из Sonde M10, M20, MRZ или RS41.",
+  "appDescription_geonav": "Азимут, расстояние и угол места радиозонда или станции APRS от позиции APRS; открывается из Sonde M10, M20, MRZ, RS41 или APRS RX.",
   "appDescription_hellmaze": "Шутер от первого лица в лабиринте, полном демонов.",
   "appDescription_kisstnc": "Радиостанция как KISS TNC через USB-C: APRSdroid или любой KISS-клиент, AFSK 1200 бод.",
   "appDescription_minesweeper": "Классическая игра «Сапёр».",

@@ -593,7 +593,7 @@ window.UVSTUDIO_LOCALES.zh = {
   "appDescription_epirb406": "分析并解码 406 MHz 信标帧。",
   "appDescription_flashmap": "浏览外部闪存映射：固件插槽、应用、活动状态、安全寄存器和十六进制查看器。",
   "appDescription_foxhunt": "辅助无线电测向。",
-  "appDescription_geonav": "从 APRS 位置到无线电探空仪的方位角、距离和仰角，可从 Sonde M10、M20、MRZ 或 RS41 打开。",
+  "appDescription_geonav": "从 APRS 位置到无线电探空仪或 APRS 电台的方位角、距离和仰角，可从 Sonde M10、M20、MRZ、RS41 或 APRS RX 打开。",
   "appDescription_hellmaze": "恶魔出没的迷宫中的第一人称射击游戏。",
   "appDescription_kisstnc": "将电台用作 USB-C 连接的 KISS TNC：支持 APRSdroid 或任何 KISS 客户端，1200 波特 AFSK。",
   "appDescription_minesweeper": "经典扫雷游戏。",

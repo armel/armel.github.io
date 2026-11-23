@@ -593,7 +593,7 @@ window.UVSTUDIO_LOCALES.pl = {
   "appDescription_epirb406": "Analizuje i dekoduje ramki radiopław 406 MHz.",
   "appDescription_flashmap": "Wyświetla mapę zewnętrznej pamięci flash: sloty firmware, aplikacje, stan aktywny, rejestry bezpieczeństwa i podgląd szesnastkowy.",
   "appDescription_foxhunt": "Pomaga w radiolokacji kierunkowej.",
-  "appDescription_geonav": "Azymut, odległość i elewacja radiosondy od pozycji APRS, otwierane z Sonde M10, M20, MRZ lub RS41.",
+  "appDescription_geonav": "Azymut, odległość i elewacja radiosondy lub stacji APRS od pozycji APRS, otwierane z Sonde M10, M20, MRZ, RS41 lub APRS RX.",
   "appDescription_hellmaze": "Strzelanka FPP w labiryncie pełnym demonów.",
   "appDescription_kisstnc": "Radio jako TNC KISS przez USB-C: APRSdroid lub dowolny klient KISS, AFSK 1200 bodów.",
   "appDescription_minesweeper": "Klasyczna gra w sapera.",

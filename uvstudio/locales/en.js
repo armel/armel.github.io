@@ -593,7 +593,7 @@ window.UVSTUDIO_LOCALES.en = {
   "appDescription_epirb406": "Analyze and decode 406 MHz beacon frames.",
   "appDescription_flashmap": "Browse the external flash map: firmware slots, apps, active state, security registers and a hex viewer.",
   "appDescription_foxhunt": "Assist with radio direction finding.",
-  "appDescription_geonav": "Azimuth, distance and elevation from the APRS position to a radiosonde, opened from Sonde M10, M20, MRZ or RS41.",
+  "appDescription_geonav": "Azimuth, distance and elevation from the APRS position to a radiosonde or an APRS station, opened from Sonde M10, M20, MRZ, RS41 or APRS RX.",
   "appDescription_hellmaze": "First-person shooter in a demon-haunted maze.",
   "appDescription_kisstnc": "Use the radio as a KISS TNC over USB-C: APRSdroid or any KISS client, 1200-baud AFSK.",
   "appDescription_minesweeper": "The classic mine-clearing puzzle.",

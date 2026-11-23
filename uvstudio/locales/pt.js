@@ -593,7 +593,7 @@ window.UVSTUDIO_LOCALES.pt = {
   "appDescription_epirb406": "Analisa e descodifica tramas de balizas de 406 MHz.",
   "appDescription_flashmap": "Explora o mapa da flash externa: slots de firmware, apps, estado ativo, registos de segurança e visualizador hexadecimal.",
   "appDescription_foxhunt": "Auxilia na radiogoniometria.",
-  "appDescription_geonav": "Azimute, distância e elevação de uma radiossonda a partir da posição APRS; abre-se a partir de Sonde M10, M20, MRZ ou RS41.",
+  "appDescription_geonav": "Azimute, distância e elevação de uma radiossonda ou de uma estação APRS a partir da posição APRS; abre-se a partir de Sonde M10, M20, MRZ, RS41 ou APRS RX.",
   "appDescription_hellmaze": "Jogo de tiro na primeira pessoa num labirinto infestado de demónios.",
   "appDescription_kisstnc": "O rádio como TNC KISS por USB-C: APRSdroid ou qualquer cliente KISS, AFSK a 1200 bauds.",
   "appDescription_minesweeper": "O clássico jogo de caça-minas.",
