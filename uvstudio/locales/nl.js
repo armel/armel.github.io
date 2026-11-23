@@ -593,7 +593,7 @@ window.UVSTUDIO_LOCALES.nl = {
   "appDescription_epirb406": "Analyseert en decodeert frames van 406MHz-noodbakens.",
   "appDescription_flashmap": "Bekijkt de externe flashindeling: firmwareslots, apps, actieve status, beveiligingsregisters en hexweergave.",
   "appDescription_foxhunt": "Helpt bij radiovossenjacht en peilingen.",
-  "appDescription_geonav": "Azimut, afstand en elevatie van een radiosonde vanaf de APRS-positie, te openen vanuit Sonde M10, M20, MRZ of RS41.",
+  "appDescription_geonav": "Azimut, afstand en elevatie van een radiosonde of APRS-station vanaf de APRS-positie, te openen vanuit Sonde M10, M20, MRZ, RS41 of APRS RX.",
   "appDescription_hellmaze": "First-person shooter in een door demonen geteisterd doolhof.",
   "appDescription_kisstnc": "De radio als KISS-TNC via USB-C: APRSdroid of elke KISS-client, AFSK 1200 baud.",
   "appDescription_minesweeper": "Het klassieke mijnenvegerspel.",

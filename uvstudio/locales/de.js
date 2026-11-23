@@ -593,7 +593,7 @@ window.UVSTUDIO_LOCALES.de = {
   "appDescription_epirb406": "Analysiert und decodiert Frames von 406-MHz-Notfunkbaken.",
   "appDescription_flashmap": "Zeigt die externe Flash-Belegung: Firmware-Slots, Apps, aktiven Status, Sicherheitsregister und Hex-Ansicht.",
   "appDescription_foxhunt": "Unterstützt bei der Funkpeilung.",
-  "appDescription_geonav": "Azimut, Entfernung und Elevation einer Radiosonde von der APRS-Position aus, aufgerufen aus Sonde M10, M20, MRZ oder RS41.",
+  "appDescription_geonav": "Azimut, Entfernung und Elevation einer Radiosonde oder APRS-Station von der APRS-Position aus, aufgerufen aus Sonde M10, M20, MRZ, RS41 oder APRS RX.",
   "appDescription_hellmaze": "Ego-Shooter in einem von Dämonen heimgesuchten Labyrinth.",
   "appDescription_kisstnc": "Das Funkgerät als KISS-TNC über USB-C: APRSdroid oder jeder KISS-Client, AFSK 1200 Baud.",
   "appDescription_minesweeper": "Das klassische Minensuchspiel.",

@@ -170,7 +170,7 @@ test('adds presentation metadata without changing the app binary format', () => 
   assert.deepEqual(catalog.appDetails('GeoNav.app'), {
     id: 'geonav',
     category: 'tools',
-    description: 'Azimuth, distance and elevation from the APRS position to a radiosonde, opened from Sonde M10, M20, MRZ or RS41.',
+    description: 'Azimuth, distance and elevation from the APRS position to a radiosonde or an APRS station, opened from Sonde M10, M20, MRZ, RS41 or APRS RX.',
     descriptionKey: 'appDescription_geonav',
     author: 'armel'
   });
